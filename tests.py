@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 import tensorflow as tf
-from play import Phi
+from play import Phi, PlayCell
 
 
 sess = tf.Session()
@@ -54,6 +54,14 @@ class PlayTestCase(BaseTestCase):
         a = tf.constant([3.0, -0.5, -1., -2.], dtype=tf.float32)
         b = tf.constant([3, 0, 0, -1], dtype=tf.float32)
         a_ = Phi(a)
+        result = tf.equal(a_, b)
+        self.assertTrue(np.all(result.eval(session=sess)))
+
+    def test_pi_cell(self):
+        a = tf.constant([3.0, -0.5, -1, -2], dtype=tf.float32)
+        b = tf.constant([3.0, 0.5, 0, -1], dtype=tf.float32)
+        pi_cell = PlayCell(weight=1.0)
+        a_ = pi_cell(a)
         result = tf.equal(a_, b)
         self.assertTrue(np.all(result.eval(session=sess)))
 
