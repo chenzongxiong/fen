@@ -100,7 +100,6 @@ class PILayer(Layer):
         # self.bias_constraint = constraints.get(bias_constraint)
 
     def build(self, input_shape):
-
         if self.debug:
             self.kernel = tf.Variable([[1, -1],
                                        [2, -2],
@@ -112,30 +111,32 @@ class PILayer(Layer):
             self.bias = tf.Variable([1, 2],
                                     name="bias",
                                     dtype=tf.float32).initialized_value()
+            self._trainable_weights.append(self.kernel)
+            self._trainable_weights.append(self.bias)
 
-        # self.kernel = self.add_weight(
-        #     'kernel',
-        #     shape=[input_shape[-1].value, self.units],
-        #     initializer=self.kernel_initializer,
-        #     regularizer=self.kernel_regularizer,
-        #     constraint=self.kernel_constraint,
-        #     dtype=self.dtype,
-        #     trainable=True)
+        else:
+            pass
+            #  self.kernel = self.add_weight(
+            #      'kernel',
+            #      shape=[input_shape[-1].value, self.units],
+            #      initializer=self.kernel_initializer,
+            #      regularizer=self.kernel_regularizer,
+            #      constraint=self.kernel_constraint,
+            #      dtype=self.dtype,
+            #      trainable=True)
 
-        # if self.use_bias:
-        #     self.bias = self.add_weight(
-        #         'bias',
-        #         shape=[self.units,],
-        #         initializer=self.bias_initializer,
-        #         regularizer=self.bias_regularizer,
-        #         constraint=self.bias_constraint,
-        #         dtype=self.dtype,
-        #         trainable=True)
-        # else:
-        #     self.bias = None
+            # if self.use_bias:
+            #     self.bias = self.add_weight(
+            #         'bias',
+            #         shape=[self.units,],
+            #         initializer=self.bias_initializer,
+            #         regularizer=self.bias_regularizer,
+            #         constraint=self.bias_constraint,
+            #         dtype=self.dtype,
+            #         trainable=True)
+            # else:
+            #     self.bias = None
 
-        self._trainable_weights.append(self.kernel)
-        self._trainable_weights.append(self.bias)
         self.built = True
 
     def call(self, inputs):
@@ -164,9 +165,67 @@ class PILayer(Layer):
         pass
 
 
+class PlayBlock(Layer):
+    def __init__(self,
+                 units,
+                 number_of_players,
+                 activation="tanh",
+                 **kwargs):
+        self.debug = kwargs.pop("debug", False)
+        super(PlayBlock, self).__init__(**kwargs)
+
+        if self.debug:
+            units = 2
+            self.units = units
+            self.pi_layer = PILayer(units=units,
+                                    number_of_players=number_of_players,
+                                    debug=True)
+        else:
+            self.units = units
+            self.pi_layer = PILayer(units=units,
+                                    number_of_players=number_of_players)
+
+        self.activation = activations.get(activation)
+
+    def build(self, input_shape):
+        if self.debug:
+            self.kernel = tf.Variable([1, -1],
+                                      name="kernel",
+                                      trainable=True,
+                                      dtype=tf.float32).initialized_value()
+            self.bias = tf.Variable([1, 2],
+                                    name="bias",
+                                    dtype=tf.float32).initialized_value()
+            self._trainable_weights.append(self.kernel)
+            self._trainable_weights.append(self.bias)
+        else:
+            self.kernel = None
+            self.bias = None
+
+        self.built = True
+
+    def call(self, inputs):
+        outputs_ = self.pi_layer.__call__(inputs)
+        outputs = outputs_ * self.kernel + self.bias
+        outputs = tf.reduce_sum(outputs, axis=1)
+        if self.activation is not None:
+            return self.activation(outputs)
+        return outputs
+
+    def compute_output_shape(self, input_shape):
+        input_shape = tensor_shape.TensorShape(input_shape)
+        output_shape = input_shape[-1].value
+        return tensor_shape.TensorShape(output_shape)
+
+    def get_config(self):
+        pass
+
 
 if __name__ == "__main__":
-    # a = tf.constant([3.0, -0.5, -1, -2], dtype=tf.float32)
+    a = tf.constant([[1, 2], [2, 3], [3, 4]], dtype=tf.float32)
+    b = tf.constant([1, 3], dtype=tf.float32)
+    c = a*b+b
+    print(sess.run(tf.reduce_sum(c, axis=1)))
     # pi_cell = PlayCell()
     # print(sess.run(pi_cell(a)))
     x = tf.constant([[-1, -2, -0.5, 1],
