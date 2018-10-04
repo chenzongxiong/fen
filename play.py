@@ -20,27 +20,15 @@ def Phi(x, width=1):
 
 class PlayCell(Layer):
     def __init__(self,
-                 # units=1,
-                 # activation="tanh",
-                 # use_bias=False,
-                 # kernel_initializer='glorot_uniform',
-                 # bias_initializer='zeros',
-                 # kernel_regularizer=None,
-                 # bias_regularizer=None,
-                 # activity_regularizer=None,
-                 # kernel_constraint=None,
-                 # bias_constraint=None,
                  weight=1.0,
                  **kwargs):
-        # super(PlayCell, self).__init__(
-        #     activity_regularizer=regularizers.get(activity_regularizer), **kwargs)
         super(PlayCell, self).__init__(**kwargs)
-        # self.units = int(units)
         self.units = 1
         self.weight = weight
 
     def build(self, input_shape):
-        self.kernel = tf.Variable(self.weight, "kernel").initialized_value()
+        self.kernel = tf.Variable(self.weight, name="kernel", dtype=tf.float32).initialized_value()
+        # self.kernel = tf.Variable(self.weight, name="kernel", trainable=True, dtype=tf.float32)
         self._trainable_weights.append(self.kernel)
 
         self.built = True
@@ -73,7 +61,8 @@ class PlayCell(Layer):
 class PILayer(Layer):
     def __init__(self,
                  units,
-                 players,
+                 # players,
+                 number_of_players,
                  activation="tanh",
                  use_bias=True,
                  kernel_initializer='glorot_uniform',
@@ -85,66 +74,91 @@ class PILayer(Layer):
                  bias_constraint=None,
                  **kwargs):
 
+        self.debug = kwargs.pop("debug", False)
         super(PILayer, self).__init__(
             activity_regularizer=regularizers.get(activity_regularizer), **kwargs)
 
         self.units = int(units)
         # players: a list of play cell
-        self.players = players
-        self.number_of_players = len(players)
+        if self.debug:
+            weight_list = [1, 2, 3, 4]
+            self.players = []
+            for i in range(number_of_players):
+                self.players.append(PlayCell(weight_list[i]))
+            self.number_of_players = len(weight_list)
+        else:
+            self.players = [PlayCell() for _ in range(number_of_players)]
+            self.number_of_players = number_of_players
 
         self.activation = activations.get(activation)
         self.use_bias = use_bias
-        self.kernel_initializer = initializers.get(kernel_initializer)
-        self.bias_initializer = initializers.get(bias_initializer)
-        self.kernel_regularizer = regularizers.get(kernel_regularizer)
-        self.bias_regularizer = regularizers.get(bias_regularizer)
-        self.kernel_constraint = constraints.get(kernel_constraint)
-        self.bias_constraint = constraints.get(bias_constraint)
+        # self.kernel_initializer = initializers.get(kernel_initializer)
+        # self.bias_initializer = initializers.get(bias_initializer)
+        # self.kernel_regularizer = regularizers.get(kernel_regularizer)
+        # self.bias_regularizer = regularizers.get(bias_regularizer)
+        # self.kernel_constraint = constraints.get(kernel_constraint)
+        # self.bias_constraint = constraints.get(bias_constraint)
 
     def build(self, input_shape):
-        input_shape = tensor_shape.TensorShape(input_shape)
-        self.kernel = self.add_weight(
-            'kernel',
-            shape=[input_shape[-1].value, self.units],
-            initializer=self.kernel_initializer,
-            regularizer=self.kernel_regularizer,
-            constraint=self.kernel_constraint,
-            dtype=self.dtype,
-            trainable=True)
 
-        if self.use_bias:
-            self.bias = self.add_weight(
-                'bias',
-                shape=[self.units,],
-                initializer=self.bias_initializer,
-                regularizer=self.bias_regularizer,
-                constraint=self.bias_constraint,
-                dtype=self.dtype,
-                trainable=True)
-        else:
-            self.bias = None
+        if self.debug:
+            self.kernel = tf.Variable([[1, -1],
+                                       [2, -2],
+                                       [3, 1.2],
+                                       [4, 3]],
+                                      name="kernel",
+                                      trainable=True,
+                                      dtype=tf.float32).initialized_value()
+            self.bias = tf.Variable([1, 2],
+                                    name="bias",
+                                    dtype=tf.float32).initialized_value()
 
+        # self.kernel = self.add_weight(
+        #     'kernel',
+        #     shape=[input_shape[-1].value, self.units],
+        #     initializer=self.kernel_initializer,
+        #     regularizer=self.kernel_regularizer,
+        #     constraint=self.kernel_constraint,
+        #     dtype=self.dtype,
+        #     trainable=True)
+
+        # if self.use_bias:
+        #     self.bias = self.add_weight(
+        #         'bias',
+        #         shape=[self.units,],
+        #         initializer=self.bias_initializer,
+        #         regularizer=self.bias_regularizer,
+        #         constraint=self.bias_constraint,
+        #         dtype=self.dtype,
+        #         trainable=True)
+        # else:
+        #     self.bias = None
+
+        self._trainable_weights.append(self.kernel)
+        self._trainable_weights.append(self.bias)
         self.built = True
 
     def call(self, inputs):
         # inputs should be like p0, x1, x2, x3, ..., xm
         # inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
         outputs_list = []
-        for player in self.players:
-            outputs_list.append(player.__call__(inputs))
+        for i in range(self.number_of_players):
+            player = self.players[i]
+            outputs_list.append(player.__call__(inputs[i,:]))
 
         outputs_ = ops.convert_to_tensor(outputs_list, dtype=self.dtype)
-        outputs = tf.mat_mul(outputs_, self.kernel)
+        outputs = tf.matmul(outputs_, self.kernel)
+        if self.use_bias:
+            outputs = outputs + self.bias
 
-        # if self.use_bias:
-        #     outputs = nn.bias_add(outputs, self.bias)
-        # if self.activation is not None:
-        #     return self.activation(outputs)
+        if self.activation is not None:
+            return self.activation(outputs)
         return outputs
 
     def compute_output_shape(self, input_shape):
-        pass
+        input_shape = tensor_shape.TensorShape(input_shape)
+        output_shape = [input_shape[-1].value, self.units]
+        return tensor_shape.TensorShape(output_shape)
 
     def get_config(self):
         pass
@@ -152,6 +166,22 @@ class PILayer(Layer):
 
 
 if __name__ == "__main__":
-    a = tf.constant([3.0, -0.5, -1, -2], dtype=tf.float32)
-    pi_cell = PlayCell()
-    print(sess.run(pi_cell(a)))
+    # a = tf.constant([3.0, -0.5, -1, -2], dtype=tf.float32)
+    # pi_cell = PlayCell()
+    # print(sess.run(pi_cell(a)))
+    x = tf.constant([[-1, -2, -0.5, 1],
+                     [0, -2, -0.5, 1],
+                     [1, -2, -0.5, 1],
+                     [10, -2, -0.5, 1]], dtype=tf.float32, shape=[4, 4])
+    y = tf.constant([1, 2, 3, 4], dtype=tf.float32, shape=(4,))
+    # print(sess.run(x + y))
+    # array([[-1. , -1. , -0.5,  1. ],
+    #        [ 0. , -3. , -1. ,  2. ],
+    #        [ 1. , -5. , -1.5,  3. ],
+    #        [10. , -7. , -2. ,  4. ]], dtype=float32)
+    pi_layer = PILayer(units=2, number_of_players=4, debug=True)
+    sess.run(pi_layer(x))
+    # array([[-1.5, -2. ],
+    #        [-2. , -4. ],
+    #        [-2.5, -6. ],
+    #        [ 5. ,  0. ]], dtype=float32)
