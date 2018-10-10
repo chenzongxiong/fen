@@ -17,7 +17,6 @@ print(total)
 print(total2)
 print(total3)
 
-import ipdb; ipdb.set_trace()
 a_result = sess.run(a)
 b_result = sess.run(b)
 total_result = sess.run(total)
@@ -74,7 +73,7 @@ class MyDense(Layer):
     def __init__(self,
                 units,
                 activation=None,
-                use_bias=True,
+                use_bias=False,
                 kernel_initializer='glorot_uniform',
                 bias_initializer='zeros',
                 kernel_regularizer=None,
@@ -100,7 +99,7 @@ class MyDense(Layer):
         self.bias_constraint = constraints.get(bias_constraint)
 
         self.supports_masking = True
-        self.input_spec = InputSpec(min_ndim=2)
+        # self.input_spec = InputSpec(min_ndim=1)
 
     def build(self, input_shape):
         # import ipdb; ipdb.set_trace()
@@ -108,11 +107,12 @@ class MyDense(Layer):
         if input_shape[-1].value is None:
             raise ValueError('The last dimension of the inputs to `MyDense` '
                              'should be defined. Found `None`.')
-        self.input_spec = InputSpec(min_ndim=2,
-                                    axes={-1: input_shape[-1].value})
+        # self.input_spec = InputSpec(min_ndim=2,
+        #                             axes={-1: input_shape[-1].value})
         self.kernel = self.add_weight(
             'kernel',
-            shape=[input_shape[-1].value, self.units],
+            # shape=[input_shape[-1].value, self.units],
+            shape=(),
             initializer=self.kernel_initializer,
             regularizer=self.kernel_regularizer,
             constraint=self.kernel_constraint,
@@ -132,7 +132,7 @@ class MyDense(Layer):
         self.built = True
 
     def call(self, inputs):
-        # import ipdb; ipdb.set_trace()
+        import ipdb; ipdb.set_trace()
         inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
         rank = common_shapes.rank(inputs)
         if rank > 2:
@@ -144,7 +144,8 @@ class MyDense(Layer):
                 output_shape = shape[:-1] + [self.units]
                 outputs.set_shape(output_shape)
         else:
-            outputs = gen_math_ops.mat_mul(inputs, self.kernel)
+            # outputs = gen_math_ops.mat_mul(inputs, self.kernel)
+            outputs = tf.multiply(inputs, self.kernel)
         if self.use_bias:
             outputs = nn.bias_add(outputs, self.bias)
         if self.activation is not None:
@@ -177,10 +178,12 @@ class MyDense(Layer):
         base_config = super(MyDense, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
 
+import ipdb; ipdb.set_trace()
 
-
-x = tf.constant([[1], [2], [3], [4]], dtype=tf.float32)
-y_true = tf.constant([[0], [-1], [-2], [-3]], dtype=tf.float32)
+# x = tf.constant([[1], [2], [3], [4]], dtype=tf.float32)
+# y_true = tf.constant([[0], [-1], [-2], [-3]], dtype=tf.float32)
+x = tf.constant([1, 2, 3, 4], dtype=tf.float32)
+y_true = tf.constant([0, -1, -2, -3], dtype=tf.float32)
 
 linear_model = MyDense(units=1)
 print("config: ", linear_model.get_config())
@@ -200,9 +203,9 @@ writer.add_graph(tf.get_default_graph())
 
 sess = tf.Session()
 sess.run(init)
-# for i in range(100):
-#   _, loss_value = sess.run((train, loss))
-#   print(loss_value)
+for i in range(100):
+  _, loss_value = sess.run((train, loss))
+  print(loss_value)
 
 
 print(sess.run(y_pred))
