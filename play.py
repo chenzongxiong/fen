@@ -5,26 +5,35 @@ from tensorflow.python.framework import ops
 from tensorflow.python.keras import regularizers
 from tensorflow.python.keras import activations
 from tensorflow.python.keras import initializers
+import numpy as np
+
 
 sess = tf.Session()
 
 
-def Phi(x, width=1):
+def Phi(x, width=1.0):
     """
     Phi(x) = x         , if x > 0
            = x + width , if x < - width
            = 0         , otherwise
     """
-    return tf.math.maximum(0.0, x) + tf.math.minimum(0.0, x+width)
+    if x > 0:
+        return x
+    elif x < - width:
+        return x + width
+    else:
+        return 0
 
 
 class PlayCell(Layer):
     def __init__(self,
                  weight=1.0,
+                 width=1.0,
                  **kwargs):
         super(PlayCell, self).__init__(**kwargs)
         self.units = 1
         self.weight = weight
+        self.width = width
 
     def build(self, input_shape):
         self.kernel = tf.Variable(self.weight, name="kernel", dtype=tf.float32).initialized_value()
@@ -34,13 +43,21 @@ class PlayCell(Layer):
         self.built = True
 
     def call(self, inputs):
+        """
+        Parameters:
+        ----------------
+        inputs: `inputs` is a vector, the first value in `inputs` is inital state `p0`.
+        """
         inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
         p0 = inputs[0]
         outputs_ = tf.multiply(inputs[1:], self.kernel)
 
-        outputs = [p0]
+        outputs_res = outputs_.eval(session=sess)
+        p0_res = p0.eval(session=sess)
+        outputs = [p0_res]
         for index in range(outputs_.shape[-1].value):
-            outputs.append(Phi(outputs_[index] - outputs[-1]) + outputs[-1])
+            # outputs.append(Phi(outputs_[index] - outputs[-1], width=self.width) + outputs[-1])
+            outputs.append(Phi(outputs_res[index] - outputs[-1], width=self.width) + outputs[-1])
         outputs = tf.convert_to_tensor(outputs)
 
         return outputs
@@ -52,7 +69,8 @@ class PlayCell(Layer):
     def get_config(self):
         config = {
             "units": self.units,
-            "weight": self.weight
+            "weight": self.weight,
+            "width": self.width,
         }
         base_config = super(PlayCell, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
@@ -222,25 +240,39 @@ class PlayBlock(Layer):
 
 
 if __name__ == "__main__":
-    a = tf.constant([[1, 2], [2, 3], [3, 4]], dtype=tf.float32)
-    b = tf.constant([1, 3], dtype=tf.float32)
-    c = a*b+b
-    print(sess.run(tf.reduce_sum(c, axis=1)))
-    # pi_cell = PlayCell()
+    # a = tf.constant([[1, 2], [2, 3], [3, 4]], dtype=tf.float32)
+    # b = tf.constant([1, 3], dtype=tf.float32)
+    # c = a*b+b
+    # print(sess.run(tf.reduce_sum(c, axis=1)))
+    # _inputs = np.random.randint(low=-10, high=10, size=500)
+    _inputs = np.random.uniform(low=-10, high=10, size=5000)
+    np.insert(_inputs, 0, 0)
+    inputs = tf.constant(_inputs, dtype=tf.float32)
+
+    pi_cell = PlayCell(weight=1.0)
+    outputs = pi_cell(inputs)
+    inputs_res = sess.run(inputs)
+    outputs_res = sess.run(outputs)
+    print(inputs_res, outputs_res)
+    # plt.plot(inputs_res, outputs_res)
+    plt.scatter(inputs_res, outputs_res)
+    plt.show()
+    # import ipdb; ipdb.set_trace()
     # print(sess.run(pi_cell(a)))
-    x = tf.constant([[-1, -2, -0.5, 1],
-                     [0, -2, -0.5, 1],
-                     [1, -2, -0.5, 1],
-                     [10, -2, -0.5, 1]], dtype=tf.float32, shape=[4, 4])
-    y = tf.constant([1, 2, 3, 4], dtype=tf.float32, shape=(4,))
-    # print(sess.run(x + y))
-    # array([[-1. , -1. , -0.5,  1. ],
-    #        [ 0. , -3. , -1. ,  2. ],
-    #        [ 1. , -5. , -1.5,  3. ],
-    #        [10. , -7. , -2. ,  4. ]], dtype=float32)
-    pi_layer = PILayer(units=2, number_of_players=4, debug=True)
-    sess.run(pi_layer(x))
-    # array([[-1.5, -2. ],
-    #        [-2. , -4. ],
-    #        [-2.5, -6. ],
-    #        [ 5. ,  0. ]], dtype=float32)
+
+    # x = tf.constant([[-1, -2, -0.5, 1],
+    #                  [0, -2, -0.5, 1],
+    #                  [1, -2, -0.5, 1],
+    #                  [10, -2, -0.5, 1]], dtype=tf.float32, shape=[4, 4])
+    # y = tf.constant([1, 2, 3, 4], dtype=tf.float32, shape=(4,))
+    # # print(sess.run(x + y))
+    # # array([[-1. , -1. , -0.5,  1. ],
+    # #        [ 0. , -3. , -1. ,  2. ],
+    # #        [ 1. , -5. , -1.5,  3. ],
+    # #        [10. , -7. , -2. ,  4. ]], dtype=float32)
+    # pi_layer = PILayer(units=2, number_of_players=4, debug=True)
+    # sess.run(pi_layer(x))
+    # # array([[-1.5, -2. ],
+    # #        [-2. , -4. ],
+    # #        [-2.5, -6. ],
+    # #        [ 5. ,  0. ]], dtype=float32)
