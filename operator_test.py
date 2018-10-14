@@ -1,10 +1,10 @@
 import sys
 import numpy as np
-from matplotlib import pyplot as plt
 import tensorflow as tf
-from play import Phi, PlayCell
+from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 
+from play import Phi, PlayCell
 
 sess = tf.Session()
 
@@ -36,8 +36,7 @@ def save(inputs, outputs, fname):
     np.savetxt(fname, res, fmt="%.3f", delimiter=",", header="x,p")
 
 
-def load(method, weight, widht):
-    fname = "./training-data/operators/{}-{}-{}.csv".format(method, weight, width)
+def load(fname):
     data = np.loadtxt(fname, skiprows=1, delimiter=",", dtype=np.float32)
     inputs, outputs = data[:, 0], data[:, 1]
     return inputs, outputs
@@ -96,15 +95,16 @@ if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == "save":
         save_anim = True
 
-    methods = ["sin"]
+    methods = ["integer", "float"]
     widths = [1, 2, 3, 4, 5, 5.5, 6.5, 7, 9, 10, 12, 20, 100]
     weights = [1.0, 2.0, 3.0, 4.5]
 
-    # for method in methods:
-    #     for weight in weights:
-    #         for width in widths:
-    #             inputs, outputs = generate_play_operator(weight, width, method)
-    #             save(inputs, outputs, method, weight, width)
+    for method in methods:
+        for weight in weights:
+            for width in widths:
+                inputs, outputs = generate_play_operator(weight, width, method)
+                fname = "./training-data/operators/{}-{}-{}.csv".format(method, weight, width)
+                save(inputs, outputs, fname)
                 # if save_anim is True:
                 #     fname = "./pics/operators/{}-{}-{}.gif".format(method, weight, width)
                 #     xlim = [np.min(inputs) - 1, np.max(inputs) + 1]
@@ -117,5 +117,6 @@ if __name__ == '__main__':
     for method in methods:
         for weight in weights:
             for width in widths:
-                inputs, outputs = load(method, weight, width)
+                fname = "./training-data/operators/{}-{}-{}.csv".format(method, weight, width)
+                inputs, outputs = load(fname)
                 fit(inputs, outputs, width, method, weight)
