@@ -70,20 +70,20 @@ if __name__ == '__main__':
         save_anim = True
 
     methods = ["sin"]
-    # widths = [1, 2, 3, 4, 5, 5.5, 6.5, 7, 9, 10, 12, 20, 100]
-    widths = [1]
-    # weights = [1.0, 2.0, 3.0, 4.5]
-    weights = [1.0]
+    widths = [2, 3, 4, 5, 5.5, 6.5, 7, 9, 10, 12, 20, 100]
+    # widths = [1]
+    weights = [1.0, 2.0, 3.0, 4.5]
+    # weights = [1.0]
     for method in methods:
         for weight in weights:
             for width in widths:
                 inputs, outputs = generate_play_operator(weight, width, method)
                 if save_anim is True:
                     fname = "./pics/operators/{}-{}-{}.gif".format(method, weight, width)
-                    xlim = [-np.min(inputs) - 1, np.max(inputs) + 1]
-                    xlim = [-15, 15]
-                    # ylim = [-np.min(outputs) - 1, np.max(outputs) + 1]
-                    ylim = [-20, 20]
+                    xlim = [np.min(inputs) - 1, np.max(inputs) + 1]
+                    # xlim = [-15, 15]
+                    ylim = [np.min(outputs) - 1, np.max(outputs) + 1]
+                    # ylim = [-20, 20]
                     save_animation(inputs, outputs, fname, xlim, ylim)
                     print("Finished ", fname)
                 else:
