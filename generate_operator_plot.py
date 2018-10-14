@@ -36,15 +36,15 @@ def generate_play_operator(weight=1.0, width=1.0, method="integer"):
 def save(inputs, outputs, method, weight, width):
     res = np.vstack([inputs, outputs]).T
     np.savetxt("./training-data/operators/{}-{}-{}.csv".format(method, weight, width),
-                res, fmt="%.3f.", delimiter=",", header="x,p")
+                res, fmt="%.3f", delimiter=",", header="x,p")
 
-    plt.scatter(inputs, outputs)
-    fname = "./pics/operators/{}-{}-{}.pdf".format(method, weight, width)
+    # plt.scatter(inputs, outputs)
+    # fname = "./pics/operators/{}-{}-{}.pdf".format(method, weight, width)
 
-    plt.figure(figsize=(9, 9))
-    plt.xlim(-10, 10)
-    plt.ylim(-20, 20)
-    plt.savefig(fname, format="pdf")
+    # plt.figure(figsize=(9, 9))
+    # plt.xlim(-10, 10)
+    # plt.ylim(-20, 20)
+    # plt.savefig(fname, format="pdf")
 
 
 def update(i, *fargs):
@@ -71,13 +71,13 @@ if __name__ == '__main__':
 
     methods = ["sin"]
     widths = [2, 3, 4, 5, 5.5, 6.5, 7, 9, 10, 12, 20, 100]
-    # widths = [1]
     weights = [1.0, 2.0, 3.0, 4.5]
-    # weights = [1.0]
+
     for method in methods:
         for weight in weights:
             for width in widths:
                 inputs, outputs = generate_play_operator(weight, width, method)
+                save(inputs, outputs, method, weight, width)
                 if save_anim is True:
                     fname = "./pics/operators/{}-{}-{}.gif".format(method, weight, width)
                     xlim = [np.min(inputs) - 1, np.max(inputs) + 1]
