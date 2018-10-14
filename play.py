@@ -5,6 +5,7 @@ from tensorflow.python.framework import ops
 from tensorflow.python.keras import regularizers
 from tensorflow.python.keras import activations
 from tensorflow.python.keras import initializers
+from tensorflow.python.keras import constraints
 import numpy as np
 
 
@@ -17,48 +18,69 @@ def Phi(x, width=1.0):
            = x + width , if x < - width
            = 0         , otherwise
     """
-    if x > 0:
-        return x
-    elif x < - width:
-        return x + width
-    else:
-        return 0
+    return tf.maximum(x, 0) + tf.minimum(x+width, 0)
 
 
 class PlayCell(Layer):
     def __init__(self,
                  weight=1.0,
                  width=1.0,
+                 kernel_initializer='glorot_uniform',
+                 kernel_regularizer=None,
+                 activity_regularizer=None,
+                 kernel_constraint=None,
                  **kwargs):
-        super(PlayCell, self).__init__(**kwargs)
+
+        self.debug = kwargs.pop("debug", False)
+
+        super(PlayCell, self).__init__(
+            activity_regularizer=regularizers.get(activity_regularizer), **kwargs)
+
         self.units = 1
         self.weight = weight
         self.width = width
+        self.kernel_initializer = initializers.get(kernel_initializer)
+        self.kernel_regularizer = regularizers.get(kernel_regularizer)
+        self.kernel_constraint = constraints.get(kernel_constraint)
+
 
     def build(self, input_shape):
-        self.kernel = tf.Variable(self.weight, name="kernel", dtype=tf.float32).initialized_value()
-        # self.kernel = tf.Variable(self.weight, name="kernel", trainable=True, dtype=tf.float32)
-        self._trainable_weights.append(self.kernel)
+        if self.debug:
+            print("Initialize *weight* as pre-defined...")
+            self.kernel = tf.Variable(self.weight, name="kernel", dtype=tf.float32).initialized_value()
+            self._trainable_weights.append(self.kernel)
+        else:
+            print("Initialize *weight* randomly...")
+            self.kernel = self.add_weight(
+                'kernel',
+                shape=(),
+                initializer=self.kernel_initializer,
+                regularizer=self.kernel_regularizer,
+                constraint=self.kernel_constraint,
+                dtype=self.dtype,
+                trainable=True)
 
         self.built = True
 
-    def call(self, inputs):
+    def call(self, inputs, state):
         """
         Parameters:
         ----------------
         inputs: `inputs` is a vector, the first value in `inputs` is inital state `p0`.
         """
         inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
-        p0 = inputs[0]
-        outputs_ = tf.multiply(inputs[1:], self.kernel)
+        outputs_ = tf.multiply(inputs, self.kernel)
+        outputs = [state]
 
-        outputs_res = outputs_.eval(session=sess)
-        p0_res = p0.eval(session=sess)
-        outputs = [p0_res]
         for index in range(outputs_.shape[-1].value):
-            # outputs.append(Phi(outputs_[index] - outputs[-1], width=self.width) + outputs[-1])
-            outputs.append(Phi(outputs_res[index] - outputs[-1], width=self.width) + outputs[-1])
-        outputs = tf.convert_to_tensor(outputs)
+            phi_ = Phi(outputs_[index]-outputs[-1], width=self.width) + outputs[-1]
+            outputs.append(phi_)
+
+        outputs = tf.convert_to_tensor(outputs[1:])
+        if outputs.shape.ndims == 2 and outputs.shape[1].value == 1:
+            outputs = tf.reshape(outputs, shape=(outputs.shape[0].value,))
+        elif outputs.shape.ndims > 2:
+            raise
 
         return outputs
 
