@@ -14,5 +14,5 @@ def save(inputs, outputs, fname):
 
 def load(fname):
     data = np.loadtxt(fname, skiprows=1, delimiter=",", dtype=np.float32)
-    inputs, outputs = data[:, 0], data[:, 1]
+    inputs, outputs = data[:, 0], data[:, 1:].T
     return inputs, outputs
