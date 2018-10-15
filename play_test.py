@@ -112,7 +112,6 @@ if __name__ == "__main__":
                 print("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
                 fname = "./training-data/players/{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
                 inputs, outputs_ = utils.load(fname)
-                # generator(inputs, weight, width, units, None)
                 fit(inputs, outputs_, units, activation, width, weight)
 
 
