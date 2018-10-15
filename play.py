@@ -46,7 +46,8 @@ class PlayCell(Layer):
     def build(self, input_shape):
         if self.debug:
             print("Initialize *weight* as pre-defined...")
-            self.kernel = tf.Variable(self.weight, name="kernel", dtype=tf.float32).initialized_value()
+            # self.kernel = tf.Variable(self.weight, name="kernel", dtype=tf.float32).initialized_value()
+            self.kernel = tf.Variable(self.weight, name="kernel", dtype=tf.float32)
             self._trainable_weights.append(self.kernel)
         else:
             print("Initialize *weight* randomly...")
@@ -95,6 +96,7 @@ class PlayCell(Layer):
             "units": self.units,
             "weight": self.weight,
             "width": self.width,
+            "debug": self.debug,
         }
         base_config = super(PlayCell, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
@@ -192,7 +194,6 @@ class PILayer(Layer):
 
     def compute_output_shape(self, input_shape):
         input_shape = tensor_shape.TensorShape(input_shape)
-        # output_shape = [input_shape[-1].value, self.units]
         outputs_shape = (self.units, input_shape[-1].value)
         return tensor_shape.TensorShape(output_shape)
 
