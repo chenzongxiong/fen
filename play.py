@@ -223,15 +223,16 @@ class Play(Layer):
 
         if self.use_bias:
             outputs2 += self.bias2
-        if self.activation is not None:
-            outputs2 = self.activation(outputs2)
+        # if self.activation is not None:
+        #     outputs2 = self.activation(outputs2)
 
         assert outputs2.shape.ndims == 1
         return outputs2
 
     def compute_output_shape(self, input_shape):
         input_shape = tensor_shape.TensorShape(input_shape)
-        outputs_shape = (self.units, input_shape[-1].value)
+        # outputs_shape = (self.units, input_shape[-1].value)
+        outputs_shape = (input_shape[-1].value,)
         return tensor_shape.TensorShape(output_shape)
 
     def get_config(self):
@@ -257,7 +258,7 @@ if __name__ == "__main__":
 
     cell = PlayCell(weight=weight, width=width, debug=False)
     layer = Play(units=4, cell=cell,
-                 activation="linear",
+                 activation="tanh",
                  debug=False)
 
     predictions = layer(inputs, state)
