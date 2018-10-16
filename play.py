@@ -92,9 +92,13 @@ class PlayCell(Layer):
 
     def get_config(self):
         config = {
+            "debug": self.debug,
             "weight": self.weight,
             "width": self.width,
-            "debug": self.debug,
+            "kernel_initializer": initializers.serialize(self.kernel_initializer),
+            "kernel_regularizer": regularizers.serialize(self.kernel_regularize),
+            "kernel_constraint": constraints.serialize(self.kernel_constraint),
+            "activity_regularizer": regularizers.serialize(self.activity_regularizer),
         }
         base_config = super(PlayCell, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
@@ -144,12 +148,18 @@ class Play(Layer):
                                        [4]],
                                       name="kernel1",
                                       dtype=tf.float32)
-            self.bias1 = tf.Variable([[1], [2], [-1], [-2]],
+            self.bias1 = tf.Variable([[1],
+                                      [2],
+                                      [-1],
+                                      [-2]],
                                     name="bias1",
                                     # shape=(self.units, 1),
                                     dtype=tf.float32)
 
-            self.kernel2 = tf.Variable([[1], [2], [3], [4]],
+            self.kernel2 = tf.Variable([[1],
+                                        [2],
+                                        [3],
+                                        [4]],
                                        name="kernel2",
                                        dtype=tf.float32)
             self.bias2 = tf.Variable(1,
@@ -212,7 +222,7 @@ class Play(Layer):
         # outputs = tf.reshape(outputs, shape=(outputs.shape[1].value, outputs.shape[0].value))
         # assert outputs.shape[1].value == self.units
 
-        if self.use_bias:
+        if self.bias1 is not None:
             outputs1 += self.bias1
         if self.activation is not None:
             outputs1 =  self.activation(outputs1)
@@ -221,24 +231,30 @@ class Play(Layer):
         outputs2 = outputs1 * self.kernel2
         outputs2 = tf.reduce_sum(outputs2, axis=0)
 
-        if self.use_bias:
+        if self.bias2 is not None:
             outputs2 += self.bias2
-        # if self.activation is not None:
-        #     outputs2 = self.activation(outputs2)
 
         assert outputs2.shape.ndims == 1
         return outputs2
 
     def compute_output_shape(self, input_shape):
         input_shape = tensor_shape.TensorShape(input_shape)
-        # outputs_shape = (self.units, input_shape[-1].value)
         outputs_shape = (input_shape[-1].value,)
         return tensor_shape.TensorShape(output_shape)
 
     def get_config(self):
         config = {
-            "units": self.units,
             "debug": self.debug,
+            "units": self.units,
+            "activation": activations.serialize(self.activation),
+            "use_bias": self.use_bias,
+            "kernel_initializer": initializers.serialize(self.kernel_initializer),
+            "bias_initializer": initializers.serialize(self.bias_initializer),
+            "kernel_regularizer": regularizers.serialize(self.kernel_regularizer),
+            "bias_regularizer": regularizers.serialize(self.bias_regularizer),
+            "activity_regularizer": regularizers.serialize(self.activity_regularizer),
+            "kernel_constraint": constraints.serialize(self.kernel_constraint),
+            "bias_constraint": constraints.serialize(self.bias_constraint),
         }
         base_config = super(Play, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
@@ -269,6 +285,12 @@ if __name__ == "__main__":
     opt = optimizer.minimize(loss)
 
     init = tf.global_variables_initializer()
+
+    # tensorboard writer
+    # tensorboard --logdir .
+    writer = tf.summary.FileWriter('.')
+    writer.add_graph(tf.get_default_graph())
+
     sess.run(init)
 
     epochs = 1000
