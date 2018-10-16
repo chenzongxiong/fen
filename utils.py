@@ -5,7 +5,7 @@ def save(inputs, outputs, fname):
     if len(inputs.shape) == 1:
         inputs = inputs.reshape(inputs.shape[0], 1)
     if len(outputs.shape) == 1:
-        outputs = outputs.reshape(output.shape[0], 1)
+        outputs = outputs.reshape(outputs.shape[0], 1)
 
     res = np.hstack([inputs, outputs])
 
