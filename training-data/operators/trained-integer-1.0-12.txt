@@ -1,1 +1,0 @@
-true_weight: 1.0, estimated_weight: 1.0002690553665161

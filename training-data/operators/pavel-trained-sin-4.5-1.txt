@@ -1,2 +1,0 @@
-epochs: 500, loss: 0.0057325707748532295
-true_weight: 4.5, estimated_weight: 4.50005578994751
