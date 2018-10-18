@@ -16,7 +16,7 @@ def save(inputs, outputs, fname):
 
 
 def load(fname):
-    data = np.loadtxt(fname, skiprows=1, delimiter=",", dtype=np.float32)
+    data = np.loadtxt(fname, skiprows=0, delimiter=",", dtype=np.float32)
     inputs, outputs = data[:, 0], data[:, 1:].T
     assert len(inputs.shape) == 1
     if len(outputs.shape) == 2:
@@ -37,13 +37,24 @@ def update(i, *fargs):
     since = fargs[4]
     step = fargs[5]
 
-    if since is not None:
-        idx = i // since
-        if idx >= len(colors):
-            idx = -1                      # force to always use the last color type
-        ax.scatter(inputs[i:i+step], outputs[i:i+step], color=colors[idx])
-    else:
-        ax.scatter(inputs[i:i+step], outputs[i:i+step], color=colors[0])
+    shape = inputs.shape
+
+
+    if len(shape) == 1:
+        if since is not None:
+            idx = i // since
+            if idx >= len(colors):
+                idx = -1                      # force to always use the last color type
+            ax.scatter(inputs[i:i+step], outputs[i:i+step], color=colors[idx])
+        else:
+            ax.scatter(inputs[i:i+step], outputs[i:i+step], color=colors[0])
+    elif len(shape) == 2:
+        if since is not None:
+            ax.scatter(inputs[i:i+step, 0], outputs[i:i+step, 0], color=colors[0])
+            ax.scatter(inputs[i:i+step, 1], outputs[i:i+step, 1], color=colors[1])
+        else:
+            ax.scatter(inputs[i:i+step, 0], outputs[i:i+step, 0], color=colors[0])
+            ax.scatter(inputs[i:i+step, 1], outputs[i:i+step, 1], color=colors[1])
 
 
 def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
@@ -52,6 +63,8 @@ def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
         xlim = [np.min(inputs) - 1, np.max(inputs) + 1]
     if ylim is None:
         ylim = [np.min(outputs) - 1, np.max(outputs) + 1]
+
+    assert inputs.shape == outputs.shape
 
     if not isinstance(colors, list):
         colors = [colors]
@@ -63,7 +76,7 @@ def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
     points = inputs.shape[0]
 
     anim = FuncAnimation(fig, update, frames=np.arange(0, points, step),
-                         fargs=(inputs, outputs, ax, colors, since, step), interval=150)
+                         fargs=(inputs, outputs, ax, colors, since, step), interval=300)
     anim.save(fname, dpi=40, writer='imagemagick')
 
 

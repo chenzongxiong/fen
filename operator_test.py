@@ -63,8 +63,9 @@ def fit(inputs, outputs, width, method, true_weight):
 
         print("epoch", i, "loss:", loss_value, ", weight: ", cell.kernel.eval(session=sess))
 
-    predictions = cell(inputs, 0)
-    return predictions
+    state = tf.constant(0, dtype=tf.float32)
+    predictions = cell(inputs, state)
+    return sess.run(predictions)
 
 
 if __name__ == '__main__':

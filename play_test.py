@@ -66,8 +66,11 @@ def fit(inputs, outputs, units, activation, width, true_weight, method="sin"):
               ", bias1: ", layer.bias1.eval(session=sess).tolist(),
               ", bias2: ", layer.bias2.eval(session=sess).tolist())
 
-    predictions = layer(inputs, 0)
-    return predictions
+    state = tf.constant(0, dtype=tf.float32)
+    predictions = layer(inputs, state)
+
+    return sess.run(predictions)
+
 
 
 if __name__ == "__main__":
@@ -103,20 +106,56 @@ if __name__ == "__main__":
     #             fname = "./pics/players/{}-{}-{}-{}-{}.pdf".format(method, weight, width, units, activation)
     #             plt.scatter(inputs, outputs)
     #             plt.savefig(fname)
+    #             # utils.save_animation(inputs, outputs, fname)
 
-                # utils.save_animation(inputs, outputs, fname)
+
+    # activation = "tanh"
+    # _units = 4
+    # for method in methods:
+    #     for weight in weights:
+    #         for width in widths:
+    #             print("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
+    #             fname = "./training-data/players/{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
+    #             inputs, outputs_ = utils.load(fname)
+    #             # increase *units* in order to increase the capacity of the model
+    #             predictions = fit(inputs, outputs_, _units, activation, width, weight)
+    #             fname = "./training-data/players/predicted-{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
+    #             utils.save(inputs, predictions, fname)
+    #             print("========================================")
 
 
+    # mixed x ~ f(x)_true ~ f(x)_estimated
+    # activation = "tanh"
+    # for method in methods:
+    #     for weight in weights:
+    #         for width in widths:
+    #             print("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
+    #             fname_true = "./training-data/players/{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
+    #             fname_pred = "./training-data/players/predicted-{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
+
+    #             inputs_true, outputs_true = utils.load(fname_true)
+    #             inputs_pred, outputs_pred = utils.load(fname_pred)
+
+    #             inputs = np.vstack([inputs_true, inputs_pred]).T
+    #             outputs = np.vstack([outputs_true, outputs_pred]).T
+    #             fname = "./pics/players/mixed-x-{}-{}-{}-{}-{}.gif".format(method, weight, width, units, activation)
+    #             utils.save_animation(inputs, outputs, fname, colors=["blue", "red"], step=5)
+
+    # mixed p ~ f(p)_true ~ f(p)_estimated
     activation = "tanh"
-    _units = 4
     for method in methods:
         for weight in weights:
             for width in widths:
                 print("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = "./training-data/players/{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
-                inputs, outputs_ = utils.load(fname)
-                # increase *units* in order to increase the capacity of the model
-                predictions = fit(inputs, outputs_, _units, activation, width, weight)
-                fname = "./training-data/players/predicted-{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
-                utils.save(inputs, predictions, fname)
-                print("========================================")
+                fname_operator = "./training-data/operators/{}-{}-{}.csv".format(method, weight, width)
+                fname_true = "./training-data/players/{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
+                fname_pred = "./training-data/players/predicted-{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
+
+                _, p = utils.load(fname_operator)
+                _, outputs_true = utils.load(fname_true)
+                _, outputs_pred = utils.load(fname_pred)
+
+                inputs = np.vstack([p, p]).T
+                outputs = np.vstack([outputs_true, outputs_pred]).T
+                fname = "./pics/players/mixed-p-{}-{}-{}-{}-{}.gif".format(method, weight, width, units, activation)
+                utils.save_animation(inputs, outputs, fname, colors=["blue", "red"], step=5)
