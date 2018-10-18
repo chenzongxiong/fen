@@ -143,23 +143,23 @@ class Play(Layer):
         if self.debug:
             print("Initalize *theta* as pre-defined...")
             self.kernel1 = tf.Variable([[1],
-                                       [2],
-                                       [3],
-                                       [4]],
+                                       [1],
+                                       [1],
+                                       [1]],
                                       name="kernel1",
                                       dtype=tf.float32)
             self.bias1 = tf.Variable([[1],
-                                      [2],
+                                      [1],
                                       [-1],
-                                      [-2]],
+                                      [-1]],
                                     name="bias1",
                                     # shape=(self.units, 1),
                                     dtype=tf.float32)
 
             self.kernel2 = tf.Variable([[1],
-                                        [2],
-                                        [3],
-                                        [4]],
+                                        [1],
+                                        [1],
+                                        [1]],
                                        name="kernel2",
                                        dtype=tf.float32)
             self.bias2 = tf.Variable(1,

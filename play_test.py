@@ -12,7 +12,6 @@ sess = tf.Session()
 
 
 def generator(inputs, weight, width, units, activation=None):
-    # inputs, outputs_ = utils.load(fname)
     cell = PlayCell(weight=weight, width=width, debug=True)
     state = tf.constant(0, dtype=tf.float32)
 
@@ -20,10 +19,6 @@ def generator(inputs, weight, width, units, activation=None):
                     activation=activation,
                     debug=True)
     outputs = layer(inputs, state)
-    if activation is None:
-        fname = "./training-data/players/play-{}-{}-{}-{}-linear.csv".format(method, weight, width, units)
-    else:
-        fname = "./training-data/players/play-{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
 
     init = tf.global_variables_initializer()
     sess.run(init)
@@ -31,7 +26,7 @@ def generator(inputs, weight, width, units, activation=None):
     outputs = outputs.eval(session=sess)
 
     outputs = outputs.T
-    utils.save(inputs, outputs, fname)
+    return inputs, outputs
 
 
 def fit(inputs, outputs, units, activation, width, true_weight, method="sin"):
@@ -40,22 +35,15 @@ def fit(inputs, outputs, units, activation, width, true_weight, method="sin"):
 
     cell = PlayCell(weight=weight, width=width, debug=False)
 
-    # layer = Play(units=units, cell=cell,
-    #              activation=None,
-    #              debug=False)
     layer = Play(units=units, cell=cell,
                  activation="tanh",
                  debug=False)
     predictions = layer(inputs, state)
-    print("****************************************")
-    print("config: ")
-    print(layer.get_config())
-    print("****************************************")
 
     loss = tf.losses.mean_squared_error(labels=outputs,
                                         predictions=predictions)
+    loss_summary = tf.summary.scalar("loss", loss)
     optimizer = tf.train.GradientDescentOptimizer(0.01)
-    # optimizer = tf.train.AdamOptimizer()
     opt = optimizer.minimize(loss)
 
     init = tf.global_variables_initializer()
@@ -65,6 +53,10 @@ def fit(inputs, outputs, units, activation, width, true_weight, method="sin"):
     loss_value = -1;
     for i in range(epochs):
         _, loss_value = sess.run((opt, loss))
+        if i % 10 == 0:
+            summary = sess.run(loss_summary)
+            utils.writer.add_summary(summary, i)
+
         print("epoch", i, "loss:", loss_value,
               ", true_weight: ", true_weight,
               ", activation: ", activation,
@@ -74,50 +66,32 @@ def fit(inputs, outputs, units, activation, width, true_weight, method="sin"):
               ", bias1: ", layer.bias1.eval(session=sess).tolist(),
               ", bias2: ", layer.bias2.eval(session=sess).tolist())
 
-    with open("./training-data/players/trained-play-{}-{}-{}-{}.txt".format(method, true_weight, width, activation), "w") as f:
-        print("epochs: {}, loss: {}".format(epochs, loss_value))
-        print("true weight: {}, estimated_weight: {}".format(true_weight, cell.kernel.eval(session=sess).tolist()))
-        print("true theta1: {}, estimated_theta1: {}".format([[1], [2], [3], [4]], layer.kernel1.eval(session=sess).tolist()))
-        print("true bias1: {}, estimated_bias1: {}".format([[1], [2], [-1], [-2]], layer.bias1.eval(session=sess).tolist()))
-
-        print("true theta2: {}, estimated_theta2: {}".format([[1], [2], [3], [4]], layer.kernel2.eval(session=sess).tolist()))
-        print("true bias2: {}, estimated_bias2: {}".format(1, layer.bias2.eval(session=sess).tolist()))
-
-        f.write("epochs: {}, loss: {}\n".format(epochs, loss_value))
-        f.write("true_weight: {}, estimated_weight: {}\n".format(true_weight, cell.kernel.eval(session=sess).tolist()))
-        f.write("true theta: {}, estimated_theta: {}\n".format([[1], [2], [3], [4]], layer.kernel1.eval(session=sess).tolist()))
-        f.write("true bias: {}, estimated_bias: {}\n".format([[1], [2], [-1], [-2]], layer.bias1.eval(session=sess).tolist()))
-        f.write("true theta2: {}, estimated_theta2: {}\n".format([[1], [2], [3], [4]], layer.kernel2.eval(session=sess).tolist()))
-        f.write("true bias2: {}, estimated_bias2: {}\n".format(1, layer.bias2.eval(session=sess).tolist()))
-
-
-    print("================================================================================")
-
+    predictions = layer(inputs, 0)
+    return predictions
 
 
 if __name__ == "__main__":
-    methods = ["sin"]
-    widths = [1, 2, 3, 4, 5, 5.5, 6.5, 7, 9, 10, 12, 20, 100]
-    weights = [1.0, 2.0, 3.0, 4.5]
+    utils.writer = utils.get_tf_summary_writer("./log/players/")
 
+    methods = ["sin"]
+    widths = [5]
+    weights = [2]
     units = 4
 
+    # activation = "tanh"
     # for method in methods:
     #     for weight in weights:
     #         for width in widths:
     #             print("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
     #             fname = "./training-data/operators/{}-{}-{}.csv".format(method, weight, width)
     #             inputs, outputs_ = utils.load(fname)
-    #             generator(inputs, weight, width, units, None)
+    #             inputs, outputs = generator(inputs, weight, width, units, activation)
+    #             if activation is None:
+    #                 fname = "./training-data/players/{}-{}-{}-{}-linear.csv".format(method, weight, width, units)
+    #             else:
+    #                 fname = "./training-data/players/{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
+    #             utils.save(inputs, outputs, fname)
 
-
-    # for method in methods:
-    #     for weight in weights:
-    #         for width in widths:
-    #             print("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-    #             fname = "./training-data/operators/{}-{}-{}.csv".format(method, weight, width)
-    #             inputs, outputs_ = utils.load(fname)
-    #             generator(inputs, weight, width, units, "tanh")
 
     # activation = "tanh"
     # for method in methods:
@@ -125,19 +99,24 @@ if __name__ == "__main__":
     #         for width in widths:
     #             print("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
     #             fname = "./training-data/players/{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
-    #             inputs, outputs_ = utils.load(fname)
-    #             fit(inputs, outputs_, units, activation, width, weight)
+    #             inputs, outputs = utils.load(fname)
+    #             fname = "./pics/players/{}-{}-{}-{}-{}.pdf".format(method, weight, width, units, activation)
+    #             plt.scatter(inputs, outputs)
+    #             plt.savefig(fname)
+
+                # utils.save_animation(inputs, outputs, fname)
 
 
     activation = "tanh"
-
+    _units = 4
     for method in methods:
         for weight in weights:
             for width in widths:
                 print("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = "./training-data/players/play-{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
+                fname = "./training-data/players/{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
                 inputs, outputs_ = utils.load(fname)
-                outputs_ = outputs_.reshape((outputs_.shape[1],))
-                # fit(inputs, outputs_, units, activation, width, weight)
                 # increase *units* in order to increase the capacity of the model
-                fit(inputs, outputs_, 10, activation, width, weight)
+                predictions = fit(inputs, outputs_, _units, activation, width, weight)
+                fname = "./training-data/players/predicted-{}-{}-{}-{}-{}.csv".format(method, weight, width, units, activation)
+                utils.save(inputs, predictions, fname)
+                print("========================================")
