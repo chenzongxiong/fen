@@ -27,7 +27,6 @@ class PlayCell(Layer):
     def __init__(self,
                  weight=1.0,
                  width=1.0,
-                 # fixed_state=True,
                  kernel_initializer='glorot_uniform',
                  kernel_regularizer=None,
                  activity_regularizer=None,
@@ -44,7 +43,6 @@ class PlayCell(Layer):
         self.kernel_initializer = initializers.get(kernel_initializer)
         self.kernel_regularizer = regularizers.get(kernel_regularizer)
         self.kernel_constraint = constraints.get(kernel_constraint)
-        # self.fixed_state = fixed_state
 
     def build(self, input_shape):
         if self.debug:
@@ -64,18 +62,10 @@ class PlayCell(Layer):
                 constraint=self.kernel_constraint,
                 dtype=self.dtype,
                 trainable=True)
-            # self.state = self.add_weight(
-            #     'state',
-            #     shape=(),
-            #     initializer=self.kernel_initializer,
-            #     regularizer=self.kernel_regularizer,
-            #     constraint=self.kernel_constraint,
-            #     dtype=self.dtype,
-            #     trainable=self.fixed_state)
 
         self.built = True
 
-    def call(self, inputs, state=None):
+    def call(self, inputs, state):
         """
         Parameters:
         ----------------
@@ -122,7 +112,6 @@ class PlayCell(Layer):
 class Play(Layer):
     def __init__(self,
                  units,
-                 # cells,
                  cell,
                  nbr_of_chunks=1,
                  activation="tanh",
@@ -144,11 +133,6 @@ class Play(Layer):
 
         self.units = int(units)
         self.cell = cell
-        # if not isinstance(cells, list):
-        #     self.cells = [cells]
-        # else:
-        #     self.cells = cells
-        # self.nbr_of_cells = len(self.cells)
         self.nbr_of_chunks = nbr_of_chunks
 
         if self.debug:
@@ -162,18 +146,10 @@ class Play(Layer):
         self.bias_regularizer = regularizers.get(bias_regularizer)
         self.kernel_constraint = constraints.get(kernel_constraint)
         self.bias_constraint = constraints.get(bias_constraint)
-        # self.fixed_state = fixed_state
-
 
     def build(self, input_shape):
         if self.debug:
             print("Initalize *theta* as pre-defined...")
-            # self.kernel1 = tf.Variable([[1],
-            #                            [1],
-            #                            [1],
-            #                            [1]],
-            #                           name="theta1",
-            #                           dtype=tf.float32)
             self.kernel1 = tf.Variable([[1],
                                        [2],
                                        [3],
@@ -186,15 +162,7 @@ class Play(Layer):
                                       [-1],
                                       [-2]],
                                     name="bias1",
-                                    # shape=(self.units, 1),
                                     dtype=tf.float32)
-
-            # self.kernel2 = tf.Variable([[1],
-            #                             [1],
-            #                             [1],
-            #                             [1]],
-            #                            name="theta2",
-            #                            dtype=tf.float32)
 
             self.kernel2 = tf.Variable([[1],
                                         [2],
@@ -207,9 +175,6 @@ class Play(Layer):
                                      name="bias2",
                                      dtype=tf.float32)
 
-            # self.states = tf.Variable([0 for i in range(self.nbr_of_cells)],
-            #                           name="states",
-            #                           dtype=tf.float32)
             self.state = tf.Variable(0,
                                      name="state",
                                      dtype=tf.float32)
@@ -296,18 +261,15 @@ class Play(Layer):
         for i in range(self.nbr_of_chunks):
             if i == 0:
                 # question: only one weight or multiple weights?
-                # outputs1_ = self.cell.__call__(inputs[i*size_per_chunk:(i+1)*size_per_chunk], self.state)
                 outputs1_ = self.cell(inputs[i*size_per_chunk:(i+1)*size_per_chunk], self.state)
             else:
                 state = outputs1_list[-1][-1]   # retrieve the last output in previous play as intial state
-                # outputs1_ = self.cell.__call__(inputs[i*size_per_chunk:(i+1)*size_per_chunk], state)
                 outputs1_ = self.cell(inputs[i*size_per_chunk:(i+1)*size_per_chunk], state)
 
             outputs1_list.append(outputs1_)
 
         outputs1_ = tf.convert_to_tensor(outputs1_list)
         outputs1_ = tf.reshape(outputs1_, shape=(outputs1_.shape[1].value * outputs1_.shape[0].value,))
-        # return outputs1_
 
         outputs1 = outputs1_ * self.kernel1
         assert outputs1.shape.ndims == 2
