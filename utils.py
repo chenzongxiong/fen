@@ -86,7 +86,7 @@ _writer = None
 def get_tf_summary_writer(fpath="."):
     global _writer
     if _writer is None:
-        _writer = tf.summary.FileWriter(fpath, tf.get_default_graph())
+        _writer = tf.summary.FileWriter(fpath)
     return _writer
 
 

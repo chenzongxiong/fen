@@ -8,6 +8,8 @@ from tensorflow.python.keras import initializers
 from tensorflow.python.keras import constraints
 import numpy as np
 import utils
+import constants
+
 
 sess = tf.Session()
 
@@ -25,6 +27,7 @@ class PlayCell(Layer):
     def __init__(self,
                  weight=1.0,
                  width=1.0,
+                 # fixed_state=True,
                  kernel_initializer='glorot_uniform',
                  kernel_regularizer=None,
                  activity_regularizer=None,
@@ -41,12 +44,15 @@ class PlayCell(Layer):
         self.kernel_initializer = initializers.get(kernel_initializer)
         self.kernel_regularizer = regularizers.get(kernel_regularizer)
         self.kernel_constraint = constraints.get(kernel_constraint)
+        # self.fixed_state = fixed_state
 
     def build(self, input_shape):
         if self.debug:
             print("Initialize *weight* as pre-defined...")
-            # self.kernel = tf.Variable(self.weight, name="kernel", dtype=tf.float32).initialized_value()
             self.kernel = tf.Variable(self.weight, name="kernel", dtype=tf.float32)
+            if constants.DEBUG_INIT_TF_VALUE:
+                self.kernel = self.kernel.initialized_value()
+
             self._trainable_weights.append(self.kernel)
         else:
             print("Initialize *weight* randomly...")
@@ -58,10 +64,18 @@ class PlayCell(Layer):
                 constraint=self.kernel_constraint,
                 dtype=self.dtype,
                 trainable=True)
+            # self.state = self.add_weight(
+            #     'state',
+            #     shape=(),
+            #     initializer=self.kernel_initializer,
+            #     regularizer=self.kernel_regularizer,
+            #     constraint=self.kernel_constraint,
+            #     dtype=self.dtype,
+            #     trainable=self.fixed_state)
 
         self.built = True
 
-    def call(self, inputs, state):
+    def call(self, inputs, state=None):
         """
         Parameters:
         ----------------
@@ -69,6 +83,7 @@ class PlayCell(Layer):
         state: `state` is randomly initialized
         """
         inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
+
         state = ops.convert_to_tensor(state, dtype=self.dtype)
 
         outputs_ = tf.multiply(inputs, self.kernel)
@@ -107,9 +122,12 @@ class PlayCell(Layer):
 class Play(Layer):
     def __init__(self,
                  units,
+                 # cells,
                  cell,
+                 nbr_of_chunks=1,
                  activation="tanh",
                  use_bias=True,
+                 fixed_state=True,
                  kernel_initializer='glorot_uniform',
                  bias_initializer='zeros',
                  kernel_regularizer=None,
@@ -126,6 +144,12 @@ class Play(Layer):
 
         self.units = int(units)
         self.cell = cell
+        # if not isinstance(cells, list):
+        #     self.cells = [cells]
+        # else:
+        #     self.cells = cells
+        # self.nbr_of_cells = len(self.cells)
+        self.nbr_of_chunks = nbr_of_chunks
 
         if self.debug:
             self.units = 4
@@ -138,42 +162,74 @@ class Play(Layer):
         self.bias_regularizer = regularizers.get(bias_regularizer)
         self.kernel_constraint = constraints.get(kernel_constraint)
         self.bias_constraint = constraints.get(bias_constraint)
+        # self.fixed_state = fixed_state
+
 
     def build(self, input_shape):
         if self.debug:
             print("Initalize *theta* as pre-defined...")
+            # self.kernel1 = tf.Variable([[1],
+            #                            [1],
+            #                            [1],
+            #                            [1]],
+            #                           name="theta1",
+            #                           dtype=tf.float32)
             self.kernel1 = tf.Variable([[1],
-                                       [1],
-                                       [1],
-                                       [1]],
-                                      name="kernel1",
+                                       [2],
+                                       [3],
+                                       [4]],
+                                      name="theta1",
                                       dtype=tf.float32)
+
             self.bias1 = tf.Variable([[1],
-                                      [1],
+                                      [2],
                                       [-1],
-                                      [-1]],
+                                      [-2]],
                                     name="bias1",
                                     # shape=(self.units, 1),
                                     dtype=tf.float32)
 
+            # self.kernel2 = tf.Variable([[1],
+            #                             [1],
+            #                             [1],
+            #                             [1]],
+            #                            name="theta2",
+            #                            dtype=tf.float32)
+
             self.kernel2 = tf.Variable([[1],
-                                        [1],
-                                        [1],
-                                        [1]],
-                                       name="kernel2",
+                                        [2],
+                                        [3],
+                                        [4]],
+                                       name="theta2",
                                        dtype=tf.float32)
+
             self.bias2 = tf.Variable(1,
                                      name="bias2",
                                      dtype=tf.float32)
+
+            # self.states = tf.Variable([0 for i in range(self.nbr_of_cells)],
+            #                           name="states",
+            #                           dtype=tf.float32)
+            self.state = tf.Variable(0,
+                                     name="state",
+                                     dtype=tf.float32)
+            if constants.DEBUG_INIT_TF_VALUE:
+                self.kernel1 = self.kernel1.initialized_value()
+                self.kernel2 = self.kernel2.initialized_value()
+                self.bias1 = self.bias1.initialized_value()
+                self.bias2 = self.bias2.initialized_value()
+                self.state = self.state.initialized_value()
 
             self._trainable_weights.append(self.kernel1)
             self._trainable_weights.append(self.kernel2)
             self._trainable_weights.append(self.bias1)
             self._trainable_weights.append(self.bias2)
+            self._trainable_weights.append(self.state)
+
         else:
             print("Initalize *theta* randomly...")
             self.kernel1 = self.add_weight(
-                'kernel1',
+                'theta1',
                 shape=(self.units, 1),
                 initializer=self.kernel_initializer,
                 regularizer=self.kernel_regularizer,
@@ -182,8 +238,18 @@ class Play(Layer):
                 trainable=True)
 
             self.kernel2 = self.add_weight(
-                'kernel2',
+                'theta2',
                 shape=(self.units, 1),
+                initializer=self.kernel_initializer,
+                regularizer=self.kernel_regularizer,
+                constraint=self.kernel_constraint,
+                dtype=self.dtype,
+                trainable=True)
+
+            self.state = self.add_weight(
+                'state',
+                # shape=(self.nbr_of_cells, 1),
+                shape=(),
                 initializer=self.kernel_initializer,
                 regularizer=self.kernel_regularizer,
                 constraint=self.kernel_constraint,
@@ -214,9 +280,35 @@ class Play(Layer):
 
         self.built = True
 
-    def call(self, inputs, state):
+    def call(self, inputs, state=None):
+        # import ipdb; ipdb.set_trace()
+        if isinstance(inputs, np.ndarray):
+            size_of_sequence = inputs.shape[0]
+        else:
+            size_of_sequence = inputs.shape[0].value
 
-        outputs1_ = self.cell.__call__(inputs, state)
+        size_per_chunk = size_of_sequence // self.nbr_of_chunks
+
+        print("Using chunks: ", self.nbr_of_chunks)
+
+        outputs1_list = []
+
+        for i in range(self.nbr_of_chunks):
+            if i == 0:
+                # question: only one weight or multiple weights?
+                # outputs1_ = self.cell.__call__(inputs[i*size_per_chunk:(i+1)*size_per_chunk], self.state)
+                outputs1_ = self.cell(inputs[i*size_per_chunk:(i+1)*size_per_chunk], self.state)
+            else:
+                state = outputs1_list[-1][-1]   # retrieve the last output in previous play as intial state
+                # outputs1_ = self.cell.__call__(inputs[i*size_per_chunk:(i+1)*size_per_chunk], state)
+                outputs1_ = self.cell(inputs[i*size_per_chunk:(i+1)*size_per_chunk], state)
+
+            outputs1_list.append(outputs1_)
+
+        outputs1_ = tf.convert_to_tensor(outputs1_list)
+        outputs1_ = tf.reshape(outputs1_, shape=(outputs1_.shape[1].value * outputs1_.shape[0].value,))
+        # return outputs1_
+
         outputs1 = outputs1_ * self.kernel1
         assert outputs1.shape.ndims == 2
         # outputs = tf.reshape(outputs, shape=(outputs.shape[1].value, outputs.shape[0].value))
