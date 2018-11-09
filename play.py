@@ -7,9 +7,13 @@ from tensorflow.python.keras import activations
 from tensorflow.python.keras import initializers
 from tensorflow.python.keras import constraints
 import numpy as np
+
 import utils
 import constants
+import log as logging
 
+
+LOG = logging.getLogger(__name__)
 
 sess = tf.Session()
 
@@ -42,18 +46,19 @@ class PlayCell(Layer):
         self.width = width
         self.kernel_initializer = initializers.get(kernel_initializer)
         self.kernel_regularizer = regularizers.get(kernel_regularizer)
+        # TODO: try non negative constraint
         self.kernel_constraint = constraints.get(kernel_constraint)
 
     def build(self, input_shape):
         if self.debug:
-            print("Initialize *weight* as pre-defined...")
+            LOG.debug("Initialize *weight* as pre-defined...")
             self.kernel = tf.Variable(self.weight, name="kernel", dtype=tf.float32)
             if constants.DEBUG_INIT_TF_VALUE:
                 self.kernel = self.kernel.initialized_value()
 
             self._trainable_weights.append(self.kernel)
         else:
-            print("Initialize *weight* randomly...")
+            LOG.debug("Initialize *weight* randomly...")
             self.kernel = self.add_weight(
                 'kernel',
                 shape=(),
@@ -72,22 +77,31 @@ class PlayCell(Layer):
         inputs: `inputs` is a vector
         state: `state` is randomly initialized
         """
+        # TODO: test keras case
+        # import ipdb; ipdb.set_trace()
         inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
-
         state = ops.convert_to_tensor(state, dtype=self.dtype)
 
         outputs_ = tf.multiply(inputs, self.kernel)
         outputs = [state]
 
-        for index in range(outputs_.shape[-1].value):
-            phi_ = Phi(outputs_[index]-outputs[-1], width=self.width) + outputs[-1]
-            outputs.append(phi_)
+        if inputs.shape.ndims == 1:
+            # simple tensorflow call, doesn't introduce `batch`
+            for index in range(outputs_.shape[-1].value):
+                phi_ = Phi(outputs_[index]-outputs[-1], width=self.width) + outputs[-1]
+                outputs.append(phi_)
+        elif inputs.shape.ndims == 2:
+            # call from keras, introduce `batch` here
+            for index in range(outputs_.shape[-1].value):
+                phi_ = Phi(outputs_[:,index]-outputs[-1], width=self.width) + outputs[-1]
+                outputs.append(phi_)
+        else:
+            raise
 
         outputs = tf.convert_to_tensor(outputs[1:])
-        if outputs.shape.ndims == 2 and outputs.shape[1].value == 1:
-            outputs = tf.reshape(outputs, shape=(outputs.shape[0].value,))
-        elif outputs.shape.ndims > 2:
-            raise
+
+        outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
+        # assert outputs.shape[-1] == inputs.shape[-1]
 
         return outputs
 
@@ -149,7 +163,7 @@ class Play(Layer):
 
     def build(self, input_shape):
         if self.debug:
-            print("Initalize *theta* as pre-defined...")
+            LOG.debug("Initalize *theta* as pre-defined...")
             self.kernel1 = tf.Variable([[1],
                                        [2],
                                        [3],
@@ -192,7 +206,7 @@ class Play(Layer):
             self._trainable_weights.append(self.state)
 
         else:
-            print("Initalize *theta* randomly...")
+            LOG.debug("Initalize *theta* randomly...")
             self.kernel1 = self.add_weight(
                 'theta1',
                 shape=(self.units, 1),
@@ -245,36 +259,43 @@ class Play(Layer):
 
         self.built = True
 
-    def call(self, inputs, state=None):
+    def call(self, inputs):
         # import ipdb; ipdb.set_trace()
-        if isinstance(inputs, np.ndarray):
-            size_of_sequence = inputs.shape[0]
-        else:
-            size_of_sequence = inputs.shape[0].value
+        # make it work under keras
+        # if inputs.shape.ndims == 2:
+        #      if inputs.shape[1].value == 1:
+        #         inputs = tf.reshape(inputs, shape=(inputs.shape[0].value,))
+        #     else:
+        #         raise
 
-        size_per_chunk = size_of_sequence // self.nbr_of_chunks
+        # if isinstance(inputs, np.ndarray):
+        #     size_of_sequence = inputs.shape[0]
+        # else:
+        #     size_of_sequence = inputs.shape[0].value
+        #     # size_of_sequence = inputs.shape[-1].value
 
-        print("Using chunks: ", self.nbr_of_chunks)
+        # size_per_chunk = size_of_sequence // self.nbr_of_chunks
 
-        outputs1_list = []
+        # print("Using chunks: ", self.nbr_of_chunks)
 
-        for i in range(self.nbr_of_chunks):
-            if i == 0:
-                # question: only one weight or multiple weights?
-                outputs1_ = self.cell(inputs[i*size_per_chunk:(i+1)*size_per_chunk], self.state)
-            else:
-                state = outputs1_list[-1][-1]   # retrieve the last output in previous play as intial state
-                outputs1_ = self.cell(inputs[i*size_per_chunk:(i+1)*size_per_chunk], state)
+        # outputs1_list = []
 
-            outputs1_list.append(outputs1_)
+        # for i in range(self.nbr_of_chunks):
+        #     if i == 0:
+        #         # question: only one weight or multiple weights?
+        #         outputs1_ = self.cell(inputs[i*size_per_chunk:(i+1)*size_per_chunk], self.state)
+        #     else:
+        #         state = outputs1_list[-1][-1]   # retrieve the last output in previous play as intial state
+        #         outputs1_ = self.cell(inputs[i*size_per_chunk:(i+1)*size_per_chunk], state)
 
-        outputs1_ = tf.convert_to_tensor(outputs1_list)
-        outputs1_ = tf.reshape(outputs1_, shape=(outputs1_.shape[1].value * outputs1_.shape[0].value,))
+        #     outputs1_list.append(outputs1_)
 
-        outputs1 = outputs1_ * self.kernel1
+        # outputs1_ = tf.convert_to_tensor(outputs1_list)
+
+        # outputs1_ = tf.reshape(outputs1_, shape=(outputs1_.shape[1].value * outputs1_.shape[0].value,))
+        outputs1_ = self.cell(inputs, self.state)   # shape = (None, 1200)
+        outputs1 = outputs1_ * self.kernel1         # shape = (4, 1200)
         assert outputs1.shape.ndims == 2
-        # outputs = tf.reshape(outputs, shape=(outputs.shape[1].value, outputs.shape[0].value))
-        # assert outputs.shape[1].value == self.units
 
         if self.bias1 is not None:
             outputs1 += self.bias1
@@ -282,18 +303,26 @@ class Play(Layer):
             outputs1 =  self.activation(outputs1)
 
         # move forward
-        outputs2 = outputs1 * self.kernel2
-        outputs2 = tf.reduce_sum(outputs2, axis=0)
+        outputs2 = outputs1 * self.kernel2         # shape = (4, 1200)
+        outputs2 = tf.reduce_sum(outputs2, axis=0)   # shape = (1200, )
 
         if self.bias2 is not None:
             outputs2 += self.bias2
 
         assert outputs2.shape.ndims == 1
-        return outputs2
+        # outputs2 = tf.reshape(outputs2, shape=(outputs2.shape[0], 1))
+        return outputs2                   # shape = (1200,)
 
     def compute_output_shape(self, input_shape):
+        # import ipdb; ipdb.set_trace()
         input_shape = tensor_shape.TensorShape(input_shape)
-        outputs_shape = (input_shape[-1].value,)
+        if input_shape.ndims == 1:
+            output_shape = (input_shape[0].value, 1)
+        elif input_shape.ndims == 2:
+            if input_shape[1].value == 1:
+                output_shape = (input_shape[0].value, 1)
+            else:
+                raise
         return tensor_shape.TensorShape(output_shape)
 
     def get_config(self):
@@ -352,11 +381,11 @@ if __name__ == "__main__":
 
     for i in range(epochs):
         _, loss_value = sess.run((opt, loss))
-        print("epoch", i, "loss:", loss_value,
-              ", weight: ", cell.kernel.eval(session=sess).tolist(),
-              ", theta1: ", layer.kernel1.eval(session=sess).tolist(),
-              ", theta2: ", layer.kernel2.eval(session=sess).tolist(),
-              ", bias1: ", layer.bias1.eval(session=sess).tolist(),
-              ", bias2: ", layer.bias2.eval(session=sess).tolist())
+        LOG.debug("epoch", i, "loss:", loss_value,
+                  ", weight: ", cell.kernel.eval(session=sess).tolist(),
+                  ", theta1: ", layer.kernel1.eval(session=sess).tolist(),
+                  ", theta2: ", layer.kernel2.eval(session=sess).tolist(),
+                  ", bias1: ", layer.bias1.eval(session=sess).tolist(),
+                  ", bias2: ", layer.bias2.eval(session=sess).tolist())
 
-    print("========================================")
+    LOG.debug("========================================")
