@@ -15,7 +15,7 @@ def save(inputs, outputs, fname):
     np.savetxt(fname, res, fmt="%.3f", delimiter=",")
 
 
-def load(fname):
+def load_data(fname, split=1):
     data = np.loadtxt(fname, skiprows=0, delimiter=",", dtype=np.float32)
     inputs, outputs = data[:, 0], data[:, 1:].T
     assert len(inputs.shape) == 1
@@ -25,8 +25,13 @@ def load(fname):
             outputs = outputs.reshape(d,)
         if d == 1:
             outputs = outputs.reshape(n,)
+    if split == 1:
+        return inputs, outputs
 
-    return inputs, outputs
+    split_index = int(split * inputs.shape[0])
+    train_inputs, train_outputs = inputs[:split_index], outputs[:split_index]
+    test_inputs, test_outputs = inputs[split_index:], outputs[split_index:]
+    return (train_inputs, train_outputs), (test_inputs, test_outputs)
 
 
 def update(i, *fargs):

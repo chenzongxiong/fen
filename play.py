@@ -78,7 +78,6 @@ class PlayCell(Layer):
         state: `state` is randomly initialized
         """
         # TODO: test keras case
-        # import ipdb; ipdb.set_trace()
         inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
         state = ops.convert_to_tensor(state, dtype=self.dtype)
 
@@ -95,6 +94,10 @@ class PlayCell(Layer):
             for index in range(outputs_.shape[-1].value):
                 phi_ = Phi(outputs_[:,index]-outputs[-1], width=self.width) + outputs[-1]
                 outputs.append(phi_)
+            # assert inputs.shape[1].value == 1
+            # for index in range(outputs_.shape[0].value):
+            #     phi_ = Phi(outputs_[index, :]-outputs[-1], width=self.width) + outputs[-1]
+            #     outputs.append(phi_)
         else:
             raise
 
@@ -102,7 +105,7 @@ class PlayCell(Layer):
 
         outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
         # assert outputs.shape[-1] == inputs.shape[-1]
-
+        LOG.debug("PlayCell inputs.shape: {}, output.shape: {}".format(inputs.shape, outputs.shape))
         return outputs
 
     def compute_output_shape(self, input_shape):
@@ -291,7 +294,6 @@ class Play(Layer):
         #     outputs1_list.append(outputs1_)
 
         # outputs1_ = tf.convert_to_tensor(outputs1_list)
-
         # outputs1_ = tf.reshape(outputs1_, shape=(outputs1_.shape[1].value * outputs1_.shape[0].value,))
         outputs1_ = self.cell(inputs, self.state)   # shape = (None, 1200)
         outputs1 = outputs1_ * self.kernel1         # shape = (4, 1200)
@@ -309,12 +311,10 @@ class Play(Layer):
         if self.bias2 is not None:
             outputs2 += self.bias2
 
-        assert outputs2.shape.ndims == 1
-        # outputs2 = tf.reshape(outputs2, shape=(outputs2.shape[0], 1))
+        LOG.debug("Play, inputs.shape: {}, outputs.shape: {}".format(inputs.shape, outputs2.shape))
         return outputs2                   # shape = (1200,)
 
     def compute_output_shape(self, input_shape):
-        # import ipdb; ipdb.set_trace()
         input_shape = tensor_shape.TensorShape(input_shape)
         if input_shape.ndims == 1:
             output_shape = (input_shape[0].value, 1)

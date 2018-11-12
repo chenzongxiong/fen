@@ -29,39 +29,13 @@ class PlayModel(tf.keras.Model):
         ----------------
         inputs: `inputs` is a vector, assert len(inputs.shape) == 1
         """
-        import ipdb; ipdb.set_trace()
-        # tensorflow case
-        if isinstance(inputs, np.ndarray):
-            num_sequence = inputs.shape[0]
-        # keras case, inputs.shape -> (None, 1200)
-        elif isinstance(inputs, tf.Tensor):
-            num_sequence = inputs.shape[-1].value
-
-        # num_batches = num_sequence // self._batch_size
-        # batches = [(i*self._batch_size, (i+1)*self._batch_size) for i in range(num_batches)]
-
-        # outputs = []
-        # for play in self._plays:
-        #     output = []
-        #     for batch_start, batch_end in batches:
-        #         if len(inputs.shape) == 1:
-        #             output.append(play(inputs[batch_start:batch_end]))
-        #         elif len(inputs.shape) == 2:
-        #             output.append(play(inputs[:, batch_start:batch_end]))
-        #         else:
-        #             raise
-        #     outputs.append(output)
+        # import ipdb; ipdb.set_trace()
         outputs = []
         for play in self._plays:
             outputs.append(play(inputs))
 
-        import ipdb; ipdb.set_trace()
         outputs = tf.convert_to_tensor(outputs, dtype=self.dtype)   # (nb_plays, nb_batches, batch_size)
-
-        # assert outputs.shape[0].value == self._nb_plays
-
-        # outputs = tf.reshape(outptus, shape=(outputs.shape[1].value,
-        #                                      outputs.shape[2].value))
+        outputs = tf.reduce_sum(outputs, axis=0)
         LOG.debug("outputs.shape: {}".format(outputs.shape))  # (nb_plays, nb_batches, batch_size)
         return outputs
 
@@ -78,25 +52,34 @@ if __name__ == "__main__":
     width = 5
 
     fname = "./training-data/operators/{}-{}-{}.csv".format(method, weight, width)
-    inputs, outputs = utils.load(fname)
-    inputs = inputs.reshape(1, inputs.shape[0])
-    outputs = outputs.reshape(1, outputs.shape[0])
+    (train_inputs, train_outputs), (test_inputs, test_outputs) = utils.load_data(fname, split=0.6)
+
+    samples_per_batch = 10
+
+    train_samples = train_inputs.shape[0] // samples_per_batch
+    train_inputs = train_inputs.reshape(train_samples, samples_per_batch)  # samples * sequences
+    train_outputs = train_outputs.reshape(train_samples, samples_per_batch)  # samples * sequences
+
+    test_samples = test_inputs.shape[0] // samples_per_batch
+    test_inputs = test_inputs.reshape(test_samples, samples_per_batch)  # samples * sequences
+    test_outputs = test_outputs.reshape(test_samples, samples_per_batch)  # samples * sequences
 
     optimizer = tf.train.GradientDescentOptimizer(0.01)
-    batch_size = 600
-    nb_players = 1
+    # NOTE: trick here, always set batch_size to 1, then reshape the input sequence.
+    batch_size = 1
+    nb_players = 3
     play_model = PlayModel(nb_players, batch_size)
 
     play_model.compile(loss="mse",
                        optimizer=optimizer,
                        metrics=["mse"])
 
-    import ipdb; ipdb.set_trace()
-    LOG.debug("inputs.shape: {}, outputs.shape: {}".format(inputs.shape, outputs.shape))
+    LOG.debug("train_inputs.shape: {}, train_outputs.shape: {}".format(train_inputs.shape, train_outputs.shape))
     LOG.debug("Fitting...")
-    play_model.fit(inputs, outputs, epochs=500, verbose=0, batch_size=batch_size,
-                   shuffle=False)
-
-    import ipdb; ipdb.set_trace()
+    early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor="loss", patience=5)
+    play_model.fit(train_inputs, train_outputs, epochs=5000, verbose=1, batch_size=batch_size,
+                   shuffle=False, callbacks=[early_stopping_callback])
     LOG.debug("Evaluating...")
-    loss, mse = play_model.evaluate(inputs, outputs, verbose=0, batch_size=batch_size)
+    # loss, mse = play_model.evaluate(train_inputs, train_outputs, verbose=1, batch_size=batch_size)
+    loss, mse = play_model.evaluate(test_inputs, test_outputs, verbose=1, batch_size=batch_size)
+    LOG.info("loss: {}, mse: {}".format(loss, mse))
