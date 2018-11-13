@@ -2,9 +2,12 @@ import numpy as np
 import tensorflow as tf
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
+import log as logging
+
+LOG = logging.getLogger(__name__)
 
 
-def save(inputs, outputs, fname):
+def save_data(inputs, outputs, fname):
     if len(inputs.shape) == 1:
         inputs = inputs.reshape(inputs.shape[0], 1)
     if len(outputs.shape) == 1:
@@ -42,37 +45,31 @@ def update(i, *fargs):
     since = fargs[4]
     step = fargs[5]
 
+    if i % 100 == 0:
+        LOG.info("Update animation frame: {}, step: {}".format(i, step))
+
     shape = inputs.shape
-
-
-    if len(shape) == 1:
-        if since is not None:
-            idx = i // since
-            if idx >= len(colors):
-                idx = -1                      # force to always use the last color type
-            ax.scatter(inputs[i:i+step], outputs[i:i+step], color=colors[idx])
-        else:
-            ax.scatter(inputs[i:i+step], outputs[i:i+step], color=colors[0])
-    elif len(shape) == 2:
-        if since is not None:
-            ax.scatter(inputs[i:i+step, 0], outputs[i:i+step, 0], color=colors[0])
-            ax.scatter(inputs[i:i+step, 1], outputs[i:i+step, 1], color=colors[1])
-        else:
-            ax.scatter(inputs[i:i+step, 0], outputs[i:i+step, 0], color=colors[0])
-            ax.scatter(inputs[i:i+step, 1], outputs[i:i+step, 1], color=colors[1])
+    for x in range(len(colors)):
+        ax.scatter(inputs[i:i+step, x], outputs[i:i+step, x], color=colors[x])
 
 
 def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
                    colors=["black"], step=1, since=None):
+    assert inputs.shape == outputs.shape
+
     if xlim is None:
         xlim = [np.min(inputs) - 1, np.max(inputs) + 1]
     if ylim is None:
         ylim = [np.min(outputs) - 1, np.max(outputs) + 1]
 
-    assert inputs.shape == outputs.shape
+    if len(inputs.shape) == 1:
+        inputs = inputs.reshape(-1, 1)
+        outputs = outputs.reshape(-1, 1)
 
     if not isinstance(colors, list):
         colors = [colors]
+
+    assert len(colors) == inputs.shape[1]
 
     fig, ax = plt.subplots(figsize=(20, 20))
     fig.set_tight_layout(True)
@@ -83,6 +80,17 @@ def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
     anim = FuncAnimation(fig, update, frames=np.arange(0, points, step),
                          fargs=(inputs, outputs, ax, colors, since, step), interval=300)
     anim.save(fname, dpi=40, writer='imagemagick')
+
+
+
+
+COLORS = ["blue", "red", "green", "magenta", "yellow", "black", "cyan"]
+
+def generate_colors(length=1):
+    if (length >= len(COLORS)):
+        LOG.error("Doesn't have enough colors")
+        raise
+    return COLORS[:length]
 
 
 _writer = None
