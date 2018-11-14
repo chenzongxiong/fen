@@ -9,13 +9,15 @@ from tensorflow.python.keras import constraints
 import numpy as np
 
 import utils
+import colors
 import constants
+
 import log as logging
 
 
 LOG = logging.getLogger(__name__)
 
-sess = tf.Session()
+sess = utils.get_session()
 
 
 def Phi(x, width=1.0):
@@ -105,7 +107,8 @@ class PlayCell(Layer):
 
         outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
         # assert outputs.shape[-1] == inputs.shape[-1]
-        LOG.debug("PlayCell inputs.shape: {}, output.shape: {}".format(inputs.shape, outputs.shape))
+        LOG.debug("{} inputs.shape: {}, output.shape: {}".format(colors.red("PlayCell"),
+                                                                 inputs.shape, outputs.shape))
         return outputs
 
     def compute_output_shape(self, input_shape):
@@ -311,7 +314,8 @@ class Play(Layer):
         if self.bias2 is not None:
             outputs2 += self.bias2
 
-        LOG.debug("Play, inputs.shape: {}, outputs.shape: {}".format(inputs.shape, outputs2.shape))
+        LOG.debug("{}, inputs.shape: {}, outputs.shape: {}".format(colors.red("Play"),
+                                                                   inputs.shape, outputs2.shape))
         return outputs2                   # shape = (1200,)
 
     def compute_output_shape(self, input_shape):

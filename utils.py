@@ -42,20 +42,31 @@ def update(i, *fargs):
     outputs = fargs[1]
     ax = fargs[2]
     colors = fargs[3]
-    since = fargs[4]
+    mode = fargs[4]
     step = fargs[5]
+    if mode == "snake":
+        xlim = fargs[6]
+        ylim = fargs[7]
+        ax.clear()
+        ax.set_xlim(xlim)
+        ax.set_ylim(ylim)
 
     if i % 100 == 0:
         LOG.info("Update animation frame: {}, step: {}".format(i, step))
 
     shape = inputs.shape
-    for x in range(len(colors)):
-        ax.scatter(inputs[i:i+step, x], outputs[i:i+step, x], color=colors[x])
+    if mode == "sequence":
+        for x in range(len(colors)):
+            ax.scatter(inputs[i:i+step, x], outputs[i:i+step, x], color=colors[x])
+    elif mode == "snake":
+        for x in range(len(colors)):
+            ax.scatter(inputs[i:i+10, x], outputs[i:i+10, x], color=colors[x])
 
 
 def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
-                   colors=["black"], step=1, since=None):
+                   colors=["black"], step=1, mode="sequence"):
     assert inputs.shape == outputs.shape
+    assert mode in ["sequence", "snake"]
 
     if xlim is None:
         xlim = [np.min(inputs) - 1, np.max(inputs) + 1]
@@ -73,18 +84,17 @@ def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
 
     fig, ax = plt.subplots(figsize=(20, 20))
     fig.set_tight_layout(True)
+    points = inputs.shape[0]
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
-    points = inputs.shape[0]
+    fargs=(inputs, outputs, ax, colors, mode, step, xlim, ylim)
 
     anim = FuncAnimation(fig, update, frames=np.arange(0, points, step),
-                         fargs=(inputs, outputs, ax, colors, since, step), interval=300)
+                         fargs=fargs, interval=300)
     anim.save(fname, dpi=40, writer='imagemagick')
 
 
-
-
-COLORS = ["blue", "red", "green", "magenta", "yellow", "black", "cyan"]
+COLORS = ["blue", "black", "orange", "cyan", "red", "magenta", "yellow", "green"]
 
 def generate_colors(length=1):
     if (length >= len(COLORS)):
@@ -92,15 +102,20 @@ def generate_colors(length=1):
         raise
     return COLORS[:length]
 
+# TODO: test tf summary writer
+class TFSummaryFileWriter(object):
+    _writer = None
+    def __new__(cls, fpath="."):
+        if not cls._writer:
+            cls._writer = tf.summary.FileWriter(fpath)
+        return cls._writer
 
-_writer = None
+writer = TFSummaryFileWriter()
+
+def get_tf_summary_writer():
+    global writer
+    return writer
 
 
-def get_tf_summary_writer(fpath="."):
-    global _writer
-    if _writer is None:
-        _writer = tf.summary.FileWriter(fpath)
-    return _writer
-
-
-writer = None
+def get_session():
+    return tf.keras.backend.get_session()
