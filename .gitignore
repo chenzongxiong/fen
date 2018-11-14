@@ -1,3 +1,5 @@
 .DS_Store
+TODO.org
 __pycache__/*
 log/*
+tmp/*

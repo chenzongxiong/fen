@@ -9,10 +9,9 @@ import log as logging
 
 
 LOG = logging.getLogger(__name__)
-CSV_COLUMN_NAMES = ["x", "y"]
 
 
-class DatasetGenerator():
+class DatasetGenerator(object):
     @classmethod
     def systhesis_input_generator(cls, points):
         # NOTE: x = sin(t) + 3 sin(1.3 t)  + 1.2 sin (1.6 t)
@@ -60,35 +59,66 @@ class DatasetGenerator():
             return _inputs, plays_outputs.sum(axis=1)
 
 
+class DatasetLoader(object):
+    SPLIT_RATIO = 0.6
+    _CACHED_DATASET = {}
 
-def load_data(fname):
-    # data = np.loadtxt(fname, skiprows=0, delimiter=",", dtype=np.float32)
-    # inputs, outputs = data[:, 0], data[:, 1:].T
-    # assert len(inputs.shape) == 1
-    # if len(outputs.shape) == 2:
-    #     n, d = outputs.shape
-    #     if n == 1:
-    #         outputs = outputs.reshape(d,)
-    #     if d == 1:
-    #         outputs = outputs.reshape(n,)
-    data = pd.read_csv(fname, names=CSV_COLUMN_NAMES, header=0)
-    inputs, outputs = data, data.pop("y")
-    # inputs = inputs.reshape(1, inputs.shape[0])
-    # outputs = outputs.reshape(1, outputs.shape[0])
-    return inputs, outputs
+    @classmethod
+    def load_data(cls, fname):
+        if fname in cls._CACHED_DATASET:
+            return cls._CACHED_DATASET[fname]
+
+        data = np.loadtxt(fname, skiprows=0, delimiter=",", dtype=np.float32)
+        inputs, outputs = data[:, 0], data[:, 1:].T
+        assert len(inputs.shape) == 1
+        if len(outputs.shape) == 2:
+            n, d = outputs.shape
+            if n == 1:
+                outputs = outputs.reshape(d,)
+            if d == 1:
+                outputs = outputs.reshape(n,)
+
+        cls._CACHED_DATASET[fname] = (inputs, outputs)
+        return inputs, outputs
+
+    @classmethod
+    def load_train_data(cls, fname):
+        if fname in cls._CACHED_DATASET:
+            inputs, outputs = cls._CACHED_DATASET[fname]
+            LOG.debug("Load train dataset {} from cache".format(colors.red(fname)))
+        else:
+            inputs, outputs = cls.load_data(fname)
+            cls._CACHED_DATASET[fname] = (inputs, outputs)
+
+        split_index = int(cls.SPLIT_RATIO * inputs.shape[0])
+        train_inputs, train_outputs = inputs[:split_index], outputs[:split_index]
+        return train_inputs, train_outputs
+
+    @classmethod
+    def load_test_data(cls, fname):
+        if fname in cls._CACHED_DATASET:
+            inputs, outputs = cls._CACHED_DATASET[fname]
+            LOG.debug("Load test dataset {} from cache".format(colors.red(fname)))
+        else:
+            inputs, outputs = cls.load_data(fname)
+            cls._CACHED_DATASET[fname] = (inputs, outputs)
+
+        split_index = int(cls.SPLIT_RATIO * inputs.shape[0])
+        test_inputs, test_outputs = inputs[split_index:], outputs[split_index:]
+        return test_inputs, test_outputs
 
 
-def train_input_fn(inputs, outputs, batch_size):
-    # dataset = tf.data.Dataset.from_tensor_slices((dict(inputs), outputs))
-    # dataset = tf.data.Dataset.from_tensor_slices((inputs, outputs))
-    inputs = inputs.values
-    inputs = inputs.reshape(1, inputs.shape[0])
-    outputs = outputs.values
-    outputs = outputs.reshape(1, outputs.shape[0])
+class DatasetSaver(object):
+    @staticmethod
+    def save_data(inputs, outputs, fname):
+        assert len(inputs.shape) == 1, "length of inputs.shape must be equal to 1."
+        assert inputs.shape[0] == outputs.shape[0], \
+          "inputs.shape[0] is: {}, whereas outputs.shape[0] is {}.".format(inputs.shape[0], outputs.shape[0])
 
-    dataset = tf.data.Dataset.from_tensor_slices((inputs, outputs))
+        if len(inputs.shape) == 1:
+            inputs = inputs.reshape(-1, 1)
+        if len(outputs.shape) == 1:
+            outputs = outputs.reshape(-1, 1)
 
-    import ipdb; ipdb.set_trace()
-    # dataset = dataset.shuffle(1000).repeat().batch(batch_size)
-    dataset = dataset.repeat().batch(batch_size)
-    return dataset
+        res = np.hstack([inputs, outputs])
+        np.savetxt(fname, res, fmt="%.3f", delimiter=",")

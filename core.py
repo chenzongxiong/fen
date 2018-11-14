@@ -347,6 +347,73 @@ class Play(Layer):
         return dict(list(base_config.items()) + list(config.items()))
 
 
+class PlayModel(tf.keras.Model):
+    def __init__(self, nb_plays, units=4, batch_size=1, *args, **kwargs):
+        super(PlayModel, self).__init__(name="play_model")
+
+        self.debug = kwargs.pop("debug", False)
+
+        self._nb_plays = nb_plays
+        self._plays = []
+        # self._batch_size = batch_size
+
+        for _ in range(self._nb_plays):
+            cell = PlayCell(debug=self.debug)
+            play = Play(units=units, cell=cell, debug=self.debug)
+            self._plays.append(play)
+        self.plays_outputs = None
+
+    def call(self, inputs, debug=False):
+        """
+        Parameters:
+        ----------------
+        inputs: `inputs` is a vector, assert len(inputs.shape) == 1
+        """
+        # import ipdb; ipdb.set_trace()
+        outputs = []
+        for play in self._plays:
+            outputs.append(play(inputs))
+
+        outputs = tf.convert_to_tensor(outputs, dtype=self.dtype)   # (nb_plays, nb_batches, batch_size)
+        self.plays_outputs = outputs
+        LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
+                                                outputs.shape))  # (nb_plays, nb_batches, batch_size)
+        outputs = tf.reduce_sum(outputs, axis=0)
+        LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
+                                                outputs.shape))  # (nb_plays, nb_batches, batch_size)
+        outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
+        if debug is True:
+            return outputs, self.plays_outputs
+        else:
+            return outputs
+
+    def get_config(self):
+        config = {
+            "nb_plays": self._nb_plays,
+            # "batch_size": self._batch_size,
+            "debug": self.debug,
+        }
+
+        return config
+
+    def get_plays_outputs(self, inputs, batch_size=1):
+        # if not sess:
+        #     sess = tf.keras.backend.get_session()
+        sess = utils.get_session()
+        assert len(inputs.shape) == 2
+        samples, _ = inputs.shape
+
+        plays_outputs_list = []
+        for x in range(samples):
+            outputs, plays_outputs = self.__call__(inputs[x,:], debug=True)
+            outputs_eval = sess.run(outputs)
+            plays_outputs_eval = sess.run(plays_outputs)
+            plays_outputs_list.append(plays_outputs_eval)
+
+        return np.hstack(plays_outputs_list).T
+
+
+
 if __name__ == "__main__":
     method = "sin"
     weight = 1.0
