@@ -32,6 +32,7 @@ def fit(inputs, outputs, width, method, true_weight):
 
     epochs = 500
 
+    loss_value = None
     for i in range(epochs):
         _, loss_value = sess.run((opt, loss))
         if i % 10 == 0:         # every 10 times
@@ -42,7 +43,7 @@ def fit(inputs, outputs, width, method, true_weight):
 
     state = tf.constant(0, dtype=tf.float32)
     predictions = cell(inputs, state)
-    return sess.run(predictions)
+    return sess.run(predictions), loss_value
 
 
 if __name__ == '__main__':
@@ -56,6 +57,8 @@ if __name__ == '__main__':
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
                 fname = constants.FNAME_FORMAT["operators"].format(method=method, weight=weight, width=width)
                 inputs, outputs = tdata.DatasetLoader.load_data(fname)
-                predictions = fit(inputs, outputs, width, method, weight)
+                predictions, loss = fit(inputs, outputs, width, method, weight)
+                fname = constants.FNAME_FORMAT["operators_loss"].format(method=method, weight=weight, width=width)
+                tdata.DatasetSaver.save_loss({"loss": loss_value}, fname)
                 fname = constants.FNAME_FORMAT["operators_predictions"].format(method=method, weight=weight, width=width)
                 tdata.DatasetSaver.save_data(inputs, predictions, fname)

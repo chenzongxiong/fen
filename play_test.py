@@ -39,7 +39,7 @@ def fit(inputs, outputs, units, activation, width, true_weight, method="sin", nb
     sess.run(init)
 
     epochs = 500
-    loss_value = -1;
+    loss_value = None
     for i in range(epochs):
         _, loss_value = sess.run((opt, loss))
         if i % 10 == 0:
@@ -59,7 +59,7 @@ def fit(inputs, outputs, units, activation, width, true_weight, method="sin", nb
     state = tf.constant(0, dtype=tf.float32)
     predictions = layer(inputs, state)
 
-    return sess.run(predictions)
+    return sess.run(predictions), loss_value
 
 
 if __name__ == "__main__":
@@ -79,7 +79,10 @@ if __name__ == "__main__":
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
                 # increase *units* in order to increase the capacity of the model
                 for units in _units:
-                    predictions = fit(inputs, outputs_, _units, activation, width, weight, method=method)
+                    predictions, loss = fit(inputs, outputs_, _units, activation, width, weight, method=method)
+                    fname = constants.FNAME_FORMAT["plays_loss"].format(method=method, weight=weight,
+                                                                        width=width, activation=activation, units=units)
+                    tdata.DatasetSaver.save_loss({"loss": loss}, fname)
                     fname = constants.FNAME_FORMAT["plays_predictions"].format(method=method, weight=weight,
                                                                                width=width, activation=activation, units=units)
                     tdata.DatasetSaver.save_data(inputs, predictions, fname)

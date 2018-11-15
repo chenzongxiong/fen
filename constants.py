@@ -15,12 +15,19 @@ BATCH_SIZE_LIST = [4, 16, 64, 320, 1600]
 FNAME_FORMAT = dict(
     operators="./training-data/operators/{method}-{weight}-{width}.csv",
     operators_predictions="./training-data/operators/{method}-{weight}-{width}-predictions.csv",
+    operators_loss="./training-data/operators/{method}-{weight}-{width}-loss.csv",
+    operators_gif="./pics/operators/{method}-{weight}-{width}.gif",
+
     plays="./training-data/plays/{method}-{weight}-{width}-tanh.csv",
     plays_predictions="./training-data/plays/{method}-{weight}-{width}-{activation}-{units}-predictions.csv",
+    plays_loss = "./training-data/plays/{method}-{weight}-{width}-{activation}-{units}-loss.csv",
+    plays_gif="./pics/plays/{method}-{weight}-{width}-{activation}-{units}.gif"
 
     models="./training-data/models/{method}-{weight}-{width}-{nb_plays}.csv",
     models_multi="./training-data/models/{method}-{weight}-{width}-{nb_plays}-multi.csv",
-    models_loss="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}loss.csv",
+    models_loss="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-loss.csv",
     models_predictions="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-predictions.csv",
     models_multi_predictions="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-multi-predictions.csv",
+    models_gif="./pics/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}.gif",
+    models_multi_gif="./pics/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-multi.gif",
 )
