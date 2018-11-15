@@ -78,13 +78,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--operator", dest="operator",
                         required=False,
-                        action="store_true")
+                        action="store_true",
+                        help="generate operators' dataset")
     parser.add_argument("--play", dest="play",
                         required=False,
-                        action="store_true")
+                        action="store_true",
+                        help="generate plays' dataset")
     parser.add_argument("--model", dest="model",
                         required=False,
-                        action="store_true")
+                        action="store_true",
+                        help="generate models' dataset")
 
 
     argv = parser.parse_args(sys.argv[1:])

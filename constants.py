@@ -21,7 +21,7 @@ FNAME_FORMAT = dict(
     plays="./training-data/plays/{method}-{weight}-{width}-tanh.csv",
     plays_predictions="./training-data/plays/{method}-{weight}-{width}-{activation}-{units}-predictions.csv",
     plays_loss = "./training-data/plays/{method}-{weight}-{width}-{activation}-{units}-loss.csv",
-    plays_gif="./pics/plays/{method}-{weight}-{width}-{activation}-{units}.gif"
+    plays_gif="./pics/plays/{method}-{weight}-{width}-{activation}-{units}.gif",
 
     models="./training-data/models/{method}-{weight}-{width}-{nb_plays}.csv",
     models_multi="./training-data/models/{method}-{weight}-{width}-{nb_plays}-multi.csv",
