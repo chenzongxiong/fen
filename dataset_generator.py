@@ -2,7 +2,6 @@ import sys
 import argparse
 
 import numpy as np
-
 import trading_data as tdata
 import log as logging
 import constants
@@ -13,9 +12,11 @@ LOG = logging.getLogger(__name__)
 methods = constants.METHODS
 weights = constants.WEIGHTS
 widths = constants.WIDTHS
+_nb_plays = constants.NB_PLAYS
+points = constants.POINTS
 
 
-def operator_generator(points=1000):
+def operator_generator():
     states = [0, 1, 4, 7, 10 -1, -4, -7, -10]
 
     for method in methods:
@@ -37,7 +38,7 @@ def operator_generator(points=1000):
                 tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
 
-def play_generator(points=1000):
+def play_generator():
     for method in methods:
         for weight in weights:
             for width in widths:
@@ -53,7 +54,7 @@ def play_generator(points=1000):
                 tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
 
-def model_generator(points=1000, nb_plays=1):
+def model_generator():
     for method in methods:
         for weight in weights:
             for width in widths:
@@ -63,13 +64,14 @@ def model_generator(points=1000, nb_plays=1):
                 except FileNotFoundError:
                     inputs = None
 
-                inputs, outputs, plays_outputs = tdata.DatasetGenerator.systhesis_model_generator(
-                    nb_plays=nb_plays, points=points, debug_plays=True, inputs=inputs)
-                fname = "./training-data/models/{}-{}-{}-{}.csv".format(method, weight, width, nb_plays)
-                tdata.DatasetSaver.save_data(inputs, outputs, fname)
+                for nb_plays in _nb_plays:
+                    inputs, outputs, plays_outputs = tdata.DatasetGenerator.systhesis_model_generator(
+                        nb_plays=nb_plays, points=points, debug_plays=True, inputs=inputs)
 
-                fname = "./training-data/models/{}-{}-{}-{}-multi.csv".format(method, weight, width, nb_plays)
-                tdata.DatasetSaver.save_data(inputs, plays_outputs, fname)
+                    fname = "./training-data/models/{}-{}-{}-{}.csv".format(method, weight, width, nb_plays)
+                    tdata.DatasetSaver.save_data(inputs, outputs, fname)
+                    fname = "./training-data/models/{}-{}-{}-{}-multi.csv".format(method, weight, width, nb_plays)
+                    tdata.DatasetSaver.save_data(inputs, plays_outputs, fname)
 
 
 if __name__ == "__main__":
@@ -83,9 +85,6 @@ if __name__ == "__main__":
     parser.add_argument("--model", dest="model",
                         required=False,
                         action="store_true")
-    parser.add_argument("--nb_plays", dest="nb_plays",
-                        required=False, default=1,
-                        type=int)
 
 
     argv = parser.parse_args(sys.argv[1:])
@@ -95,4 +94,4 @@ if __name__ == "__main__":
     if argv.play:
         play_generator()
     if argv.model:
-        model_generator(nb_plays=argv.nb_plays)
+        model_generator()

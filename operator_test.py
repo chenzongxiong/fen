@@ -54,8 +54,8 @@ if __name__ == '__main__':
         for weight in weights:
             for width in widths:
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = "./training-data/operators/{}-{}-{}.csv".format(method, weight, width)
+                fname = constants.FNAME_FORMAT["operators"].format(method=method, weight=weight, width=width)
                 inputs, outputs = tdata.DatasetLoader.load_data(fname)
                 predictions = fit(inputs, outputs, width, method, weight)
-                fname = "./training-data/operators/{}-{}-{}-prediction.csv".format(method, weight, width)
+                fname = constants.FNAME_FORMAT["operators_predictions"].format(method=method, weight=weight, width=width)
                 tdata.DatasetSaver.save_data(inputs, predictions, fname)

@@ -66,38 +66,20 @@ if __name__ == "__main__":
     methods = constants.METHODS
     weights = constants.WEIGHTS
     widths = constants.WIDTHS
-    units = 4
-    nbr_of_chunks = 1
-    activation = "tanh"
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument("--generate", dest="generate",
-                        required=False,
-                        action="store_true")
-    parser.add_argument("--train", dest="train",
-                        required=False,
-                        action="store_true")
-    parser.add_argument("--plot", dest="plot",
-                        required=False,
-                        action="store_true")
-
-
-    argv = parser.parse_args(sys.argv[1:])
-
-    activation = "tanh"
     _units = constants.UNITS
+
+    activation = "tanh"
     _nbr_of_chunks = 1
 
     for method in methods:
         for weight in weights:
             for width in widths:
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = "./training-data/players/{}-{}-{}-tanh.csv".format(method, weight, width)
+                fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weigth, width=width)
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
                 # increase *units* in order to increase the capacity of the model
                 for units in _units:
-                    predictions = fit(inputs, outputs_, _units, activation, width, weight, method=method,
-                                      nbr_of_chunks=_nbr_of_chunks)
-                    fname = "./training-data/players/{}-{}-{}-{}-{}-prediction.csv".format(method, weight, width, activation, units)
+                    predictions = fit(inputs, outputs_, _units, activation, width, weight, method=method)
+                    fname = constants.FNAME_FORMAT["plays_predictions"].format(method=method, weight=weight,
+                                                                               width=width, activation=activation, units=units)
                     tdata.DatasetSaver.save_data(inputs, predictions, fname)

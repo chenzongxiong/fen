@@ -8,93 +8,86 @@ import trading_data as tdata
 import colors
 import log as logging
 
+
 LOG = logging.getLogger(__name__)
+epochs = constants.EPOCHS
+batch_size = constants.BATCH_SIZE
+
+
+def fit(inputs, outputs, nb_plays):
+    optimizer = tf.train.GradientDescentOptimizer(0.01)
+    play_model = core.PlayModel(nb_plays)
+
+    play_model.compile(loss="mse",
+                       optimizer=optimizer,
+                       metrics=["mse"])
+
+    early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor="loss", patience=50)
+    play_model.fit(inputs, outputs, epochs=epochs, verbose=1, batch_size=batch_size,
+                   shuffle=False, callbacks=[early_stopping_callback])
+
+    return play_model
+
+
+def evaluate(play_model, inputs, outputs):
+    loss, mse = play_model.evaluate(inputs, outputs, verbose=1, batch_size=batch_size)
+    LOG.info("loss: {}, mse: {}".format(loss, mse))
+    return loss, mse
+
+
+def predict(play_model, inputs, debug_plays=False):
+    predictions = play_model.predict(inputs, batch_size=batch_size, verbose=1)
+    if debug_plays:
+        plays_outputs = play_model.get_plays_outputs(inputs)
+        return predictions, plays_outputs
+
+    return predictions
 
 
 if __name__ == "__main__":
     methods = constants.METHODS
     weights = constants.WEIGHTS
     widths = constants.WIDTHS
+    _nb_plays = constants.NB_PLAYS
+    batch_size_list = constants.BATCH_SIZE_LIST
 
-    fname = "./training-data/plays/{}-{}-{}-4-tanh.csv".format(method, weight, width)
-    train_inputs, train_outputs = tdata.DatasetLoader.load_train_data(fname)
-    test_inputs, test_outputs = tdata.DatasetLoader.load_test_data(fname)
-    samples_per_batch = 240
-    # samples_per_batch = 10
+    for method in methods:
+        for weight in weights:
+            for width in widths:
+                fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width)
+                train_inputs, train_outputs = tdata.DatasetLoader.load_train_data(fname)
+                test_inputs, test_outputs = tdata.DatasetLoader.load_test_data(fname)
 
-    train_samples = train_inputs.shape[0] // samples_per_batch
-    train_inputs = train_inputs.reshape(train_samples, samples_per_batch)  # samples * sequences
-    train_outputs = train_outputs.reshape(train_samples, samples_per_batch)  # samples * sequences
+                for bz in batch_size_list:
+                    _train_inputs = train_inputs.reshape(-1, bz)  # samples * sequences
+                    _train_outputs = train_outputs.reshape(-1, bz)  # samples * sequences
+                    _test_inputs = test_inputs.reshape(-1, bz)  # samples * sequences
+                    _test_outputs = test_outputs.reshape(-1, bz)  # samples * sequences
 
-    test_samples = test_inputs.shape[0] // samples_per_batch
-    test_inputs = test_inputs.reshape(test_samples, samples_per_batch)  # samples * sequences
-    test_outputs = test_outputs.reshape(test_samples, samples_per_batch)  # samples * sequences
+                    for nb_plays in _nb_plays:
+                        LOG.debug("Fitting...")
+                        play_model = fit(_train_inputs, _train_outputs, nb_plays)
+                        LOG.debug("Evaluating...")
+                        loss, mse = evaluate(play_model, _test_inputs, _test_ouputs)
+                        fname = constants.FNAME_FORMAT["models_loss"].format(method=method, weight=weigth,
+                                                                             width=width, nb_plays=nb_plays,
+                                                                             batch_size=bz)
+                        tdata.DatasetSaver.save_loss({"loss": loss, "mse": mse}, fname)
+                        train_predictions, train_plays_outputs = predict(play_model, _train_inputs, debug_plays=True)
+                        test_predictions, test_plays_outputs = predict(play_model, _test_inputs, debug_plays=True)
 
-    optimizer = tf.train.GradientDescentOptimizer(0.01)
-    # NOTE: trick here, always set batch_size to 1, then reshape the input sequence.
-    batch_size = 1
-    nb_plays = 3
-    epochs = 1000
-    # epochs = 500
-    play_model = core.PlayModel(nb_plays, batch_size)
+                        train_predictions = train_predictions.reshape(-1)
+                        test_predictions = test_predictions.reshape(-1)
 
-    play_model.compile(loss="mse",
-                       optimizer=optimizer,
-                       metrics=["mse"])
+                        inputs = np.hstack([train_inputs, test_inputs])
+                        predictions = np.hstack([train_predictions, test_predictions])
+                        fname = constants.FNAME_FORMAT["models_predictions"].format(method=method, weight=weight,
+                                                                                    width=width, nb_plays=nb_plays,
+                                                                                    batch_size=bz)
+                        tdata.DatasetSaver.save_data(inputs, predictions, fname)
 
-    LOG.debug("train_inputs.shape: {}, train_outputs.shape: {}".format(train_inputs.shape, train_outputs.shape))
-    LOG.debug("Fitting...")
-    early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor="loss", patience=50)
-    play_model.fit(train_inputs, train_outputs, epochs=epochs, verbose=1, batch_size=batch_size,
-                   shuffle=False, callbacks=[early_stopping_callback])
-
-    LOG.debug("Evaluating...")
-    loss, mse = play_model.evaluate(train_inputs, train_outputs, verbose=1, batch_size=batch_size)
-    loss, mse = play_model.evaluate(test_inputs, test_outputs, verbose=1, batch_size=batch_size)
-    LOG.info("loss: {}, mse: {}".format(loss, mse))
-
-    train_predications = play_model.predict(train_inputs, batch_size=batch_size, verbose=1)
-    # LOG.debug("predications of train_inputs: {}".format(predications))
-    test_predications = play_model.predict(test_inputs, batch_size=batch_size, verbose=1)
-    # LOG.debug("predications of test_inputs: {}".format(predications))
-
-    train_plays_outputs = play_model.get_plays_outputs(train_inputs)
-    test_plays_outputs = play_model.get_plays_outputs(test_inputs)
-
-    train_inputs = train_inputs.reshape(train_samples*samples_per_batch)
-    train_outputs = train_outputs.reshape(train_samples*samples_per_batch)
-    train_predications = train_predications.reshape(train_samples*samples_per_batch)
-    # train_plays_outputs = train_plays_outputs.T
-
-    test_inputs = test_inputs.reshape(test_samples*samples_per_batch)
-    test_outputs = test_outputs.reshape(test_samples*samples_per_batch)
-    test_predications = test_predications.reshape(test_samples*samples_per_batch)
-    # test_plays_outputs = test_plays_outputs.T
-
-    utils.save_data(train_inputs, train_predications, "train1.csv")
-    utils.save_data(test_inputs, test_predications, "test1.csv")
-
-    utils.save_data(train_inputs, train_plays_outputs, "train2.csv")
-    utils.save_data(test_inputs, test_plays_outputs, "test2.csv")
-
-    inputs, outputs = utils.load_data(fname)
-    _, train_predications = utils.load_data("./train1.csv")
-    _, test_predications = utils.load_data("./test1.csv")
-    _, train_plays_outputs = utils.load_data("./train2.csv")
-    _, test_plays_outputs = utils.load_data("./test2.csv")
-
-    predicates = np.hstack([train_predications, test_predications])
-    plays_outputs = np.hstack([train_plays_outputs, test_plays_outputs]).T
-
-    if len(plays_outputs.shape) == 1:
-        comb_outputs = np.vstack([outputs, predicates, plays_outputs]).T
-    else:
-        comb_outputs = np.vstack([outputs, predicates]).T
-        comb_outputs = np.hstack([comb_outputs, plays_outputs])
-
-    nbr_of_inputs = comb_outputs.shape[1]
-
-    comb_inputs = np.vstack([inputs for _ in range(nbr_of_inputs)]).T
-
-    anim_fname = "play.gif"
-    utils.save_animation(comb_inputs, comb_outputs, anim_fname, colors=utils.generate_colors(comb_inputs.shape[1]), step=5)
+                        fname = constants.FNAME_FORMAT["models_multi_predictions"].format(method, weight=weight,
+                                                                                          width=width, nb_plays=nb_plays,
+                                                                                          batch_size=bz)
+                        plays_outputs = np.vstack([train_plays_outputs, test_plays_outputs])
+                        tdata.DatasetSaver.save_data(inputs, plays_outputs, fname)

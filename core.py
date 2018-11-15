@@ -37,7 +37,7 @@ class PlayCell(Layer):
                  kernel_regularizer=None,
                  activity_regularizer=None,
                  # kernel_constraint=None,
-                 kernel_constraint="non_negative",
+                 kernel_constraint="non_neg",
                  **kwargs):
 
         self.debug = kwargs.pop("debug", False)

@@ -1,4 +1,5 @@
 import os
+import json
 import numpy as np
 import core
 import utils
@@ -129,3 +130,9 @@ class DatasetSaver(object):
 
         res = np.hstack([inputs, outputs])
         np.savetxt(fname, res, fmt="%.3f", delimiter=",")
+
+
+    @staticmethod
+    def save_loss(loss, fname):
+        with open(fname, "w") as f:
+            f.write(json.dumps(loss))
