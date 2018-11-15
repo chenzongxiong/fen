@@ -12,9 +12,9 @@ LOG = logging.getLogger(__name__)
 
 
 if __name__ == "__main__":
-    method = "sin"
-    weight = 2
-    width = 5
+    methods = constants.METHODS
+    weights = constants.WEIGHTS
+    widths = constants.WIDTHS
 
     fname = "./training-data/plays/{}-{}-{}-4-tanh.csv".format(method, weight, width)
     train_inputs, train_outputs = tdata.DatasetLoader.load_train_data(fname)

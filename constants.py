@@ -1,1 +1,6 @@
+# SETTINGS
 DEBUG_INIT_TF_VALUE = True
+WEIGHTS = [1]
+WIDTHS = [1]
+METHODS = ["sin"]
+UNITS = [4, 8, 16]

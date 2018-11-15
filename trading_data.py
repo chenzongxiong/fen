@@ -1,8 +1,6 @@
+import os
 import numpy as np
-import pandas as pd
-import tensorflow as tf
-import play
-import model
+import core
 import utils
 import colors
 import log as logging
@@ -23,23 +21,27 @@ class DatasetGenerator(object):
         return inputs
 
     @classmethod
-    def systhesis_play_operator_generator(cls, points=1000, weight=1, width=1, state=0):
+    def systhesis_operator_generator(cls, points=1000, weight=1, width=1, state=0):
         _inputs = cls.systhesis_input_generator(points)
         weight = float(weight)
         width = float(width)
         state = float(state)
 
-        cell = play.PlayCell(weight=weight, width=width, debug=True)
+        cell = core.PlayCell(weight=weight, width=width, debug=True)
         outputs = cell(_inputs, state)
         sess = utils.get_session()
         _outputs = sess.run(outputs)
         return _inputs, _outputs
 
     @classmethod
-    def systhesis_play_generator(cls, points=1000):
-        _inputs = cls.systhesis_input_generator(points)
-        cell = play.PlayCell(debug=True)
-        layer = play.Play(units=4,
+    def systhesis_play_generator(cls, points=1000, inputs=None):
+        if inputs is None:
+            _inputs = cls.systhesis_input_generator(points)
+        else:
+            _inputs = inputs
+
+        cell = core.PlayCell(debug=True)
+        layer = core.Play(units=4,
                           cell=cell,
                           debug=True)
         outputs = layer(_inputs)
@@ -48,9 +50,13 @@ class DatasetGenerator(object):
         return _inputs, _outputs
 
     @classmethod
-    def systhesis_model_generator(cls, nb_plays=1, points=1000, debug_plays=False):
-        play_model = model.PlayModel(nb_plays=nb_plays, debug=True)
-        _inputs = cls.systhesis_input_generator(points)
+    def systhesis_model_generator(cls, nb_plays=1, points=1000, debug_plays=False, inputs=None):
+        play_model = core.PlayModel(nb_plays=nb_plays, debug=True)
+        if inputs is None:
+            _inputs = cls.systhesis_input_generator(points)
+        else:
+            _inputs = inputs
+
         plays_outputs = play_model.get_plays_outputs(_inputs.reshape(1, -1))
 
         if debug_plays is True:
@@ -114,6 +120,7 @@ class DatasetSaver(object):
         assert len(inputs.shape) == 1, "length of inputs.shape must be equal to 1."
         assert inputs.shape[0] == outputs.shape[0], \
           "inputs.shape[0] is: {}, whereas outputs.shape[0] is {}.".format(inputs.shape[0], outputs.shape[0])
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
 
         if len(inputs.shape) == 1:
             inputs = inputs.reshape(-1, 1)

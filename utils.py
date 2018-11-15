@@ -1,40 +1,13 @@
+import threading
+
 import numpy as np
 import tensorflow as tf
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
+
 import log as logging
 
 LOG = logging.getLogger(__name__)
-
-
-def save_data(inputs, outputs, fname):
-    if len(inputs.shape) == 1:
-        inputs = inputs.reshape(inputs.shape[0], 1)
-    if len(outputs.shape) == 1:
-        outputs = outputs.reshape(outputs.shape[0], 1)
-
-    res = np.hstack([inputs, outputs])
-
-    np.savetxt(fname, res, fmt="%.3f", delimiter=",")
-
-
-def load_data(fname, split=1):
-    data = np.loadtxt(fname, skiprows=0, delimiter=",", dtype=np.float32)
-    inputs, outputs = data[:, 0], data[:, 1:].T
-    assert len(inputs.shape) == 1
-    if len(outputs.shape) == 2:
-        n, d = outputs.shape
-        if n == 1:
-            outputs = outputs.reshape(d,)
-        if d == 1:
-            outputs = outputs.reshape(n,)
-    if split == 1:
-        return inputs, outputs
-
-    split_index = int(split * inputs.shape[0])
-    train_inputs, train_outputs = inputs[:split_index], outputs[:split_index]
-    test_inputs, test_outputs = inputs[split_index:], outputs[split_index:]
-    return (train_inputs, train_outputs), (test_inputs, test_outputs)
 
 
 def update(i, *fargs):
@@ -102,18 +75,21 @@ def generate_colors(length=1):
         raise
     return COLORS[:length]
 
-# TODO: test tf summary writer
+
 class TFSummaryFileWriter(object):
     _writer = None
+    _lock = threading.Lock()
+
     def __new__(cls, fpath="."):
         if not cls._writer:
-            cls._writer = tf.summary.FileWriter(fpath)
+            with cls._lock:
+                if not cls._writer:
+                    cls._writer = tf.summary.FileWriter(fpath)
         return cls._writer
 
-writer = TFSummaryFileWriter()
 
-def get_tf_summary_writer():
-    global writer
+def get_tf_summary_writer(fpath):
+    writer = TFSummaryFileWriter(fpath)
     return writer
 
 

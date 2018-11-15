@@ -36,7 +36,8 @@ class PlayCell(Layer):
                  kernel_initializer='glorot_uniform',
                  kernel_regularizer=None,
                  activity_regularizer=None,
-                 kernel_constraint=None,
+                 # kernel_constraint=None,
+                 kernel_constraint="non_negative",
                  **kwargs):
 
         self.debug = kwargs.pop("debug", False)
@@ -79,34 +80,22 @@ class PlayCell(Layer):
         inputs: `inputs` is a vector
         state: `state` is randomly initialized
         """
-        # TODO: test keras case
         inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
         state = ops.convert_to_tensor(state, dtype=self.dtype)
+        if inputs.shape.ndims == 2:
+            inputs = tf.reshape(inputs, shape=(-1,))
+        elif inputs.shape.ndims > 2:
+            raise Exception("len(inputs.shape) must be less or equal than 2, but got {}".format(inputs.shape.ndims))
 
         outputs_ = tf.multiply(inputs, self.kernel)
         outputs = [state]
 
-        if inputs.shape.ndims == 1:
-            # simple tensorflow call, doesn't introduce `batch`
-            for index in range(outputs_.shape[-1].value):
-                phi_ = Phi(outputs_[index]-outputs[-1], width=self.width) + outputs[-1]
-                outputs.append(phi_)
-        elif inputs.shape.ndims == 2:
-            # call from keras, introduce `batch` here
-            for index in range(outputs_.shape[-1].value):
-                phi_ = Phi(outputs_[:,index]-outputs[-1], width=self.width) + outputs[-1]
-                outputs.append(phi_)
-            # assert inputs.shape[1].value == 1
-            # for index in range(outputs_.shape[0].value):
-            #     phi_ = Phi(outputs_[index, :]-outputs[-1], width=self.width) + outputs[-1]
-            #     outputs.append(phi_)
-        else:
-            raise
+        for index in range(outputs_.shape[-1].value):
+            phi_ = Phi(outputs_[index]-outputs[-1], width=self.width) + outputs[-1]
+            outputs.append(phi_)
 
         outputs = tf.convert_to_tensor(outputs[1:])
-
-        outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
-        # assert outputs.shape[-1] == inputs.shape[-1]
+        outputs = tf.reshape(outputs, shape=(-1,))
         LOG.debug("{} inputs.shape: {}, output.shape: {}".format(colors.red("PlayCell"),
                                                                  inputs.shape, outputs.shape))
         return outputs
@@ -266,40 +255,8 @@ class Play(Layer):
         self.built = True
 
     def call(self, inputs):
-        # import ipdb; ipdb.set_trace()
-        # make it work under keras
-        # if inputs.shape.ndims == 2:
-        #      if inputs.shape[1].value == 1:
-        #         inputs = tf.reshape(inputs, shape=(inputs.shape[0].value,))
-        #     else:
-        #         raise
-
-        # if isinstance(inputs, np.ndarray):
-        #     size_of_sequence = inputs.shape[0]
-        # else:
-        #     size_of_sequence = inputs.shape[0].value
-        #     # size_of_sequence = inputs.shape[-1].value
-
-        # size_per_chunk = size_of_sequence // self.nbr_of_chunks
-
-        # print("Using chunks: ", self.nbr_of_chunks)
-
-        # outputs1_list = []
-
-        # for i in range(self.nbr_of_chunks):
-        #     if i == 0:
-        #         # question: only one weight or multiple weights?
-        #         outputs1_ = self.cell(inputs[i*size_per_chunk:(i+1)*size_per_chunk], self.state)
-        #     else:
-        #         state = outputs1_list[-1][-1]   # retrieve the last output in previous play as intial state
-        #         outputs1_ = self.cell(inputs[i*size_per_chunk:(i+1)*size_per_chunk], state)
-
-        #     outputs1_list.append(outputs1_)
-
-        # outputs1_ = tf.convert_to_tensor(outputs1_list)
-        # outputs1_ = tf.reshape(outputs1_, shape=(outputs1_.shape[1].value * outputs1_.shape[0].value,))
-        outputs1_ = self.cell(inputs, self.state)   # shape = (None, 1200)
-        outputs1 = outputs1_ * self.kernel1         # shape = (4, 1200)
+        outputs1_ = self.cell(inputs, self.state)
+        outputs1 = outputs1_ * self.kernel1
         assert outputs1.shape.ndims == 2
 
         if self.bias1 is not None:
@@ -308,26 +265,18 @@ class Play(Layer):
             outputs1 =  self.activation(outputs1)
 
         # move forward
-        outputs2 = outputs1 * self.kernel2         # shape = (4, 1200)
-        outputs2 = tf.reduce_sum(outputs2, axis=0)   # shape = (1200, )
+        outputs2 = outputs1 * self.kernel2
+        outputs2 = tf.reduce_sum(outputs2, axis=0)
 
         if self.bias2 is not None:
             outputs2 += self.bias2
 
         LOG.debug("{}, inputs.shape: {}, outputs.shape: {}".format(colors.red("Play"),
                                                                    inputs.shape, outputs2.shape))
-        return outputs2                   # shape = (1200,)
+        return outputs2
 
     def compute_output_shape(self, input_shape):
-        input_shape = tensor_shape.TensorShape(input_shape)
-        if input_shape.ndims == 1:
-            output_shape = (input_shape[0].value, 1)
-        elif input_shape.ndims == 2:
-            if input_shape[1].value == 1:
-                output_shape = (input_shape[0].value, 1)
-            else:
-                raise
-        return tensor_shape.TensorShape(output_shape)
+        return tensor_shape.TensorShape(input_shape)
 
     def get_config(self):
         config = {
@@ -369,7 +318,6 @@ class PlayModel(tf.keras.Model):
         ----------------
         inputs: `inputs` is a vector, assert len(inputs.shape) == 1
         """
-        # import ipdb; ipdb.set_trace()
         outputs = []
         for play in self._plays:
             outputs.append(play(inputs))
@@ -390,19 +338,15 @@ class PlayModel(tf.keras.Model):
     def get_config(self):
         config = {
             "nb_plays": self._nb_plays,
-            # "batch_size": self._batch_size,
             "debug": self.debug,
         }
 
         return config
 
     def get_plays_outputs(self, inputs, batch_size=1):
-        # if not sess:
-        #     sess = tf.keras.backend.get_session()
-        sess = utils.get_session()
         assert len(inputs.shape) == 2
+        sess = utils.get_session()
         samples, _ = inputs.shape
-
         plays_outputs_list = []
         for x in range(samples):
             outputs, plays_outputs = self.__call__(inputs[x,:], debug=True)
