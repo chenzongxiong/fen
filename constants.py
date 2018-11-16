@@ -17,11 +17,13 @@ FNAME_FORMAT = dict(
     operators_predictions="./training-data/operators/{method}-{weight}-{width}-predictions.csv",
     operators_loss="./training-data/operators/{method}-{weight}-{width}-loss.csv",
     operators_gif="./pics/operators/{method}-{weight}-{width}.gif",
+    operators_gif_snake="./pics/operators/{method}-{weight}-{width}-snake.gif",
 
     plays="./training-data/plays/{method}-{weight}-{width}-tanh.csv",
     plays_predictions="./training-data/plays/{method}-{weight}-{width}-{activation}-{units}-predictions.csv",
     plays_loss = "./training-data/plays/{method}-{weight}-{width}-{activation}-{units}-loss.csv",
     plays_gif="./pics/plays/{method}-{weight}-{width}-{activation}-{units}.gif",
+    plays_gif_snake="./pics/plays/{method}-{weight}-{width}-{activation}-{units}-snake.gif",
 
     models="./training-data/models/{method}-{weight}-{width}-{nb_plays}.csv",
     models_multi="./training-data/models/{method}-{weight}-{width}-{nb_plays}-multi.csv",
@@ -30,4 +32,6 @@ FNAME_FORMAT = dict(
     models_multi_predictions="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-multi-predictions.csv",
     models_gif="./pics/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}.gif",
     models_multi_gif="./pics/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-multi.gif",
+    models_gif_snake="./pics/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-snake.gif",
+    models_multi_gif_snake="./pics/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-multi-snake.gif",
 )

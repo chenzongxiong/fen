@@ -1,3 +1,4 @@
+import os
 import threading
 
 import numpy as np
@@ -6,6 +7,7 @@ from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 
 import log as logging
+import colors
 
 LOG = logging.getLogger(__name__)
 
@@ -27,7 +29,6 @@ def update(i, *fargs):
     if i % 100 == 0:
         LOG.info("Update animation frame: {}, step: {}".format(i, step))
 
-    shape = inputs.shape
     if mode == "sequence":
         for x in range(len(colors)):
             ax.scatter(inputs[i:i+step, x], outputs[i:i+step, x], color=colors[x])
@@ -39,7 +40,8 @@ def update(i, *fargs):
 def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
                    colors=["black"], step=1, mode="sequence"):
     assert inputs.shape == outputs.shape
-    assert mode in ["sequence", "snake"]
+    assert mode in ["sequence", "snake"], "mode must be 'sequence' or 'snake'."
+    os.makedirs(os.path.dirname(fname), exist_ok=True)
 
     if xlim is None:
         xlim = [np.min(inputs) - 1, np.max(inputs) + 1]
@@ -49,11 +51,10 @@ def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
     if len(inputs.shape) == 1:
         inputs = inputs.reshape(-1, 1)
         outputs = outputs.reshape(-1, 1)
-
     if not isinstance(colors, list):
         colors = [colors]
 
-    assert len(colors) == inputs.shape[1]
+    assert len(colors) == outputs.shape[1]
 
     fig, ax = plt.subplots(figsize=(20, 20))
     fig.set_tight_layout(True)
@@ -71,7 +72,7 @@ COLORS = ["blue", "black", "orange", "cyan", "red", "magenta", "yellow", "green"
 
 def generate_colors(length=1):
     if (length >= len(COLORS)):
-        LOG.error("Doesn't have enough colors")
+        LOG.error(colors.red("Doesn't have enough colors"))
         raise
     return COLORS[:length]
 

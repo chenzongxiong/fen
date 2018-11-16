@@ -82,8 +82,10 @@ class DatasetLoader(object):
             n, d = outputs.shape
             if n == 1:
                 outputs = outputs.reshape(d,)
-            if d == 1:
+            elif d == 1:
                 outputs = outputs.reshape(n,)
+            elif d == inputs.shape[0]:
+                outputs = outputs.T
 
         cls._CACHED_DATASET[fname] = (inputs, outputs)
         return inputs, outputs
