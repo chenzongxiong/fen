@@ -4,13 +4,14 @@ from tensorflow.python.framework import ops
 
 import core
 import utils
+import constants
 import trading_data as tdata
-import colors
 import log as logging
 
 
 LOG = logging.getLogger(__name__)
 epochs = constants.EPOCHS
+epochs = 1
 batch_size = constants.BATCH_SIZE
 
 
@@ -39,6 +40,8 @@ def predict(play_model, inputs, debug_plays=False):
     predictions = play_model.predict(inputs, batch_size=batch_size, verbose=1)
     if debug_plays:
         plays_outputs = play_model.get_plays_outputs(inputs)
+        import ipdb; ipdb.set_trace()
+        sess.run(play_model, feed_dict={"inputs": inputs})
         return predictions, plays_outputs
 
     return predictions
@@ -57,7 +60,6 @@ if __name__ == "__main__":
                 fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width)
                 train_inputs, train_outputs = tdata.DatasetLoader.load_train_data(fname)
                 test_inputs, test_outputs = tdata.DatasetLoader.load_test_data(fname)
-
                 for bz in batch_size_list:
                     _train_inputs = train_inputs.reshape(-1, bz)  # samples * sequences
                     _train_outputs = train_outputs.reshape(-1, bz)  # samples * sequences
@@ -68,8 +70,8 @@ if __name__ == "__main__":
                         LOG.debug("Fitting...")
                         play_model = fit(_train_inputs, _train_outputs, nb_plays)
                         LOG.debug("Evaluating...")
-                        loss, mse = evaluate(play_model, _test_inputs, _test_ouputs)
-                        fname = constants.FNAME_FORMAT["models_loss"].format(method=method, weight=weigth,
+                        loss, mse = evaluate(play_model, _test_inputs, _test_outputs)
+                        fname = constants.FNAME_FORMAT["models_loss"].format(method=method, weight=weight,
                                                                              width=width, nb_plays=nb_plays,
                                                                              batch_size=bz)
                         tdata.DatasetSaver.save_loss({"loss": loss, "mse": mse}, fname)

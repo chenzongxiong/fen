@@ -82,8 +82,8 @@ class PlayCell(Layer):
         """
         inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
         state = ops.convert_to_tensor(state, dtype=self.dtype)
-        if inputs.shape.ndims == 2:
-            inputs = tf.reshape(inputs, shape=(-1,))
+        if inputs.shape.ndims == 1:
+            inputs = tf.reshape(inputs, shape=(1, -1))
         elif inputs.shape.ndims > 2:
             raise Exception("len(inputs.shape) must be less or equal than 2, but got {}".format(inputs.shape.ndims))
 
@@ -91,11 +91,11 @@ class PlayCell(Layer):
         outputs = [state]
 
         for index in range(outputs_.shape[-1].value):
-            phi_ = Phi(outputs_[index]-outputs[-1], width=self.width) + outputs[-1]
+            phi_ = Phi(outputs_[:, index]-outputs[-1], width=self.width) + outputs[-1]
             outputs.append(phi_)
 
         outputs = tf.convert_to_tensor(outputs[1:])
-        outputs = tf.reshape(outputs, shape=(-1,))
+        outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
         LOG.debug("{} inputs.shape: {}, output.shape: {}".format(colors.red("PlayCell"),
                                                                  inputs.shape, outputs.shape))
         return outputs
@@ -273,6 +273,7 @@ class Play(Layer):
 
         LOG.debug("{}, inputs.shape: {}, outputs.shape: {}".format(colors.red("Play"),
                                                                    inputs.shape, outputs2.shape))
+
         return outputs2
 
     def compute_output_shape(self, input_shape):

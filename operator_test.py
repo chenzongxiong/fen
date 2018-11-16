@@ -13,7 +13,7 @@ import constants
 writer = utils.get_tf_summary_writer("./log/operators")
 sess = utils.get_session()
 LOG = logging.getLogger(__name__)
-
+epochs = constants.EPOCHS
 
 def fit(inputs, outputs, width, method, true_weight):
     state = tf.random_uniform(shape=(), minval=0, maxval=10, dtype=tf.float32)
@@ -30,7 +30,8 @@ def fit(inputs, outputs, width, method, true_weight):
     optimizer = tf.train.GradientDescentOptimizer(0.01)
     opt = optimizer.minimize(loss)
 
-    epochs = 500
+    init = tf.global_variables_initializer()
+    sess.run(init)
 
     loss_value = None
     for i in range(epochs):
@@ -39,11 +40,11 @@ def fit(inputs, outputs, width, method, true_weight):
             summary = sess.run(loss_summary)
             writer.add_summary(summary, i)
 
-        LOG.debug("epoch", i, "loss:", loss_value, ", weight: ", cell.kernel.eval(session=sess))
+        LOG.debug("epoch {}, loss: {}".format(i, loss_value))
 
     state = tf.constant(0, dtype=tf.float32)
     predictions = cell(inputs, state)
-    return sess.run(predictions), loss_value
+    return sess.run(predictions), float(loss_value)
 
 
 if __name__ == '__main__':
@@ -59,6 +60,6 @@ if __name__ == '__main__':
                 inputs, outputs = tdata.DatasetLoader.load_data(fname)
                 predictions, loss = fit(inputs, outputs, width, method, weight)
                 fname = constants.FNAME_FORMAT["operators_loss"].format(method=method, weight=weight, width=width)
-                tdata.DatasetSaver.save_loss({"loss": loss_value}, fname)
+                tdata.DatasetSaver.save_loss({"loss": loss}, fname)
                 fname = constants.FNAME_FORMAT["operators_predictions"].format(method=method, weight=weight, width=width)
                 tdata.DatasetSaver.save_data(inputs, predictions, fname)
