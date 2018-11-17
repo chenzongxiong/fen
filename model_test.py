@@ -1,21 +1,21 @@
+import pool
+import os
 import numpy as np
-import tensorflow as tf
-from tensorflow.python.framework import ops
 
-import core
-import utils
 import constants
-import trading_data as tdata
 import log as logging
 
 
 LOG = logging.getLogger(__name__)
 epochs = constants.EPOCHS
-epochs = 1
+# epochs = 1
 batch_size = constants.BATCH_SIZE
 
 
 def fit(inputs, outputs, nb_plays):
+    import tensorflow as tf
+    import core
+
     optimizer = tf.train.GradientDescentOptimizer(0.01)
     play_model = core.PlayModel(nb_plays)
 
@@ -40,56 +40,71 @@ def predict(play_model, inputs, debug_plays=False):
     predictions = play_model.predict(inputs, batch_size=batch_size, verbose=1)
     if debug_plays:
         plays_outputs = play_model.get_plays_outputs(inputs)
-        import ipdb; ipdb.set_trace()
         sess.run(play_model, feed_dict={"inputs": inputs})
         return predictions, plays_outputs
 
-    return predictions
+    return predictions, None
+
+
+def loop(method, weight, width, bz, nb_plays):
+    import trading_data as tdata
+
+    LOG.debug("pid: {}, method: {}, weight: {}, width: {}, batch_size: {}, nb_plays: {}".format(
+      os.getpid(), method, weight, width, bz, nb_plays))
+
+    fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width)
+
+    train_inputs, train_outputs = tdata.DatasetLoader.load_train_data(fname)
+    test_inputs, test_outputs = tdata.DatasetLoader.load_test_data(fname)
+
+    _train_inputs = train_inputs.reshape(-1, bz)  # samples * sequences
+    _train_outputs = train_outputs.reshape(-1, bz)  # samples * sequences
+    _test_inputs = test_inputs.reshape(-1, bz)  # samples * sequences
+    _test_outputs = test_outputs.reshape(-1, bz)  # samples * sequences
+
+    LOG.debug("Fitting...")
+    play_model = fit(_train_inputs, _train_outputs, nb_plays)
+    LOG.debug("Evaluating...")
+    loss, mse = evaluate(play_model, _test_inputs, _test_outputs)
+    fname = constants.FNAME_FORMAT["models_loss"].format(method=method, weight=weight,
+                                                         width=width, nb_plays=nb_plays,
+                                                         batch_size=bz)
+    tdata.DatasetSaver.save_loss({"loss": loss, "mse": mse}, fname)
+    train_predictions, train_plays_outputs = predict(play_model, _train_inputs, debug_plays=False)
+    test_predictions, test_plays_outputs = predict(play_model, _test_inputs, debug_plays=False)
+
+
+    train_predictions = train_predictions.reshape(-1)
+    test_predictions = test_predictions.reshape(-1)
+
+    inputs = np.hstack([train_inputs, test_inputs])
+    predictions = np.hstack([train_predictions, test_predictions])
+    fname = constants.FNAME_FORMAT["models_predictions"].format(method=method, weight=weight,
+                                                                width=width, nb_plays=nb_plays,
+                                                                batch_size=bz)
+    tdata.DatasetSaver.save_data(inputs, predictions, fname)
+    if train_plays_outputs and test_plays_outputs:
+        fname = constants.FNAME_FORMAT["models_multi_predictions"].format(method, weight=weight,
+                                                                          width=width, nb_plays=nb_plays,
+                                                                          batch_size=bz)
+        plays_outputs = np.vstack([train_plays_outputs, test_plays_outputs])
+        tdata.DatasetSaver.save_data(inputs, plays_outputs, fname)
 
 
 if __name__ == "__main__":
     methods = constants.METHODS
     weights = constants.WEIGHTS
     widths = constants.WIDTHS
-    _nb_plays = constants.NB_PLAYS
+    nb_plays = constants.NB_PLAYS
     batch_size_list = constants.BATCH_SIZE_LIST
 
-    for method in methods:
-        for weight in weights:
-            for width in widths:
-                fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width)
-                train_inputs, train_outputs = tdata.DatasetLoader.load_train_data(fname)
-                test_inputs, test_outputs = tdata.DatasetLoader.load_test_data(fname)
-                for bz in batch_size_list:
-                    _train_inputs = train_inputs.reshape(-1, bz)  # samples * sequences
-                    _train_outputs = train_outputs.reshape(-1, bz)  # samples * sequences
-                    _test_inputs = test_inputs.reshape(-1, bz)  # samples * sequences
-                    _test_outputs = test_outputs.reshape(-1, bz)  # samples * sequences
+    args_list = [(method, weight, width, bz, _nb_plays)
+                for method in methods
+                for weight in weights
+                for width in widths
+                for bz in batch_size_list
+                for _nb_plays in nb_plays]
 
-                    for nb_plays in _nb_plays:
-                        LOG.debug("Fitting...")
-                        play_model = fit(_train_inputs, _train_outputs, nb_plays)
-                        LOG.debug("Evaluating...")
-                        loss, mse = evaluate(play_model, _test_inputs, _test_outputs)
-                        fname = constants.FNAME_FORMAT["models_loss"].format(method=method, weight=weight,
-                                                                             width=width, nb_plays=nb_plays,
-                                                                             batch_size=bz)
-                        tdata.DatasetSaver.save_loss({"loss": loss, "mse": mse}, fname)
-                        train_predictions, train_plays_outputs = predict(play_model, _train_inputs, debug_plays=True)
-                        test_predictions, test_plays_outputs = predict(play_model, _test_inputs, debug_plays=True)
-
-                        train_predictions = train_predictions.reshape(-1)
-                        test_predictions = test_predictions.reshape(-1)
-
-                        inputs = np.hstack([train_inputs, test_inputs])
-                        predictions = np.hstack([train_predictions, test_predictions])
-                        fname = constants.FNAME_FORMAT["models_predictions"].format(method=method, weight=weight,
-                                                                                    width=width, nb_plays=nb_plays,
-                                                                                    batch_size=bz)
-                        tdata.DatasetSaver.save_data(inputs, predictions, fname)
-
-                        fname = constants.FNAME_FORMAT["models_multi_predictions"].format(method, weight=weight,
-                                                                                          width=width, nb_plays=nb_plays,
-                                                                                          batch_size=bz)
-                        plays_outputs = np.vstack([train_plays_outputs, test_plays_outputs])
-                        tdata.DatasetSaver.save_data(inputs, plays_outputs, fname)
+    # args_list = [('sin', 1, 1, 4, 1), ('sin', 1, 1, 4, 2), ('sin', 1, 1, 4, 3), ('sin', 1, 1, 4, 4), ('sin', 1, 1, 4, 8)]
+    _pool = pool.ProcessPool()
+    _pool.starmap(loop, args_list)

@@ -1,4 +1,6 @@
 # SETTINGS
+import os
+
 DEBUG_INIT_TF_VALUE = True
 WEIGHTS = [1]
 WIDTHS = [1]
@@ -35,3 +37,5 @@ FNAME_FORMAT = dict(
     models_gif_snake="./pics/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-snake.gif",
     models_multi_gif_snake="./pics/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-multi-snake.gif",
 )
+
+CPU_COUNTS = min(os.cpu_count(), 32)
