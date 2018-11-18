@@ -136,5 +136,6 @@ class DatasetSaver(object):
 
     @staticmethod
     def save_loss(loss, fname):
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
         with open(fname, "w") as f:
             f.write(json.dumps(loss))
