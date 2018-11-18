@@ -30,12 +30,12 @@ FNAME_FORMAT = dict(
     models="./training-data/models/{method}-{weight}-{width}-{nb_plays}.csv",
     models_multi="./training-data/models/{method}-{weight}-{width}-{nb_plays}-multi.csv",
     models_loss="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-loss.csv",
-    models_predictions="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-predictions.csv",
-    models_multi_predictions="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-multi-predictions.csv",
-    models_gif="./pics/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}.gif",
-    models_multi_gif="./pics/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-multi.gif",
-    models_gif_snake="./pics/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-snake.gif",
-    models_multi_gif_snake="./pics/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-multi-snake.gif",
+    models_predictions="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-predictions.csv",
+    models_multi_predictions="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-multi-predictions.csv",
+    models_gif="./pics/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}.gif",
+    models_multi_gif="./pics/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-multi.gif",
+    models_gif_snake="./pics/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-snake.gif",
+    models_multi_gif_snake="./pics/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-multi-snake.gif",
 )
 
 CPU_COUNTS = min(os.cpu_count(), 32)
