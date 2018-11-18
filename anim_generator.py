@@ -70,48 +70,56 @@ def model_generator():
                     fname = constants.FNAME_FORMAT["models"].format(method=method, weight=weight,
                                                                     width=width, nb_plays=_nb_plays)
                     _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
-
-                    for bz in batch_sizes:
-                        fname = constants.FNAME_FORMAT["models_predictions"].format(method=method, weight=weight,
-                                                                                    width=width, nb_plays=_nb_plays,
-                                                                                    batch_size=bz)
-                        _, predictions = tdata.DatasetLoader.load_data(fname)
-                        outputs = np.vstack([ground_truth, predictions]).T
-                        colors = utils.generate_colors(outputs.shape[-1])
-                        inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
-                        fname = constants.FNAME_FORMAT["models_gif"].format(method=method, weight=weight,
-                                                                            width=width, nb_plays=_nb_plays,
-                                                                            batch_size=bz)
-                        utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
-                        fname = constants.FNAME_FORMAT["models_gif_snake"].format(method=method, weight=weight,
-                                                                                    width=width, nb_plays=_nb_plays,
-                                                                                    batch_size=bz)
-                        utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
-
-
-                    fname = constants.FNAME_FORMAT["models_multi"].format(method=method, weight=weight,
-                                                                          width=width, nb_plays=_nb_plays)
-                    _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
-                    for bz in batch_sizes:
-                        fname = constants.FNAME_FORMAT["models_multi_predictions"].format(method=method, weight=weight,
-                                                                                          width=width, nb_plays=_nb_plays,
-                                                                                          batch_size=bz)
-                        _, predictions = tdata.DatasetLoader.load_data(fname)
-                        if _nb_plays == 1:
-                            outputs = np.vstack([ground_truth, predictions]).T
-                        else:
-                            outputs = np.hstack([ground_truth, predictions])
-
-                        colors = utils.generate_colors(outputs.shape[-1])
-                        inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
-                        fname = constants.FNAME_FORMAT["models_multi_gif"].format(method=method, weight=weight,
-                                                                                  width=width, nb_plays=_nb_plays,
-                                                                                  batch_size=bz)
-                        utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
-                        fname = constants.FNAME_FORMAT["models_multi_gif_snake"].format(method=method, weight=weight,
+                    for __nb_plays in nb_plays:
+                        for bz in batch_sizes:
+                            fname = constants.FNAME_FORMAT["models_predictions"].format(method=method, weight=weight,
                                                                                         width=width, nb_plays=_nb_plays,
+                                                                                        nb_plays_=__nb_plays,
                                                                                         batch_size=bz)
-                        utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
+                            try:
+                                _, predictions = tdata.DatasetLoader.load_data(fname)
+                            except:
+                                continue
+
+                            outputs = np.vstack([ground_truth, predictions]).T
+                            colors = utils.generate_colors(outputs.shape[-1])
+                            inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
+                            fname = constants.FNAME_FORMAT["models_gif"].format(method=method, weight=weight,
+                                                                                width=width, nb_plays=_nb_plays,
+                                                                                nb_plays_=__nb_plays,
+                                                                                batch_size=bz)
+                            utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
+                            fname = constants.FNAME_FORMAT["models_gif_snake"].format(method=method, weight=weight,
+                                                                                      width=width, nb_plays=_nb_plays,
+                                                                                      nb_plays_=__nb_plays,
+                                                                                      batch_size=bz)
+                            utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
+
+
+                        # fname = constants.FNAME_FORMAT["models_multi"].format(method=method, weight=weight,
+                        #                                                       width=width, nb_plays=_nb_plays)
+                        # _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
+
+                        # for bz in batch_sizes:
+                        #     fname = constants.FNAME_FORMAT["models_multi_predictions"].format(method=method, weight=weight,
+                        #                                                                     width=width, nb_plays=_nb_plays,
+                        #                                                                   batch_size=bz)
+                        # _, predictions = tdata.DatasetLoader.load_data(fname)
+                        # if _nb_plays == 1:
+                        #     outputs = np.vstack([ground_truth, predictions]).T
+                        # else:
+                        #     outputs = np.hstack([ground_truth, predictions])
+
+                        # colors = utils.generate_colors(outputs.shape[-1])
+                        # inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
+                        # fname = constants.FNAME_FORMAT["models_multi_gif"].format(method=method, weight=weight,
+                        #                                                           width=width, nb_plays=_nb_plays,
+                        #                                                           batch_size=bz)
+                        # utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
+                        # fname = constants.FNAME_FORMAT["models_multi_gif_snake"].format(method=method, weight=weight,
+                        #                                                                 width=width, nb_plays=_nb_plays,
+                        #                                                                 batch_size=bz)
+                        # utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
 
 
 if __name__ == "__main__":
