@@ -1,3 +1,6 @@
+import sys
+import argparse
+
 import pool
 
 import constants
@@ -10,7 +13,7 @@ weights = constants.WEIGHTS
 widths = constants.WIDTHS
 nb_plays = constants.NB_PLAYS
 epochs = constants.EPOCHS
-epochs = 1
+epochs = 100
 
 
 class Evaluator(object):
@@ -55,7 +58,7 @@ class Evaluator(object):
 
     @classmethod
     def evaluate(cls, inputs, outputs, fname=None):
-        loss, mse = cls.model.evaluate(inputs, outputs, verbose=0, batch_size=1200)
+        loss, mse = cls.model.evaluate(inputs, outputs, verbose=1)
         LOG.debug("loss: {}, mse: {}".format(loss, mse))
         if fname:
             import trading_data as tdata
@@ -73,7 +76,7 @@ class Evaluator(object):
         return predictions
 
 
-def loop(method, weight, width, nb_plays):
+def loop(method, weight, width, nb_plays, neural_type="simple_rnn"):
     import tensorflow as tf
     import trading_data as tdata
 
@@ -84,51 +87,47 @@ def loop(method, weight, width, nb_plays):
     inputs = inputs.reshape(1, -1, 1)
     outputs = outputs.reshape(1, -1)
     units = outputs.shape[-1]
-    rnn_loss_fname = constants.FNAME_FORMAT["models_rnn_loss"].format(method=method, weight=weight,
-                                                                      width=width, nb_plays=nb_plays)
-    lstm_loss_fname = constants.FNAME_FORMAT["models_lstm_loss"].format(method=method, weight=weight,
-                                                                        width=width, nb_plays=nb_plays)
-    gru_loss_fname = constants.FNAME_FORMAT["models_gru_loss"].format(method=method, weight=weight,
-                                                                      width=width, nb_plays=nb_plays)
 
-    rnn_predictions_fname = constants.FNAME_FORMAT["models_rnn_predictions"].format(method=method, weight=weight,
-                                                                                    width=width, nb_plays=nb_plays)
-    lstm_predictions_fname = constants.FNAME_FORMAT["models_lstm_predictions"].format(method=method, weight=weight,
-                                                                                      width=width, nb_plays=nb_plays)
-    gru_predictions_fname = constants.FNAME_FORMAT["models_gru_predictions"].format(method=method, weight=weight,
-                                                                                    width=width, nb_plays=nb_plays)
+    if neural_type == "simple_rnn":
+        rnn_loss_fname = constants.FNAME_FORMAT["models_rnn_loss"].format(method=method, weight=weight,
+                                                                          width=width, nb_plays=nb_plays)
+        rnn_predictions_fname = constants.FNAME_FORMAT["models_rnn_predictions"].format(method=method, weight=weight,
+                                                                                        width=width, nb_plays=nb_plays)
+        Evaluator.simple_rnn(units).fit(inputs, outputs).evaluate(inputs, outputs, rnn_loss_fname).predict(inputs, outputs, rnn_predictions_fname)
+    if neural_type == "lstm":
+        lstm_loss_fname = constants.FNAME_FORMAT["models_lstm_loss"].format(method=method, weight=weight,
+                                                                            width=width, nb_plays=nb_plays)
+        lstm_predictions_fname = constants.FNAME_FORMAT["models_lstm_predictions"].format(method=method, weight=weight,
+                                                                                          width=width, nb_plays=nb_plays)
+        Evaluator.lstm(units).fit(inputs, outputs).evaluate(inputs, outputs, lstm_loss_fname).predict(inputs, outputs, lstm_predictions_fname)
 
-    Evaluator.simple_rnn(units).fit(inputs, outputs).evaluate(inputs, outputs, rnn_loss_fname).predict(inputs, outputs, rnn_predictions_fname)
-    Evaluator.lstm(units).fit(inputs, outputs).evaluate(inputs, outputs, lstm_loss_fname).predict(inputs, outputs, lstm_predictions_fname)
-    Evaluator.gru(units).fit(inputs, outputs).evaluate(inputs, outputs, gru_loss_fname).predict(inputs, outputs, gru_predictions_fname)
+    if neural_type == "gru":
+        gru_loss_fname = constants.FNAME_FORMAT["models_gru_loss"].format(method=method, weight=weight,
+                                                                          width=width, nb_plays=nb_plays)
+        gru_predictions_fname = constants.FNAME_FORMAT["models_gru_predictions"].format(method=method, weight=weight,
+                                                                                        width=width, nb_plays=nb_plays)
+        Evaluator.gru(units).fit(inputs, outputs).evaluate(inputs, outputs, gru_loss_fname).predict(inputs, outputs, gru_predictions_fname)
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--neural-type", dest="neural_type",
+                        required=False, default="simple_rnn",
+                        type=str,
+                        help="select which rnn neural network to evaluate")
 
-    args_list = [(method, weight, width, _nb_plays)
+    argv = parser.parse_args(sys.argv[1:])
+
+    assert argv.neural_type in ["simple_rnn", "lstm", "gru"]
+
+    args_list = [(method, weight, width, _nb_plays, argv.neural_type)
                  for method in methods
                  for weight in weights
                  for width in widths
                  for _nb_plays in nb_plays]
-    args_list = [('sin', 1, 1, 1), ('sin', 1, 1, 2)]
+    # args_list = [('sin', 1, 1, 1, "simple_rnn"), ('sin', 1, 1, 2, "gru"), ('sin', 1, 1, 4, "lstm")]
 
     pool = pool.ProcessPool()
     pool.starmap(loop, args_list)
-    # for method in methods:
-    #     for weight in weights:
-    #         for width in widths:
-    #             for _nb_plays in nb_plays:
-    #                 fname = constants.FNAME_FORMAT["models"].format(method=method, weight=weight, width=width, nb_plays=_nb_plays)
-    #                 inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    #                 inputs = inputs.reshape(1, -1, 1)
-    #                 outputs = outputs.reshape(1, -1)
-    #                 units = outputs.shape[-1]
-    #                 Evaluator.simple_rnn(units).fit(inputs, outputs).evaluate(inputs, outputs)
-    #                 Evaluator.lstm(units).fit(inputs, outputs).evalute(inputs, outputs)
-    #                 Evaluator.gru(units).fit(inputs, outputs).evaluate(inputs, outputs)
-
-                    # model = tf.keras.models.Sequential()
-                    # # add dense before
-                    # model.add(tf.keras.layers.LSTM(units, input_shape=(units, 1)))
-                    # # add dense after
-                    # model.compile(loss='mse', optimizer=optimizer, metrics=['mse'])
+    pool.close()
+    pool.join()
