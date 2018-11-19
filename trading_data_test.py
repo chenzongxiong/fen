@@ -19,3 +19,8 @@ if __name__ == "__main__":
     inputs, outputs = trading_data.DatasetLoader.load_data(fname)
     train_inputs, train_outputs = trading_data.DatasetLoader.load_train_data(fname)
     test_inputs, test_outputs = trading_data.DatasetLoader.load_test_data(fname)
+
+    mu = 1
+    sigma = 5
+    B = trading_data.DatasetGenerator.systhesis_markov_chain_generator(points, mu, sigma)
+    LOG.debug("B: {}".format(B))

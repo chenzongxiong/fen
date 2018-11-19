@@ -2,7 +2,6 @@ import os
 import threading
 
 import numpy as np
-import tensorflow as tf
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 
@@ -82,6 +81,8 @@ class TFSummaryFileWriter(object):
     _lock = threading.Lock()
 
     def __new__(cls, fpath="."):
+        import tensorflow as tf
+
         if not cls._writer:
             with cls._lock:
                 if not cls._writer:
@@ -95,4 +96,5 @@ def get_tf_summary_writer(fpath):
 
 
 def get_session():
+    import tensorflow as tf
     return tf.keras.backend.get_session()

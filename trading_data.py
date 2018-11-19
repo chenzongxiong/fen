@@ -65,6 +65,15 @@ class DatasetGenerator(object):
         else:
             return _inputs, plays_outputs.sum(axis=1)
 
+    @staticmethod
+    def systhesis_markov_chain_generator(points, mu, sigma, b0=0):
+        B = [b0]
+        for i in range(points):
+            bi = np.random.normal(loc=B[-1] + mu, scale=sigma)
+            B.append(bi)
+
+        return B
+
 
 class DatasetLoader(object):
     SPLIT_RATIO = 0.6
