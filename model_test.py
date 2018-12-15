@@ -8,7 +8,7 @@ import log as logging
 
 LOG = logging.getLogger(__name__)
 epochs = constants.EPOCHS
-# epochs = 1
+epochs = 1
 batch_size = constants.BATCH_SIZE
 
 
@@ -37,6 +37,7 @@ def evaluate(play_model, inputs, outputs):
 
 
 def predict(play_model, inputs, debug_plays=False):
+
     predictions = play_model.predict(inputs, batch_size=batch_size, verbose=1)
     if debug_plays:
         plays_outputs = play_model.get_plays_outputs(inputs)
@@ -109,5 +110,6 @@ if __name__ == "__main__":
                 for _nb_plays in nb_plays]
 
     # args_list = [('sin', 1, 1, 4, 1), ('sin', 1, 1, 4, 2), ('sin', 1, 1, 4, 3), ('sin', 1, 1, 4, 4), ('sin', 1, 1, 4, 8)]
+    args_list = [('sin', 1, 1, 4, 1)]
     _pool = pool.ProcessPool()
     _pool.starmap(loop, args_list)

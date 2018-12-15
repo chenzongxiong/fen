@@ -80,13 +80,21 @@ class PlayCell(Layer):
         inputs: `inputs` is a vector
         state: `state` is randomly initialized
         """
+
+        # inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
+        # if inputs.shape.ndims == 1:
+        #     inputs = tf.reshape(inputs, shape=(1, -1))
+        # elif inputs.shape.ndims > 2:
+        #     raise Exception("len(inputs.shape) must be less or equal than 2, but got {}".format(inputs.shape.ndims))
+        # outputs_ = tf.multiply(inputs, self.kernel)
+        # outputs = [state]
+
         self.inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
         self.state = ops.convert_to_tensor(state, dtype=self.dtype)
         if self.inputs.shape.ndims == 1:
             self.inputs = tf.reshape(self.inputs, shape=(1, -1))
         elif self.inputs.shape.ndims > 2:
             raise Exception("len(inputs.shape) must be less or equal than 2, but got {}".format(self.inputs.shape.ndims))
-
         outputs_ = tf.multiply(self.inputs, self.kernel)
         outputs = [self.state]
 
@@ -96,8 +104,12 @@ class PlayCell(Layer):
 
         outputs = tf.convert_to_tensor(outputs[1:])
         outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
-        LOG.debug("{} inputs.shape: {}, output.shape: {}".format(colors.red("PlayCell"),
-                                                                 self.inputs.shape, outputs.shape))
+        # LOG.debug("{} inputs.shape: {}, output.shape: {}".format(colors.red("PlayCell"),
+        #                                                          inputs.shape, outputs.shape))
+
+        # LOG.debug("{} inputs.shape: {}, output.shape: {}".format(colors.red("PlayCell"),
+        #                                                          self.inputs.shape, outputs.shape))
+
         return outputs
 
     def compute_output_shape(self, input_shape):
@@ -257,6 +269,7 @@ class Play(Layer):
     def call(self, inputs):
         self.inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
         outputs1_ = self.cell(self.inputs, self.state)
+        # outputs1_ = self.cell(inputs, self.state)
         outputs1 = outputs1_ * self.kernel1
         assert outputs1.shape.ndims == 2
 
@@ -272,8 +285,8 @@ class Play(Layer):
         if self.bias2 is not None:
             outputs2 += self.bias2
 
-        LOG.debug("{}, inputs.shape: {}, outputs.shape: {}".format(colors.red("Play"),
-                                                                   self.inputs.shape, outputs2.shape))
+        # LOG.debug("{}, inputs.shape: {}, outputs.shape: {}".format(colors.red("Play"),
+        #                                                            inputs.shape, outputs2.shape))
 
         return outputs2
 
@@ -296,6 +309,7 @@ class Play(Layer):
         }
         base_config = super(Play, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))
+
 
 
 class PlayModel(tf.keras.Model):
@@ -322,21 +336,23 @@ class PlayModel(tf.keras.Model):
         """
         outputs = []
         self.inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
+        # inputs = self.inputs
         for play in self._plays:
             outputs.append(play(self.inputs))
+            # outputs.append(play(inputs))
 
-        outputs = tf.convert_to_tensor(outputs, dtype=self.dtype)   # (nb_plays, nb_batches, batch_size)
-        self.plays_outputs = outputs
-        LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
-                                                outputs.shape))  # (nb_plays, nb_batches, batch_size)
+        outputs = tf.convert_to_tensor(outputs, dtype=self.dtype)
+        # self.plays_outputs = outputs
+        # LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
+        #                                         outputs.shape))
         outputs = tf.reduce_sum(outputs, axis=0)
-        LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
-                                                outputs.shape))  # (nb_plays, nb_batches, batch_size)
+        # LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
+        #                                         outputs.shape))
         outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
-        if debug is True:
-            return outputs, self.plays_outputs
-        else:
-            return outputs
+        # if debug is True:
+        #     return outputs, self.plays_outputs
+        # else:
+        return outputs
 
     def get_config(self):
         config = {
@@ -358,3 +374,42 @@ class PlayModel(tf.keras.Model):
             plays_outputs_list.append(plays_outputs_eval)
 
         return np.hstack(plays_outputs_list).T
+
+
+class PlayModel2(Layer):
+    def __init__(self, nb_plays, units=4, batch_size=1,
+                 activity_regularizer=None,
+                 **kwargs):
+        self.debug = kwargs.pop("debug", False)
+        super(PlayModel2, self).__init__(
+            activity_regularizer=regularizers.get(activity_regularizer), **kwargs)
+
+        self._nb_plays = nb_plays
+        self._plays = []
+        for _ in range(self._nb_plays):
+            cell = PlayCell(debug=self.debug)
+            play = Play(units=units, cell=cell, debug=self.debug)
+            self._plays.append(play)
+        self.plays_outputs = None
+
+    def call(self, inputs, debug=False):
+        """
+        Parameters:
+        ----------------
+        inputs: `inputs` is a vector, assert len(inputs.shape) == 1
+        """
+        outputs = []
+        self.inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
+
+        for play in self._plays:
+            outputs.append(play(self.inputs))
+
+        outputs = tf.convert_to_tensor(outputs, dtype=self.dtype)
+        # LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
+        #                                         outputs.shape))
+        outputs = tf.reduce_sum(outputs, axis=0)
+        # LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
+        #                                         outputs.shape))
+        outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
+
+        return outputs
