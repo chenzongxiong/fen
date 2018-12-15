@@ -14,7 +14,6 @@ sess = utils.get_session()
 
 
 if __name__ == "__main__":
-
     LOG.debug("********************{}********************".format(colors.red("run under debug mode")))
     LOG.debug("==================Test core.Phi===========================")
     # case 1.
@@ -62,11 +61,12 @@ if __name__ == "__main__":
     # playmodel gradient
     LOG.debug("====================Test core.PlayModel==========================")
     nb_plays = 1
-    play_model = core.PlayModel(nb_plays=nb_plays, debug=True)
     inputs = np.array([-0.5, 1, -2, 5]).astype(np.float32)
+    play_model = core.PlayModel(nb_plays=nb_plays, debug=True)
     outputs = play_model(inputs)
     g = tf.gradients(outputs, [play_model.inputs])
-    LOG.debug(sess.run(g))
+    # LOG.debug(sess.run(outputs))
+    LOG.debug("gradient: {}".format(sess.run(g)))
     LOG.debug("============================================================")
 
     LOG.debug("====================Test core.PlayModel2==========================")
