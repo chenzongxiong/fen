@@ -8,7 +8,7 @@ import log as logging
 
 LOG = logging.getLogger(__name__)
 epochs = constants.EPOCHS
-epochs = 1
+epochs = 1000
 batch_size = constants.BATCH_SIZE
 
 
@@ -103,6 +103,6 @@ if __name__ == "__main__":
                 for _nb_plays in nb_plays]
 
     # args_list = [('sin', 1, 1, 4, 1), ('sin', 1, 1, 4, 2), ('sin', 1, 1, 4, 3), ('sin', 1, 1, 4, 4), ('sin', 1, 1, 4, 8)]
-    args_list = [('sin', 1, 1, 4, 1)]
+    args_list = [('sin', 1, 1, 1600, 1)]
     _pool = pool.ProcessPool()
     _pool.starmap(loop, args_list)
