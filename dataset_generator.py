@@ -74,6 +74,27 @@ def model_generator():
                     tdata.DatasetSaver.save_data(inputs, plays_outputs, fname)
 
 
+def GF_generator():
+    for method in methods:
+        for weight in weights:
+            for width in widths:
+                fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width)
+                try:
+                    inputs, _ = tdata.DatasetLoader.load_data(fname)
+                except FileNotFoundError:
+                    inputs = None
+
+                for nb_plays in _nb_plays:
+                    inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(
+                        nb_plays=nb_plays, points=points, debug_plays=False, inputs=inputs)
+
+                    fname_G = constants.FNAME_FORMAT["models_G"].format(method=method, weight=weight, width=width, nb_plays=nb_plays)
+                    fname_F = constants.FNAME_FORMAT["models_F"].format(method=method, weight=weight, width=width, nb_plays=nb_plays)
+                    tdata.DatasetSaver.save_data(inputs, outputs, fname_G)
+                    tdata.DatasetSaver.save_data(outputs, inputs, fname_F)
+
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--operator", dest="operator",
@@ -89,6 +110,10 @@ if __name__ == "__main__":
                         action="store_true",
                         help="generate models' dataset")
 
+    parser.add_argument("--GF", dest="GF",
+                        required=False,
+                        action="store_true",
+                        help="generate G & F models' dataset")
 
     argv = parser.parse_args(sys.argv[1:])
 
@@ -98,3 +123,5 @@ if __name__ == "__main__":
         play_generator()
     if argv.model:
         model_generator()
+    if argv.GF:
+        GF_generator()

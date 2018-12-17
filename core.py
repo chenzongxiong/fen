@@ -342,17 +342,17 @@ class PlayModel(tf.keras.Model):
             # outputs.append(play(inputs))
 
         outputs = tf.convert_to_tensor(outputs, dtype=self.dtype)
-        # self.plays_outputs = outputs
+        self.plays_outputs = outputs
         # LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
         #                                         outputs.shape))
         outputs = tf.reduce_sum(outputs, axis=0)
         # LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
         #                                         outputs.shape))
         outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
-        # if debug is True:
-        #     return outputs, self.plays_outputs
-        # else:
-        return outputs
+        if debug is True:
+            return outputs, self.plays_outputs
+        else:
+            return outputs
 
     def get_config(self):
         config = {

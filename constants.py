@@ -44,6 +44,16 @@ FNAME_FORMAT = dict(
     models_gru_loss="./training-data/models/gru/{method}-{weight}-{width}-{nb_plays}-gru-loss.csv",
     models_gru_predictions="./training-data/models/gru/{method}-{weight}-{width}-{nb_plays}-gru-predictions.csv",
 
+    # G model
+    models_G="./training-data/G/{method}-{weight}-{width}-{nb_plays}.csv",
+    # models_G_multi="./training-data/G/{method}-{weight}-{width}-{nb_plays}-multi.csv",
+    models_G_loss="./training-data/G/{method}-{weight}-{width}-{nb_plays}-{batch_size}-loss.csv",
+    models_G_predictions="./training-data/G/{method}-{weight}-{width}-{nb_plays}-{batch_size}-predictions.csv",
+    # F model
+    models_F="./training-data/F/{method}-{weight}-{width}-{nb_plays}.csv",
+    # models_F_multi="./training-data/F/{method}-{weight}-{width}-{nb_plays}-multi.csv",
+    models_F_loss="./training-data/F/{method}-{weight}-{width}-{nb_plays}-{batch_size}-loss.csv",
+    models_F_predictions="./training-data/F/{method}-{weight}-{width}-{nb_plays}-{batch_size}-predictions.csv",
 )
 
 CPU_COUNTS = min(os.cpu_count(), 32)
