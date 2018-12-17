@@ -44,7 +44,7 @@ if __name__ == "__main__":
     state = float(-0.5)
     cell = core.PlayCell(weight=weight, width=width, debug=True)
     outputs = cell(inputs, state)
-    g = tf.gradients(outputs, [cell.inputs, cell.state])
+    g = tf.gradients(outputs, [cell._inputs, cell._state])
     LOG.debug(sess.run(g))
     LOG.debug("============================================================")
 
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     LOG.debug("====================Test core.Play==========================")
     layer = core.Play(units=4, cell=cell, debug=True)
     outputs = layer(inputs)
-    g = tf.gradients(outputs, [layer.inputs])
+    g = tf.gradients(outputs, [layer._inputs])
     LOG.debug(inputs)
     LOG.debug(sess.run(outputs))
     LOG.debug(sess.run(g))
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     init = tf.global_variables_initializer()
     sess.run(init)
 
-    g = tf.gradients(outputs, [cell.inputs, cell.state])
+    g = tf.gradients(outputs, [cell._inputs, cell._state])
     LOG.debug(sess.run(g))
     LOG.debug("============================================================")
 
@@ -107,7 +107,7 @@ if __name__ == "__main__":
     init = tf.global_variables_initializer()
     sess.run(init)
 
-    g = tf.gradients(outputs, [layer.inputs])
+    g = tf.gradients(outputs, [layer._inputs])
     LOG.debug(inputs)
     LOG.debug(sess.run(outputs))
     LOG.debug(sess.run(g))
@@ -124,6 +124,6 @@ if __name__ == "__main__":
     init = tf.global_variables_initializer()
     sess.run(init)
 
-    g = tf.gradients(outputs, [play_model2.inputs])
+    g = tf.gradients(outputs, [play_model2._inputs])
     LOG.debug(sess.run(g))
     LOG.debug("============================================================")

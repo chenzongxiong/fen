@@ -89,14 +89,14 @@ class PlayCell(Layer):
         # outputs_ = tf.multiply(inputs, self.kernel)
         # outputs = [state]
 
-        self.inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
-        self.state = ops.convert_to_tensor(state, dtype=self.dtype)
-        if self.inputs.shape.ndims == 1:
-            self.inputs = tf.reshape(self.inputs, shape=(1, -1))
-        elif self.inputs.shape.ndims > 2:
-            raise Exception("len(inputs.shape) must be less or equal than 2, but got {}".format(self.inputs.shape.ndims))
-        outputs_ = tf.multiply(self.inputs, self.kernel)
-        outputs = [self.state]
+        self._inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
+        self._state = ops.convert_to_tensor(state, dtype=self.dtype)
+        if self._inputs.shape.ndims == 1:
+            self._inputs = tf.reshape(self._inputs, shape=(1, -1))
+        elif self._inputs.shape.ndims > 2:
+            raise Exception("len(inputs.shape) must be less or equal than 2, but got {}".format(self._inputs.shape.ndims))
+        outputs_ = tf.multiply(self._inputs, self.kernel)
+        outputs = [self._state]
 
         for index in range(outputs_.shape[-1].value):
             phi_ = Phi(outputs_[:, index]-outputs[-1], width=self.width) + outputs[-1]
@@ -108,7 +108,7 @@ class PlayCell(Layer):
         #                                                          inputs.shape, outputs.shape))
 
         # LOG.debug("{} inputs.shape: {}, output.shape: {}".format(colors.red("PlayCell"),
-        #                                                          self.inputs.shape, outputs.shape))
+        #                                                          self._inputs.shape, outputs.shape))
 
         return outputs
 
@@ -196,7 +196,7 @@ class Play(Layer):
                                      name="bias2",
                                      dtype=tf.float32)
 
-            self.state = tf.Variable(0,
+            self._state = tf.Variable(0,
                                      name="state",
                                      dtype=tf.float32)
             if constants.DEBUG_INIT_TF_VALUE:
@@ -204,13 +204,13 @@ class Play(Layer):
                 self.kernel2 = self.kernel2.initialized_value()
                 self.bias1 = self.bias1.initialized_value()
                 self.bias2 = self.bias2.initialized_value()
-                self.state = self.state.initialized_value()
+                self._state = self._state.initialized_value()
 
             self._trainable_weights.append(self.kernel1)
             self._trainable_weights.append(self.kernel2)
             self._trainable_weights.append(self.bias1)
             self._trainable_weights.append(self.bias2)
-            self._trainable_weights.append(self.state)
+            self._trainable_weights.append(self._state)
 
         else:
             LOG.debug("Initalize *theta* randomly...")
@@ -232,7 +232,7 @@ class Play(Layer):
                 dtype=self.dtype,
                 trainable=True)
 
-            self.state = self.add_weight(
+            self._state = self.add_weight(
                 'state',
                 # shape=(self.nbr_of_cells, 1),
                 shape=(),
@@ -267,9 +267,9 @@ class Play(Layer):
         self.built = True
 
     def call(self, inputs):
-        self.inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
-        outputs1_ = self.cell(self.inputs, self.state)
-        # outputs1_ = self.cell(inputs, self.state)
+        self._inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
+        outputs1_ = self.cell(self._inputs, self._state)
+        # outputs1_ = self.cell(inputs, self._state)
         outputs1 = outputs1_ * self.kernel1
         assert outputs1.shape.ndims == 2
 
@@ -335,10 +335,10 @@ class PlayModel(tf.keras.Model):
         inputs: `inputs` is a vector, assert len(inputs.shape) == 1
         """
         outputs = []
-        self.inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
-        # inputs = self.inputs
+        self._inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
+        # inputs = self._inputs
         for play in self._plays:
-            outputs.append(play(self.inputs))
+            outputs.append(play(self._inputs))
             # outputs.append(play(inputs))
 
         outputs = tf.convert_to_tensor(outputs, dtype=self.dtype)
@@ -399,10 +399,10 @@ class PlayModel2(Layer):
         inputs: `inputs` is a vector, assert len(inputs.shape) == 1
         """
         outputs = []
-        self.inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
+        self._inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
 
         for play in self._plays:
-            outputs.append(play(self.inputs))
+            outputs.append(play(self._inputs))
 
         outputs = tf.convert_to_tensor(outputs, dtype=self.dtype)
         # LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
