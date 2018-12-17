@@ -141,6 +141,7 @@ def GF_generator():
                             try:
                                 _, predictions = tdata.DatasetLoader.load_data(fname)
                             except:
+                                LOG.warn("fname {} not found.".format(fname))
                                 continue
 
                             outputs = np.vstack([ground_truth, predictions]).T
