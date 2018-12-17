@@ -54,6 +54,8 @@ FNAME_FORMAT = dict(
     # models_F_multi="./training-data/F/{method}-{weight}-{width}-{nb_plays}-multi.csv",
     models_F_loss="./training-data/F/{method}-{weight}-{width}-{nb_plays}-{batch_size}-loss.csv",
     models_F_predictions="./training-data/F/{method}-{weight}-{width}-{nb_plays}-{batch_size}-predictions.csv",
+    models_F_gif="./pics/F/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}.gif",
+    models_F_gif_snake="./pics/F/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-snake.gif",
 )
 
 CPU_COUNTS = min(os.cpu_count(), 32)

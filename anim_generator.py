@@ -15,7 +15,8 @@ weights = constants.WEIGHTS
 widths = constants.WIDTHS
 units = constants.UNITS
 nb_plays = constants.NB_PLAYS
-batch_sizes = constants.BATCH_SIZE_LIST
+# batch_sizes = constants.BATCH_SIZE_LIST
+batch_sizes = [1600]
 
 
 def operator_generator():
@@ -122,6 +123,43 @@ def model_generator():
                         # utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
 
 
+def GF_generator():
+    for method in methods:
+        for weight in weights:
+            for width in widths:
+                for _nb_plays in nb_plays:
+                    LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
+                    fname = constants.FNAME_FORMAT["models_F"].format(method=method, weight=weight,
+                                                                      width=width, nb_plays=_nb_plays)
+                    _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
+                    for __nb_plays in nb_plays:
+                        for bz in batch_sizes:
+                            fname = constants.FNAME_FORMAT["models_F_predictions"].format(method=method, weight=weight,
+                                                                                          width=width, nb_plays=_nb_plays,
+                                                                                          nb_plays_=__nb_plays,
+                                                                                          batch_size=bz)
+                            try:
+                                _, predictions = tdata.DatasetLoader.load_data(fname)
+                            except:
+                                continue
+
+                            outputs = np.vstack([ground_truth, predictions]).T
+                            colors = utils.generate_colors(outputs.shape[-1])
+                            inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
+                            fname = constants.FNAME_FORMAT["models_F_gif"].format(method=method, weight=weight,
+                                                                                  width=width, nb_plays=_nb_plays,
+                                                                                  nb_plays_=__nb_plays,
+                                                                                  batch_size=bz)
+                            utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
+                            fname = constants.FNAME_FORMAT["models_F_gif_snake"].format(method=method, weight=weight,
+                                                                                        width=width, nb_plays=_nb_plays,
+                                                                                        nb_plays_=__nb_plays,
+                                                                                        batch_size=bz)
+                            utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
+
+
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--operator", dest="operator",
@@ -136,7 +174,10 @@ if __name__ == "__main__":
                         required=False,
                         action="store_true",
                         help="generate models' dataset")
-
+    parser.add_argument("--GF", dest="GF",
+                        required=False,
+                        action="store_true",
+                        help="generate G & F's dataset")
     argv = parser.parse_args(sys.argv[1:])
 
     if argv.operator:
@@ -145,3 +186,5 @@ if __name__ == "__main__":
         play_generator()
     if argv.model:
         model_generator()
+    if argv.GF:
+        GF_generator()
