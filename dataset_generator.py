@@ -12,12 +12,13 @@ LOG = logging.getLogger(__name__)
 methods = constants.METHODS
 weights = constants.WEIGHTS
 widths = constants.WIDTHS
-_nb_plays = constants.NB_PLAYS
+NB_PLAYS = constants.NB_PLAYS
 points = constants.POINTS
-
+points = 100
 
 def operator_generator():
-    states = [0, 1, 4, 7, 10 -1, -4, -7, -10]
+    # states = [0, 1, 4, 7, 10 -1, -4, -7, -10]
+    states = [1, 4, 10 -1, -4, -10]
 
     for method in methods:
         for weight in weights:
@@ -35,6 +36,7 @@ def operator_generator():
                 fname = "./training-data/operators/{}-{}-{}.csv".format(method, weight, width)
                 inputs = np.hstack(inputs)
                 outputs = np.hstack(outputs)
+                outputs = outputs.T
                 tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
 
@@ -64,7 +66,7 @@ def model_generator():
                 except FileNotFoundError:
                     inputs = None
 
-                for nb_plays in _nb_plays:
+                for nb_plays in NB_PLAYS:
                     inputs, outputs, plays_outputs = tdata.DatasetGenerator.systhesis_model_generator(
                         nb_plays=nb_plays, points=points, debug_plays=True, inputs=inputs)
 
@@ -78,7 +80,7 @@ def GF_generator():
     for method in methods:
         for weight in weights:
             for width in widths:
-                for nb_plays in _nb_plays:
+                for nb_plays in NB_PLAYS:
                     fname = constants.FNAME_FORMAT["models"].format(method=method, weight=weight, width=width, nb_plays=nb_plays)
 
                     try:
@@ -89,7 +91,6 @@ def GF_generator():
                         tdata.DatasetSaver.save_data(outputs, inputs, fname_F)
                     except FileNotFoundError:
                         LOG.warn("fname {} not found.".format(fname))
-
 
 
 if __name__ == "__main__":

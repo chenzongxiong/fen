@@ -10,7 +10,7 @@ LOG = logging.getLogger(__name__)
 epochs = constants.EPOCHS
 epochs = 1000
 batch_size = constants.BATCH_SIZE
-
+NB_PLAYS = constants.NB_PLAYS
 
 def fit(inputs, outputs, nb_plays):
     import tensorflow as tf
@@ -64,7 +64,10 @@ def loop(method, weight, width, bz, nb_plays):
     _test_inputs = test_inputs.reshape(-1, bz)  # samples * sequences
     _test_outputs = test_outputs.reshape(-1, bz)  # samples * sequences
 
-    for nb_plays_ in constants.NB_PLAYS:
+    # for nb_plays_ in constants.NB_PLAYS:
+    NB_PLAYS = [8]
+    for nb_plays_ in NB_PLAYS:
+
         LOG.debug("Fitting...")
         play_model = fit(_train_inputs, _train_outputs, nb_plays_)
         LOG.debug("Evaluating...")
@@ -103,6 +106,7 @@ if __name__ == "__main__":
                 for _nb_plays in nb_plays]
 
     # args_list = [('sin', 1, 1, 4, 1), ('sin', 1, 1, 4, 2), ('sin', 1, 1, 4, 3), ('sin', 1, 1, 4, 4), ('sin', 1, 1, 4, 8)]
-    args_list = [('sin', 1, 1, 1600, 1)]
+    # args_list = [('sin', 1, 1, 1600, 1)]
+    args_list = [('sin', 1, 1, 100, 1)]
     _pool = pool.ProcessPool()
     _pool.starmap(loop, args_list)

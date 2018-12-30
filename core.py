@@ -33,6 +33,7 @@ class PlayCell(Layer):
     def __init__(self,
                  weight=1.0,
                  width=1.0,
+                 hysteretic_func=Phi,
                  kernel_initializer='glorot_uniform',
                  kernel_regularizer=None,
                  activity_regularizer=None,
@@ -51,6 +52,8 @@ class PlayCell(Layer):
         self.kernel_regularizer = regularizers.get(kernel_regularizer)
         # TODO: try non negative constraint
         self.kernel_constraint = constraints.get(kernel_constraint)
+
+        self.hysteretic_func = hysteretic_func
 
     def build(self, input_shape):
         if self.debug:
@@ -95,14 +98,17 @@ class PlayCell(Layer):
             self._inputs = tf.reshape(self._inputs, shape=(1, -1))
         elif self._inputs.shape.ndims > 2:
             raise Exception("len(inputs.shape) must be less or equal than 2, but got {}".format(self._inputs.shape.ndims))
+
         outputs_ = tf.multiply(self._inputs, self.kernel)
-        outputs = [self._state]
+        # outputs = [self._state]
 
-        for index in range(outputs_.shape[-1].value):
-            phi_ = Phi(outputs_[:, index]-outputs[-1], width=self.width) + outputs[-1]
-            outputs.append(phi_)
+        # for index in range(outputs_.shape[-1].value):
+        #     phi_ = self.hysteretic_func(outputs_[:, index]-outputs[-1], width=self.width) + outputs[-1]
+        #     outputs.append(phi_)
 
-        outputs = tf.convert_to_tensor(outputs[1:])
+        # outputs = tf.convert_to_tensor(outputs[1:])
+        outputs = tf.convert_to_tensor(outputs_)
+
         outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
         # LOG.debug("{} inputs.shape: {}, output.shape: {}".format(colors.red("PlayCell"),
         #                                                          inputs.shape, outputs.shape))

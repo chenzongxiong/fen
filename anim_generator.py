@@ -16,8 +16,8 @@ widths = constants.WIDTHS
 units = constants.UNITS
 nb_plays = constants.NB_PLAYS
 # batch_sizes = constants.BATCH_SIZE_LIST
-batch_sizes = [1600]
-
+batch_sizes = [100]
+nb_plays = [1]
 
 def operator_generator():
     for method in methods:
@@ -132,6 +132,7 @@ def GF_generator():
                     fname = constants.FNAME_FORMAT["models_F"].format(method=method, weight=weight,
                                                                       width=width, nb_plays=_nb_plays)
                     _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
+                    import ipdb; ipdb.set_trace()
                     for __nb_plays in nb_plays:
                         for bz in batch_sizes:
                             fname = constants.FNAME_FORMAT["models_F_predictions"].format(method=method, weight=weight,
@@ -151,12 +152,12 @@ def GF_generator():
                                                                                   width=width, nb_plays=_nb_plays,
                                                                                   nb_plays_=__nb_plays,
                                                                                   batch_size=bz)
-                            utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
+                            utils.save_animation(inputs, outputs, fname, step=10, colors=colors)
                             fname = constants.FNAME_FORMAT["models_F_gif_snake"].format(method=method, weight=weight,
                                                                                         width=width, nb_plays=_nb_plays,
                                                                                         nb_plays_=__nb_plays,
                                                                                         batch_size=bz)
-                            utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
+                            utils.save_animation(inputs, outputs, fname, step=10, colors=colors, mode="snake")
 
 
 
