@@ -1,5 +1,7 @@
 import tensorflow as tf
 from tensorflow.python.keras.engine.base_layer import Layer
+from tensorflow.python.keras.layers.recurrent import RNN
+
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.framework import ops
 from tensorflow.python.keras import regularizers
@@ -419,3 +421,194 @@ class PlayModel2(Layer):
         outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
 
         return outputs
+
+
+class PhiCell(Layer):
+    def __init__(self,
+                 input_dim=1,
+                 weight=1.0,
+                 width=1.0,
+                 hysteretic_func=Phi,
+                 kernel_initializer='glorot_uniform',
+                 kernel_regularizer=None,
+                 activity_regularizer=None,
+                 kernel_constraint="non_neg",
+                 **kwargs):
+
+        self.debug = kwargs.pop("debug", False)
+
+        super(PhiCell, self).__init__(
+            activity_regularizer=regularizers.get(activity_regularizer), **kwargs)
+
+        self._weight = weight
+        self._recurrent_weight = -1
+        self._width = width
+        self.units = 1
+        self.state_size = [1]
+        # self.state_size = 1
+
+        self.kernel_initializer = initializers.get(kernel_initializer)
+        self.kernel_regularizer = regularizers.get(kernel_regularizer)
+
+        # TODO: try non negative constraint
+        self.kernel_constraint = constraints.get(kernel_constraint)
+
+        self.hysteretic_func = hysteretic_func
+        self.input_dim = input_dim
+
+    def build(self, input_shape):
+        if self.debug:
+            LOG.debug("Initialize *weight* as pre-defined...")
+            self.kernel = tf.Variable([[self._weight]], name="weight", dtype=tf.float32)
+            if constants.DEBUG_INIT_TF_VALUE:
+                self.weight = self.kernel.initialized_value()
+
+            self._trainable_weights.append(self.weight)
+        else:
+            LOG.debug("Initialize *weight* randomly...")
+            self.kernel = self.add_weight(
+                "weight",
+                shape=(self.input_dim, self.units),
+                initializer=self.kernel_initializer,
+                regularizer=self.kernel_regularizer,
+                constraint=self.kernel_constraint,
+                dtype=tf.float32,
+                trainable=True)
+
+        self.built = True
+
+    def call(self, inputs, states):
+        """
+        Parameters:
+        ----------------
+        inputs: `inputs` is a scalar
+        state: `state` is randomly initialized
+        """
+        import ipdb; ipdb.set_trace()
+        # print("cell call states' len: ", len(states))
+
+        self._inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
+        self._state = ops.convert_to_tensor(states[-1], dtype=tf.float32)
+
+        outputs_ = tf.multiply(self._inputs, self.kernel)
+        outputs = tf.add(Phi(tf.subtract(outputs_, self._state)), self._state)
+
+        return outputs, [outputs]
+
+
+
+class Operator(RNN):
+    def __init__(self, debug=False):
+        cell = PhiCell(
+            input_dim=1,
+            weight=1.0,
+            width=1.0,
+            debug=debug
+            )
+        super(Operator, self).__init__(
+            cell=cell,
+            return_sequences=True,
+            # return_state=True
+            return_state=False,
+            stateful=True
+            )
+
+    def call(self, inputs, inital_state=None):
+        import ipdb; ipdb.set_trace()
+        return super(Operator, self).call(
+            inputs, initial_state=initial_state
+        )
+
+
+if __name__ == "__main__":
+    print("Hello world")
+
+    # tf.keras.layers.TimeDistributed()
+    tf.random.set_random_seed(123)
+    sess = utils.get_session()
+    phi_cell = PhiCell(weight=1.0, width=1.0, debug=True)
+    outputs = phi_cell(2, [1])
+
+    init = tf.global_variables_initializer()
+    sess.run(init)
+
+    print("outputs: ", sess.run(outputs))
+
+    # op = Operator()
+    # inputs = np.array([1, 2, 3, 4])
+    # outputs = op(inputs, initial_state=0)
+
+    # timesteps = 3
+    # embedding_dim = 1
+    # uints =  1
+    # num_samples = 1
+    # num_states = 2
+
+    # inputs = tf.keras.Input((timesteps, embedding_dim))
+
+    units = 1
+    input_dim = 1
+    # x = tf.keras.Input((32, input_dim), 1)
+    # RNN input shape is (batch_size, timesteps, input_dim)
+    # _x = np.array([1, 2, 3, 4, 5])
+    # _x = np.array([-5, -4, -3, -2, -1])
+    # _x = np.array([-2.5, -1.5, -0.5, 0.5, 1.5])
+    import trading_data as tdata
+    _x = tdata.DatasetGenerator.systhesis_input_generator(100)
+    _x = _x * 10
+    _x = _x.reshape((1, -1, 1))
+    # import ipdb; ipdb.set_trace()
+    x = ops.convert_to_tensor(_x, dtype=tf.float32)
+    # x = tf.keras.Input(tensor=x, shape=x.shape)
+    print("x.shape: ", x.shape)
+    # initial_state = tf.keras.Input((1,))
+    initial_state = None
+    # initial_state = np.array([0])
+    # initial_state = initial_state.reshape((1, -1))
+    # initial_state = ops.convert_to_tensor(initial_state, dtype=tf.float32)
+    # initial_state = tf.keras.Input(tensor=initial_state, shape=(1, ), batch_size=1)
+    # print("initial_state.shape: ", initial_state.shape)
+    layer = Operator(debug=True)
+    y = layer(x, initial_state)
+    init = tf.global_variables_initializer()
+    sess.run(init)
+    y_res = sess.run(y)
+    print("y: ", y_res)
+
+    y_true = y_res
+    import ipdb; ipdb.set_trace()
+    print("end")
+
+    import time
+    start = time.time()
+    model = tf.keras.models.Sequential()
+
+    _x = _x.reshape((1, -1, 1))
+    x = ops.convert_to_tensor(_x, dtype=tf.float32)
+    model.add(tf.keras.layers.InputLayer(input_tensor=x, input_shape=x.shape))
+    model.add(Operator())
+    model.compile(loss="mse",
+                  optimizer="adam",
+                  metrics=["mse"])
+
+    # model.fit(_x, y_true, epochs=10, batch_size=1, verbose=1, steps_per_epoch=1, shuffle=False)
+    # model.fit(_x, y_true, epochs=2000, batch_size=1, verbose=1, steps_per_epoch=None, shuffle=False)
+    _y_true = ops.convert_to_tensor(y_true, dtype=tf.float32)
+    model.fit(x, _y_true, epochs=100, batch_size=None, verbose=1, steps_per_epoch=1, shuffle=False)
+    end = time.time()
+    print("time costs: ", end-start, " s")
+    score = model.evaluate(_x, y_true)
+    print("score: ", score)
+    import ipdb; ipdb.set_trace()
+    print("weight: ", sess.run(model._layers[0].cell.kernel))
+    print("end")
+
+    # model = keras.models.Model(x, y)
+    # model.compile(optimizer='rmsprop', loss='mse')
+    # print("y: ", sess.run(y))
+    # initial_state = [tf.keras.backend.random_normal_variable(
+    #     (num_samples, ), 0, 1)
+    #                  for _ in range(num_states)]
+    # layer = Operator()
+    # import ipdb; ipdb.set_trace()
+    # output = layer(inputs, initial_state=initial_state)
