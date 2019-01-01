@@ -563,12 +563,12 @@ if __name__ == "__main__":
     # RNN input shape is (batch_size, timesteps, input_dim)
     # _x = np.array([1, 2, 3, 4, 5])
     # _x = np.array([-5, -4, -3, -2, -1])
-    _x = np.array([-2.5, -1.5, -0.5, -0.7, 0.5, 1.5])
-    # import trading_data as tdata
-    # _x = tdata.DatasetGenerator.systhesis_input_generator(100)
-    # _x = _x * 10
+    # _x = np.array([-2.5, -1.5, -0.5, -0.7, 0.5, 1.5])
+    import trading_data as tdata
+    _x = tdata.DatasetGenerator.systhesis_input_generator(1000)
+    _x = _x * 10
     _x = _x.reshape((1, -1, 1))
-    _x = _x.reshape((1, -1, 2))
+    # _x = _x.reshape((1, -1, 2))
     import ipdb; ipdb.set_trace()
     x = ops.convert_to_tensor(_x, dtype=tf.float32)
     # x = tf.keras.Input(tensor=x, shape=x.shape)
@@ -580,14 +580,14 @@ if __name__ == "__main__":
     # initial_state = ops.convert_to_tensor(initial_state, dtype=tf.float32)
     # initial_state = tf.keras.Input(tensor=initial_state, shape=(1, ), batch_size=1)
     # print("initial_state.shape: ", initial_state.shape)
-    layer = Operator(debug=True)
+    layer = Operator(debug=True, weight=3)
     y = layer(x, initial_state)
     init = tf.global_variables_initializer()
     sess.run(init)
     y_res = sess.run(y)
     print("y: ", y_res)
 
-    y_true = y_res
+    _y_true = y_res
     import ipdb; ipdb.set_trace()
     print("end")
 
@@ -595,9 +595,10 @@ if __name__ == "__main__":
     start = time.time()
     model = tf.keras.models.Sequential()
 
-    _x = _x.reshape((1, -1, 1))
+    _x = _x.reshape((1, -1, 50))
+    _y_true = _y_true.reshape((1, -1, 50))
     x = ops.convert_to_tensor(_x, dtype=tf.float32)
-    model.add(tf.keras.layers.InputLayer(input_tensor=x, input_shape=x.shape))
+    model.add(tf.keras.layers.InputLayer(batch_size=1, input_shape=x.shape[1:]))
     model.add(Operator())
     model.compile(loss="mse",
                   optimizer="adam",
@@ -605,11 +606,11 @@ if __name__ == "__main__":
 
     # model.fit(_x, y_true, epochs=10, batch_size=1, verbose=1, steps_per_epoch=1, shuffle=False)
     # model.fit(_x, y_true, epochs=2000, batch_size=1, verbose=1, steps_per_epoch=None, shuffle=False)
-    _y_true = ops.convert_to_tensor(y_true, dtype=tf.float32)
-    model.fit(x, _y_true, epochs=100, batch_size=None, verbose=1, steps_per_epoch=1, shuffle=False)
+    y_true = ops.convert_to_tensor(_y_true, dtype=tf.float32)
+    model.fit(x, y_true, epochs=2500, batch_size=None, verbose=1, steps_per_epoch=1, shuffle=False)
     end = time.time()
     print("time costs: ", end-start, " s")
-    score = model.evaluate(_x, y_true)
+    score = model.evaluate(x, y_true, steps=1)
     print("score: ", score)
     import ipdb; ipdb.set_trace()
     print("weight: ", sess.run(model._layers[0].cell.kernel))
