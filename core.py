@@ -468,7 +468,7 @@ class PhiCell(Layer):
             LOG.debug("Initialize *weight* randomly...")
             self.kernel = self.add_weight(
                 "weight",
-                shape=(self.input_dim, self.units),
+                shape=(self.units, self.units),
                 initializer=self.kernel_initializer,
                 regularizer=self.kernel_regularizer,
                 constraint=self.kernel_constraint,
@@ -484,25 +484,36 @@ class PhiCell(Layer):
         inputs: `inputs` is a scalar
         state: `state` is randomly initialized
         """
-        import ipdb; ipdb.set_trace()
         # print("cell call states' len: ", len(states))
 
         self._inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
+        # print("self._inputs: ", sess.run(self._inputs))
         self._state = ops.convert_to_tensor(states[-1], dtype=tf.float32)
-
+        # unroll method
         outputs_ = tf.multiply(self._inputs, self.kernel)
-        outputs = tf.add(Phi(tf.subtract(outputs_, self._state)), self._state)
+        # outputs = tf.add(Phi(tf.subtract(outputs_, self._state)), self._state)
+        # state = outputs
+        # import ipdb; ipdb.set_trace()
+        outputs = [self._state]
+        for i in range(outputs_.shape[-1].value):
+            output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1])), outputs[-1])
+            outputs.append(output)
 
-        return outputs, [outputs]
+        outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
+        state = outputs[-1]
+        outputs = tf.reshape(outputs, shape=self._inputs.shape)
+        state = tf.reshape(state, shape=(1, 1))
+        print("output.shape: ", outputs.shape)
+        print("state.shape: ", state.shape)
+        return outputs, [state]
 
 
 
 class Operator(RNN):
-    def __init__(self, debug=False):
+    def __init__(self, weight=1.0, width=1.0, debug=False):
         cell = PhiCell(
-            input_dim=1,
-            weight=1.0,
-            width=1.0,
+            weight=weight,
+            width=width,
             debug=debug
             )
         super(Operator, self).__init__(
@@ -526,13 +537,13 @@ if __name__ == "__main__":
     # tf.keras.layers.TimeDistributed()
     tf.random.set_random_seed(123)
     sess = utils.get_session()
-    phi_cell = PhiCell(weight=1.0, width=1.0, debug=True)
-    outputs = phi_cell(2, [1])
+    # phi_cell = PhiCell(weight=1.0, width=1.0, debug=True)
+    # outputs = phi_cell([2, 1], [1])
 
-    init = tf.global_variables_initializer()
-    sess.run(init)
+    # init = tf.global_variables_initializer()
+    # sess.run(init)
 
-    print("outputs: ", sess.run(outputs))
+    # print("outputs: ", sess.run(outputs))
 
     # op = Operator()
     # inputs = np.array([1, 2, 3, 4])
@@ -552,12 +563,13 @@ if __name__ == "__main__":
     # RNN input shape is (batch_size, timesteps, input_dim)
     # _x = np.array([1, 2, 3, 4, 5])
     # _x = np.array([-5, -4, -3, -2, -1])
-    # _x = np.array([-2.5, -1.5, -0.5, 0.5, 1.5])
-    import trading_data as tdata
-    _x = tdata.DatasetGenerator.systhesis_input_generator(100)
-    _x = _x * 10
+    _x = np.array([-2.5, -1.5, -0.5, -0.7, 0.5, 1.5])
+    # import trading_data as tdata
+    # _x = tdata.DatasetGenerator.systhesis_input_generator(100)
+    # _x = _x * 10
     _x = _x.reshape((1, -1, 1))
-    # import ipdb; ipdb.set_trace()
+    _x = _x.reshape((1, -1, 2))
+    import ipdb; ipdb.set_trace()
     x = ops.convert_to_tensor(_x, dtype=tf.float32)
     # x = tf.keras.Input(tensor=x, shape=x.shape)
     print("x.shape: ", x.shape)
