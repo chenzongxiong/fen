@@ -445,7 +445,6 @@ class PhiCell(Layer):
         self._width = width
         self.units = 1
         self.state_size = [1]
-        # self.state_size = 1
 
         self.kernel_initializer = initializers.get(kernel_initializer)
         self.kernel_regularizer = regularizers.get(kernel_regularizer)
@@ -481,19 +480,14 @@ class PhiCell(Layer):
         """
         Parameters:
         ----------------
-        inputs: `inputs` is a scalar
-        state: `state` is randomly initialized
+        inputs: `inputs` is a vector, the shape of inputs vector is like [1 * sequence length]
+                Here, we consider the length of sequence is the same as the batch-size.
+        state: `state` is randomly initialized, the shape of is [1 * 1]
         """
-        # print("cell call states' len: ", len(states))
-
         self._inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
-        # print("self._inputs: ", sess.run(self._inputs))
         self._state = ops.convert_to_tensor(states[-1], dtype=tf.float32)
-        # unroll method
+        # unroll method, can we use RNN method ?
         outputs_ = tf.multiply(self._inputs, self.kernel)
-        # outputs = tf.add(Phi(tf.subtract(outputs_, self._state)), self._state)
-        # state = outputs
-        # import ipdb; ipdb.set_trace()
         outputs = [self._state]
         for i in range(outputs_.shape[-1].value):
             output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1])), outputs[-1])
@@ -503,10 +497,7 @@ class PhiCell(Layer):
         state = outputs[-1]
         outputs = tf.reshape(outputs, shape=self._inputs.shape)
         state = tf.reshape(state, shape=(1, 1))
-        print("output.shape: ", outputs.shape)
-        print("state.shape: ", state.shape)
         return outputs, [state]
-
 
 
 class Operator(RNN):
@@ -525,103 +516,61 @@ class Operator(RNN):
             )
 
     def call(self, inputs, inital_state=None):
-        import ipdb; ipdb.set_trace()
         return super(Operator, self).call(
             inputs, initial_state=initial_state
         )
 
 
 if __name__ == "__main__":
-    print("Hello world")
-
-    # tf.keras.layers.TimeDistributed()
+    # set random seed to make results reproducible
     tf.random.set_random_seed(123)
+    np.random.seed(123)
+
     sess = utils.get_session()
-    # phi_cell = PhiCell(weight=1.0, width=1.0, debug=True)
-    # outputs = phi_cell([2, 1], [1])
+    phi_cell = PhiCell(weight=1.0, width=1.0, debug=True)
+    _x = np.array([-2.5, -1.5, -0.5, -0.7, 0.5, 1.5])
+    outputs = phi_cell(_x, [0])
 
-    # init = tf.global_variables_initializer()
-    # sess.run(init)
+    init = tf.global_variables_initializer()
+    sess.run(init)
 
-    # print("outputs: ", sess.run(outputs))
+    LOG.debug("outputs: {}".format(sess.run(outputs)))
 
-    # op = Operator()
-    # inputs = np.array([1, 2, 3, 4])
-    # outputs = op(inputs, initial_state=0)
-
-    # timesteps = 3
-    # embedding_dim = 1
-    # uints =  1
-    # num_samples = 1
-    # num_states = 2
-
-    # inputs = tf.keras.Input((timesteps, embedding_dim))
-
-    units = 1
-    input_dim = 1
-    # x = tf.keras.Input((32, input_dim), 1)
-    # RNN input shape is (batch_size, timesteps, input_dim)
-    # _x = np.array([1, 2, 3, 4, 5])
-    # _x = np.array([-5, -4, -3, -2, -1])
     # _x = np.array([-2.5, -1.5, -0.5, -0.7, 0.5, 1.5])
     import trading_data as tdata
-    _x = tdata.DatasetGenerator.systhesis_input_generator(1000)
+    _x = tdata.DatasetGenerator.systhesis_input_generator(100)
     _x = _x * 10
     _x = _x.reshape((1, -1, 1))
     # _x = _x.reshape((1, -1, 2))
-    import ipdb; ipdb.set_trace()
     x = ops.convert_to_tensor(_x, dtype=tf.float32)
-    # x = tf.keras.Input(tensor=x, shape=x.shape)
-    print("x.shape: ", x.shape)
-    # initial_state = tf.keras.Input((1,))
+    LOG.debug("x.shape: {}".format(x.shape))
     initial_state = None
-    # initial_state = np.array([0])
-    # initial_state = initial_state.reshape((1, -1))
-    # initial_state = ops.convert_to_tensor(initial_state, dtype=tf.float32)
-    # initial_state = tf.keras.Input(tensor=initial_state, shape=(1, ), batch_size=1)
-    # print("initial_state.shape: ", initial_state.shape)
     layer = Operator(debug=True, weight=3)
     y = layer(x, initial_state)
     init = tf.global_variables_initializer()
     sess.run(init)
     y_res = sess.run(y)
-    print("y: ", y_res)
-
+    # LOG.debug("y: {}".format(y_res))
     _y_true = y_res
-    import ipdb; ipdb.set_trace()
-    print("end")
 
     import time
     start = time.time()
     model = tf.keras.models.Sequential()
 
-    _x = _x.reshape((1, -1, 50))
-    _y_true = _y_true.reshape((1, -1, 50))
+    _x = _x.reshape((1, -1, 10))
+    _y_true = _y_true.reshape((1, -1, 10))
     x = ops.convert_to_tensor(_x, dtype=tf.float32)
+    y_true = ops.convert_to_tensor(_y_true, dtype=tf.float32)
+
     model.add(tf.keras.layers.InputLayer(batch_size=1, input_shape=x.shape[1:]))
     model.add(Operator())
     model.compile(loss="mse",
                   optimizer="adam",
                   metrics=["mse"])
 
-    # model.fit(_x, y_true, epochs=10, batch_size=1, verbose=1, steps_per_epoch=1, shuffle=False)
-    # model.fit(_x, y_true, epochs=2000, batch_size=1, verbose=1, steps_per_epoch=None, shuffle=False)
-    y_true = ops.convert_to_tensor(_y_true, dtype=tf.float32)
     model.fit(x, y_true, epochs=2500, batch_size=None, verbose=1, steps_per_epoch=1, shuffle=False)
     end = time.time()
-    print("time costs: ", end-start, " s")
+    LOG.debug("time costs: {} s".format(end-start))
     score = model.evaluate(x, y_true, steps=1)
-    print("score: ", score)
-    import ipdb; ipdb.set_trace()
-    print("weight: ", sess.run(model._layers[0].cell.kernel))
-    print("end")
-
-    # model = keras.models.Model(x, y)
-    # model.compile(optimizer='rmsprop', loss='mse')
-    # print("y: ", sess.run(y))
-    # initial_state = [tf.keras.backend.random_normal_variable(
-    #     (num_samples, ), 0, 1)
-    #                  for _ in range(num_states)]
-    # layer = Operator()
-    # import ipdb; ipdb.set_trace()
-    # output = layer(inputs, initial_state=initial_state)
+    LOG.debug("score: {}".format(score))
+    LOG.debug("weight: {}".format(sess.run(model._layers[1].cell.kernel)))
