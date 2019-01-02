@@ -434,7 +434,6 @@ class PhiCell(Layer):
                  activity_regularizer=None,
                  kernel_constraint="non_neg",
                  **kwargs):
-
         self.debug = kwargs.pop("debug", False)
 
         super(PhiCell, self).__init__(
@@ -486,17 +485,19 @@ class PhiCell(Layer):
         """
         self._inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
         self._state = ops.convert_to_tensor(states[-1], dtype=tf.float32)
-        # unroll method, can we use RNN method ?
+
         outputs_ = tf.multiply(self._inputs, self.kernel)
+
+        # NOTE: unroll method, can we use RNN method ?
         outputs = [self._state]
         for i in range(outputs_.shape[-1].value):
             output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1])), outputs[-1])
             outputs.append(output)
-
         outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
         state = outputs[-1]
         outputs = tf.reshape(outputs, shape=self._inputs.shape)
         state = tf.reshape(state, shape=(1, 1))
+
         return outputs, [state]
 
 
@@ -553,12 +554,26 @@ if __name__ == "__main__":
     # LOG.debug("y: {}".format(y_res))
     _y_true = y_res
 
+    _x = _x.reshape((1, -1, 10))
+    x = ops.convert_to_tensor(_x, dtype=tf.float32)
+    layer = Operator(debug=True, weight=3)
+    y = layer(x, initial_state)
+    init = tf.global_variables_initializer()
+    sess.run(init)
+    y_res = sess.run(y)
+
+    LOG.debug("all close: {}.".format(np.allclose(y_res.reshape(-1), _y_true.reshape(-1))))
+
     import time
     start = time.time()
     model = tf.keras.models.Sequential()
 
-    _x = _x.reshape((1, -1, 10))
-    _y_true = _y_true.reshape((1, -1, 10))
+    seq_length = 20
+    epochs = 2500 // seq_length
+    steps_per_epoch = seq_length
+
+    _x = _x.reshape((1, -1, seq_length))
+    _y_true = _y_true.reshape((1, -1, seq_length))
     x = ops.convert_to_tensor(_x, dtype=tf.float32)
     y_true = ops.convert_to_tensor(_y_true, dtype=tf.float32)
 
@@ -568,7 +583,7 @@ if __name__ == "__main__":
                   optimizer="adam",
                   metrics=["mse"])
 
-    model.fit(x, y_true, epochs=2500, batch_size=None, verbose=1, steps_per_epoch=1, shuffle=False)
+    model.fit(x, y_true, epochs=epochs, batch_size=None, verbose=1, steps_per_epoch=steps_per_epoch, shuffle=False)
     end = time.time()
     LOG.debug("time costs: {} s".format(end-start))
     score = model.evaluate(x, y_true, steps=1)
