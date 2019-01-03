@@ -59,3 +59,11 @@ FNAME_FORMAT = dict(
 )
 
 CPU_COUNTS = min(os.cpu_count(), 32)
+
+
+class NetworkType:
+    OPERATOR = 1
+    PLAY = 2
+
+
+LOG_DIR = "./log"
