@@ -1,5 +1,5 @@
 import tensorflow as tf
-# tf.enable_eager_execution()
+tf.enable_eager_execution()
 
 from tensorflow.python.keras.engine.base_layer import Layer
 from tensorflow.python.keras.layers.recurrent import RNN
@@ -31,8 +31,7 @@ def Phi(x, width=1.0):
            = x + width , if x < - width
            = 0         , otherwise
     """
-    # return tf.maximum(x, 0) + tf.minimum(x+width, 0)
-    return x
+    return tf.maximum(x, 0) + tf.minimum(x+width, 0)
 
 
 # class PlayCell(Layer):
@@ -426,16 +425,6 @@ def Phi(x, width=1.0):
 
 #         return outputs
 
-def myloss(y_true, y_pred):
-    # import ipdb; ipdb.set_trace()
-    # return tf.keras.backend.mean(tf.math.square(y_pred - y_true), axis=-1)
-    # return tf.keras.backend.mean(tf.math.square(y_pred), axis=-1)
-    loss = tf.keras.backend.sum(y_pred, axis=[1])
-    # return tf.keras.backend.sum(y_pred, axis=[1])
-    LOG.debug("my loss is called, loss is: {}".format(loss))
-    return loss
-
-
 class PhiCell(Layer):
     def __init__(self,
                  input_dim=1,
@@ -626,31 +615,6 @@ class MyDense(Layer):
         # outputs = tf.reshape(outputs, shape=(1, -1, 1))
         return outputs
 
-class MyLoss(Layer):
-    def __init__(self, model, **kwargs):
-        super(MyLoss, self).__init__(**kwargs)
-        self._model = model
-
-    def build(self, input_shape):
-        self.built = True
-
-    def call(self, inputs):
-        # _inputs = tf.reshape(inputs, shape=(-1, ))
-        # import ipdb; ipdb.set_trace()
-        # J = tf.gradients(inputs, self._model.inputs)
-        # detJ = tf.cumprod(J[0], axis=1)
-        diff = inputs[:, 1:, :] - inputs[:, :-1, :]
-
-        mean = tf.keras.backend.mean(diff)
-        std  = tf.keras.backend.std(diff)
-        tau  = 1.0 / tf.keras.backend.square(std)
-        # import ipdb; ipdb.set_trace()
-        # outputs.shape == (1, 10, 1)
-        # detJ.shape    == (1, 11, 1)
-        outputs = tf.keras.backend.square(diff - mean) * tau - tf.keras.backend.log(tau)
-        # outputs = outputs * detJ[:, 1:, :]
-        return outputs
-
 
 class Play():
     def __init__(self, inputs=None,
@@ -672,7 +636,6 @@ class Play():
         self.activation = activation
         self.loss = loss
         self.optimizer = optimizer
-        # self.optimizer = tf.train.GradientDescentOptimizer(0.01)
 
         self.batch_size = batch_size
         self.units = units
@@ -693,7 +656,10 @@ class Play():
             raise Exception("dimension of inputs must be equal to 1")
 
         self.model = tf.keras.models.Sequential()
-
+        self.mu = tf.Variable(0, name="mu", dtype=tf.float32)
+        self.tau = tf.Variable(1, name="mu", dtype=tf.float32)
+        # self.model._extra_variables.append(mu)
+        # self.model._extra_variables.append(tau)
         self.model.add(tf.keras.layers.InputLayer(batch_size=1,
                                                   input_shape=self._batch_input_shape[1:]))
         self.model.add(Operator(weight=getattr(self, "_weight", None),
@@ -708,14 +674,9 @@ class Play():
             self.model.add(tf.keras.layers.Dense(1,
                                                  activation=None,
                                                  use_bias=True))
-            # DOING: add loss layer
-            # self.model.add(tf.keras.layers.Reshape(target_shape=(length,)))
-            self.model.add(MyLoss(self.model))
-
         self.model.compile(loss=self.loss,
                            optimizer=self.optimizer,
-                           # metrics=["mse"])
-                           metrics=[self.loss])
+                           metrics=["mse"])
 
         self._early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor="loss", patience=100)
         self._tensor_board_callback = tf.keras.callbacks.TensorBoard(log_dir=constants.LOG_DIR,
@@ -734,10 +695,9 @@ class Play():
 
             elif self._network_type == constants.NetworkType.PLAY:
                 y = tf.reshape(outputs, shape=(1, -1, 1))
-
                 # y = tf.manip.tile(outputs, [self.units])
                 # y = tf.reshape(y, shape=(1, -1, self.units))
-                # y = tf.reshape(outputs, shape=(1, -1))
+
             return x, y
         else:
             return x
@@ -750,7 +710,7 @@ class Play():
             self.build(inputs)
 
         x, y = self.reshape(inputs, outputs)
-        # y = None
+        y = None
         self.model.fit(x,
                        y,
                        epochs=epochs,
@@ -811,15 +771,259 @@ class Play():
         return len(self.model._layers)
 
 
+
+def myloss(y_true, y_pred):
+    LOG.debug("my loss is called")
+    # print("y_true: ", y_true)
+    # print("y_pred: ", y_pred)
+    # mean, var = tf.nn.moments(y_pred, axes=-1)
+    # with tf.GradientTape(persistent=True) as g:
+    #     g.watch(_x)
+    #     __y = model(_x)
+    # J = g.gradient(__y, _x)
+    # J = tf.reshape(J, shape=(-1, ))
+    # # diagJ = tf.linalg.diag(J)
+    # # detJ = tf.linalg.det(diagJ)
+    # detJ = tf.math.cumprod(J)
+    # import ipdb; ipdb.set_trace()
+    return tf.keras.backend.sum(y_pred, axis=[0])
+
+    # mean_true = tf.keras.backend.mean(y_true)
+    # std_true = tf.keras.backend.std(y_true)
+    # tmp_true = tf.math.square((y_true[1:] - y_true[:-1] - mean_true)/std_true)  + tf.math.log(std_true*std_true)
+    # sum_true = tf.keras.backend.sum(tmp_true, axis=[0, 1])
+
+    # mean = tf.keras.backend.mean(y_pred)
+    # std = tf.keras.backend.std(y_pred)
+
+    # tmp = tf.math.square((y_pred[1:] - y_pred[:-1] - mean)/std)  + tf.math.log(std*std)
+
+    # tmp = tf.reshape(tmp, shape=(-1, ))
+    # # tmp = tmp * detJ[1:]
+
+    # _sum = tf.keras.backend.sum(tmp, axis=[0])
+
+    # print(
+    #     # "mean_true: ", mean_true,
+    #     # "std_true: ", std_true,
+    #     # "tmp_true: ", tmp_true,
+    #     "tmp_sum_true: ", sum_true,
+    #     '--------------------',
+    #     # "mean_pred: ", mean,
+    #     # "std_pred: ", std,
+    #     # "tmp: ", tmp,
+    #     "tmp_sum: ", _sum
+    # )
+
+    # # return tf.negative(tf.keras.backend.sum(tmp, axis=-1))
+    # # return tf.negative(tf.keras.backend.sum(tmp, axis=[0]))
+    # # import ipdb; ipdb.set_trace()
+    # return tf.keras.backend.sum(tmp, axis=[0])
+# return tmp
+
+
+    # return tf.math.negative(tf.math.reduce_sum(tmp))
+    # return tf.keras.backend.mean(tf.math.square(y_pred - y_true), axis=-1)
+    # return tf.keras.backend.mean(tf.math.square(y_pred), axis=-1)
+    # intercept, beta, sd = params[0], params[1], params[2] # inputs are guesses at our parameters
+    # yhat = intercept + beta*x # predictions
+    # next, we flip the Bayesian question
+    # compute PDF of observed values normally distributed around mean (yhat)
+    # with a standard deviation of sd
+    # tf.math.sum(tf.math.log(y))
+    # negLL = - tf.sum( stats.norm.logpdf(y, loc=yhat, scale=sd) )
+class LossLayer(Layer):
+    def __init__(self,
+                 kernel_initializer='glorot_uniform',
+                 kernel_regularizer=None,
+                 kernel_constraint="non_neg",
+                 **kwargs):
+        super(LossLayer, self).__init__(**kwargs)
+
+        self.kernel_initializer = kernel_initializer
+        self.kernel_regularizer = kernel_regularizer
+        self.kernel_constraint = kernel_constraint
+
+    def build(self, input_shape):
+        # self.mu = self.add_weight(
+        #     "mu",
+        #     shape=(1, 1),
+        #     initializer=self.kernel_initializer,
+        #     regularizer=self.kernel_regularizer,
+        #     constraint=self.kernel_constraint,
+        #     dtype=tf.float32,
+        #     trainable=True)
+        # self.tau = self.add_weight(
+        #     "tau",
+        #     shape=(1, 1),
+        #     # initializer=self.kernel_initializer,
+        #     initializer=tf.keras.initializers.Ones(),
+        #     regularizer=self.kernel_regularizer,
+        #     constraint=tf.keras.constraints.MinMaxNorm(min_value=0.1, max_value=10000),
+        #     dtype=tf.float32,
+        #     trainable=True)
+        self.built = True
+    def call(self, inputs):
+        # import ipdb; ipdb.set_trace()
+        # with tf.GradientTape(persistent=True) as g:
+        #     g.watch(_x)
+        #     __y = model(_x)
+        # J = g.gradient(__y, _x)
+        # J = tf.reshape(J, shape=(-1, ))
+        # detJ = tf.math.cumprod(J)
+        outputs = inputs[1:] - inputs[:-1]
+        mean = tf.keras.backend.mean(outputs)
+        std = tf.keras.backend.std(outputs)
+        tau = 1.0 / (std * std)
+        outputs = tf.square((outputs - mean)) * tau - tf.math.log(tau)
+        LOG.debug("call loss: {}".format(tf.keras.backend.sum(outputs, axis=[0])))
+        LOG.debug("mean: {}, std: {}, tau: {}".format(mean, std, tau))
+        # # import ipdb; ipdb.set_trace()
+        return outputs
+
+
+def mle(_x, iteration=10):
+    y_pred = None
+    i = 0
+    once = False
+    learning_rate = 0.01
+    w = tf.constant(1.0, dtype=tf.float32)
+
+
+    with tf.GradientTape(persistent=True) as g:
+        g.watch(_x)
+        y_pred = w * _x
+
+    J = g.gradient(y_pred, _x)
+    J = tf.reshape(J, shape=(-1, ))
+    detJ = tf.math.cumprod(J)
+
+    mean = tf.keras.backend.mean(y_pred)
+    std = tf.keras.backend.std(y_pred)
+
+    while i < iteration:
+        i += 1
+        # import ipdb; ipdb.set_trace()
+        with tf.GradientTape(persistent=True) as gg:
+            gg.watch(mean)
+            gg.watch(std)
+            gg.watch(w)
+            gg.watch(_x)
+            y_pred = w * _x
+
+            tmp = tf.math.square((y_pred[1:] - y_pred[:-1] - mean)/std)  + tf.math.log(std*std)
+            tmp = tf.reshape(tmp, shape=(-1,))
+            tmp = tmp * detJ[:-1]
+
+        J = gg.gradient(y_pred, [_x])
+        J = tf.reshape(J, shape=(-1, ))
+        detJ = tf.math.cumprod(J)
+
+        # import ipdb; ipdb.set_trace()
+
+        xxx = gg.gradient(tmp, [w, mean, std])
+        w -= learning_rate * xxx[0]
+        mean -= learning_rate * xxx[1]
+        std -= learning_rate * xxx[2]
+
+        loss = tf.negative(tf.keras.backend.sum(tmp, axis=[0]))
+        print("weight: ", w, ", mean: ", mean, ", std: ", std, ", loss: ", loss)
+
+
+
 if __name__ == "__main__":
     # set random seed to make results reproducible
 
+    sess = utils.get_session()
     # tf.random.set_random_seed(123)
     # np.random.seed(123)
+    import trading_data as tdata
+
+
+    ## test loss
+    N = 20
+    # x = np.linspace(0, 20, num=N, endpoint=False)
+    markov_chain = tdata.DatasetGenerator.systhesis_markov_chain_generator(N, 4, 0.0001)
+
+    x = np.array(markov_chain[:])
+
+    # print(markov_chain)
+    diff = x[1:] - x[:-1]
+    import ipdb; ipdb.set_trace()
+    # e = np.random.normal(loc = 0.0, scale = 5.0, size = N)
+    # y = 3*x + e
+    # y = 1 * x + 10
+    x = x[1:]
+    x = x.reshape((-1, 1))
+
+    y = markov_chain[1:]
+    # import ipdb;  ipdb.set_trace()
+    # y = y.reshape((-1, 1))
+
+    # _y = ops.convert_to_tensor(y, dtype=tf.float32)
+    _x = ops.convert_to_tensor(x, dtype=tf.float32)
+    # _y = 3 * _x
+    _y = ops.convert_to_tensor(y, dtype=tf.float32)
+    # mle(_x)
+
+
+    # with tf.GradientTape(persistent=True) as g:
+    #     g.watch(_x)
+
+    #     # g = tf.GradientTape(_x)
+    # print(g.gradient(_y, _x))
+
+    # mean = tf.keras.backend.mean(_y)
+    # std = tf.keras.backend.mean(_y)
+
+    # init = tf.global_variables_initializer()
+    # sess.run(init)
+
+    # mean = tf.keras.backend.mean(_y)
+    # std = tf.keras.backend.std(_y)
+    # tmp = tf.math.square((_y - mean)/std)  + 2 *tf.math.log(std)
+
+    # xxxx = tf.keras.backend.mean(tf.math.square(_y - _x), axis=-1)
+    # print("y - x: ", sess.run(tf.keras.backend.mean(tf.math.square(_y - _x), axis=-1)))
+    # print("(y - x).shape: ", xxxx.shape)
+    # print("tmp.shape: ", tmp.shape)
+
+    # import ipdb; ipdb.set_trace()
+    model = tf.keras.models.Sequential()
+#     # model.add(tf.keras.layers.InputLayer(batch_size=1,
+#     #                                      input_shape=(N,)))
+
+#     # model.add(tf.keras.layers.Dense(units=1, input_dim=1,
+#     #                                 use_bias=True)) # , kernel_constraint=tf.keras.constraints.MinMaxNorm(min_value=0.0, max_val
+# # ue=10)))
+    model.add(LossLayer())
+
+    model.compile(
+        loss=myloss,
+        optimizer=tf.train.GradientDescentOptimizer(0.01),
+        # optimizer=tf.train.AdamOptimizer(0.001),
+        # metrics=[tf.keras.metrics.mse])
+        metrics=[myloss])
+
+#     # print("x.shape: ", x.shape)
+#     # print("y.shape: ", y.shape)
+#     import ipdb; ipdb.set_trace()
+#     # with tf.GradientTape(persistent=True) as g:
+#     #     g.watch(_x)
+#     #     __y = model(_x)
+#     # print(g.gradient(__y, _x))
+    model.fit(_x, _y, batch_size=N, verbose=1, epochs=100, steps_per_epoch=None)
+    import ipdb; ipdb.set_trace()
+    # try:
+    #     print("weight: ", sess.run(model._layers[1].kernel))
+    #     print("bias: ", sess.run(model._layers[1].bias))
+    # except:
+    #     print("weight: ", model._layers[1].kernel)
+    #     print("bias: ", model._layers[1].bias)
 
     ## Test
     # from tensorflow.python.ops import standard_ops
-    # sess = utils.get_session()
+
 
     # a = tf.constant([[[1, 2],
     #                   [3, 4],
@@ -921,11 +1125,11 @@ if __name__ == "__main__":
 
     import trading_data as tdata
 
-    # batch_size = 10
-    # # epochs = 100 // batch_size
-    # epochs = 10000 // batch_size
-    # steps_per_epoch = batch_size
-    # units = 4
+    batch_size = 10
+    # epochs = 100 // batch_size
+    epochs = 10000 // batch_size
+    steps_per_epoch = batch_size
+    units = 4
 
     # LOG.debug("Test Operator")
     # fname = constants.FNAME_FORMAT["operators"].format(method="sin", weight=1, width=1)
@@ -970,33 +1174,3 @@ if __name__ == "__main__":
 
     # LOG.debug("number of layer is: {}".format(play.number_of_layers))
     # LOG.debug("weight: {}".format(play.weight))
-
-    # a = tf.constant([1, 2, 3, 4], dtype=tf.float32)
-    # b = tf.reshape(a, shape=(1, -1, 1))
-    # c = tf.cumprod(b, axis=1)
-    # d = b * c
-    # print("c: ", utils.get_session().run(c))
-    # print("d: ", utils.get_session().run(d))
-    # import ipdb; ipdb.set_trace()
-
-    LOG.debug("Test Loss")
-    batch_size = 1
-    epochs = 10 // batch_size
-    steps_per_epoch = batch_size
-    units = 1
-    points = 10
-    mu = 4
-    sigma = 0.001
-
-    inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(points=points, mu=mu, sigma=sigma)
-    play = Play(batch_size=batch_size,
-                units=units,
-                activation=None,
-                network_type=constants.NetworkType.PLAY,
-                loss=myloss)
-
-
-    play.fit(inputs, inputs[1:], epochs=epochs, verbose=1)
-    import ipdb; ipdb.set_trace()
-    LOG.debug("number of layer is: {}".format(play.number_of_layers))
-    LOG.debug("weight: {}".format(play.weight))
