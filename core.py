@@ -32,8 +32,8 @@ def Phi(x, width=1.0):
            = x + width , if x < - width
            = 0         , otherwise
     """
-    # return tf.maximum(x, 0) + tf.minimum(x+width, 0)
-    return x
+    return tf.maximum(x, 0) + tf.minimum(x+width, 0)
+    # return x
 
 def myloss(y_true, y_pred):
     loss = tf.keras.backend.sum(y_pred, axis=[1])
@@ -469,7 +469,7 @@ class Agent:
         model_outputs = []
         feed_inputs = []
         feed_targets = []
-        play = self.plays[0]
+        # play = self.plays[0]
         import ipdb; ipdb.set_trace()
         # for play in self.plays:
             # play.fit(inputs, outputs, epochs=epochs, verbose=verbose,
@@ -488,25 +488,36 @@ class Agent:
 
 
         feed_targets = []
-        for i in range(len(play.model.outputs)):
-            shape = tf.keras.backend.int_shape(play.model.outputs[i])
-            name = 'test'
-            target = tf.keras.backend.placeholder(
-                ndim=len(shape),
-                name=name + '_target',
-                dtype=tf.keras.backend.dtype(play.model.outputs[i]))
+        # for i in range(len(play.model.outputs)):
+        #     shape = tf.keras.backend.int_shape(play.model.outputs[i])
+        #     name = 'test'
+        #     target = tf.keras.backend.placeholder(
+        #         ndim=len(shape),
+        #         name=name + '_target',
+        #         dtype=tf.keras.backend.dtype(play.model.outputs[i]))
 
-            feed_targets.append(target)
-        play.model._feed_targets = feed_targets
-
-        if True:
+        #     feed_targets.append(target)
+        # play.model._feed_targets = feed_targets
+        update_inputs = []
+        for play in self.plays:
             inputs = play.model._layers[0].input
             outputs = play.model._layers[-1].output
             model_inputs.append(inputs)
             model_outputs.append(outputs)
             feed_inputs.append(inputs)
-            update_inputs = play.model.get_updates_for(inputs)
-            params_list = play.model.trainable_weights
+
+            for i in range(len(play.model.outputs)):
+                shape = tf.keras.backend.int_shape(play.model.outputs[i])
+                name = 'test{}'.format(i)
+                target = tf.keras.backend.placeholder(
+                    ndim=len(shape),
+                    name=name + '_target',
+                    dtype=tf.keras.backend.dtype(play.model.outputs[i]))
+
+                feed_targets.append(target)
+
+            update_inputs += play.model.get_updates_for(inputs)
+            params_list += play.model.trainable_weights
 
         if self._nb_plays > 1:
             y_pred = tf.keras.layers.Average()(model_outputs)
@@ -514,16 +525,16 @@ class Agent:
             y_pred = model_outputs[0]
 
         loss = tf.keras.backend.mean(tf.math.square(y_pred - y))
-        # self.optimizer = tf.keras.optimizers.Adam()
-        play.model.optimizer = tf.keras.optimizers.Adam()
-        play.model.loss = loss
-        play.model.metrics = [loss]
+        self.optimizer = tf.keras.optimizers.Adam()
+        # play.model.optimizer = tf.keras.optimizers.Adam()
+        # play.model.loss = loss
+        # play.model.metrics = [loss]
         with tf.name_scope('training'):
             with tf.name_scope(play.model.optimizer.__class__.__name__):
-                # updates = self.optimizer.get_updates(params=params_list,
-                #                                      loss=loss)
-                updates = play.model.optimizer.get_updates(params=params_list,
-                                                           loss=loss)
+                updates = self.optimizer.get_updates(params=params_list,
+                                                     loss=loss)
+                # updates = play.model.optimizer.get_updates(params=params_list,
+                #                                            loss=loss)
             updates += update_inputs
 
             training_inputs = feed_inputs + feed_targets
@@ -531,7 +542,8 @@ class Agent:
                                                                   [loss],
                                                                   updates=updates)
 
-        play.model.loss_weights = None
+        # play.model.loss_weights = None
+
         # _x, _y, sample_weights = play.model._standardize_user_data(
         #     x,
         #     y,
@@ -562,8 +574,8 @@ class Agent:
 if __name__ == "__main__":
     # set random seed to make results reproducible
 
-    tf.random.set_random_seed(123)
-    np.random.seed(123)
+    # tf.random.set_random_seed(123)
+    # np.random.seed(123)
 
     ## Test
     # from tensorflow.python.ops import standard_ops
@@ -699,13 +711,13 @@ if __name__ == "__main__":
     LOG.debug(colors.red("Test Play"))
     batch_size = 10
     units = 2
-    epochs = 5000 // batch_size
+    epochs = 10000 // batch_size
     steps_per_epoch = batch_size
 
     fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
 
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    length = 100
+    length = 1000
     inputs, outputs = inputs[:length], outputs[:length]
 
     LOG.debug("timestap is: {}".format(inputs.shape[0]))
@@ -770,13 +782,14 @@ if __name__ == "__main__":
     # inputs, outputs = inputs[:length], outputs[:length]
 
     LOG.debug("timestap is: {}".format(inputs.shape[0]))
+    nb_plays = 2
     import time
     start = time.time()
     agent = Agent(batch_size=batch_size,
                   units=units,
                   activation="tanh",
                   loss='mse',
-                  nb_plays=1)
+                  nb_plays=nb_plays)
 
     agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
     end = time.time()
