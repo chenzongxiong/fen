@@ -530,7 +530,8 @@ class Agent:
         # play.model.loss = loss
         # play.model.metrics = [loss]
         with tf.name_scope('training'):
-            with tf.name_scope(play.model.optimizer.__class__.__name__):
+            # with tf.name_scope(play.model.optimizer.__class__.__name__):
+            with tf.name_scope(self.optimizer.__class__.__name__):
                 updates = self.optimizer.get_updates(params=params_list,
                                                      loss=loss)
                 # updates = play.model.optimizer.get_updates(params=params_list,
@@ -548,8 +549,8 @@ class Agent:
         #     x,
         #     y,
         #     sample_weight=None)
-        _x = [x]
-        _y = [y]
+        # _x = [x, x]
+        # _y = [y, y]
 
         # training_arrays.fit_loop(
         #     play.model, _x, _y, epochs=epochs, verbose=verbose,
@@ -558,8 +559,8 @@ class Agent:
         # init = tf.global_variables_initializer()
         # utils.get_session().run(init)
 
-        # real_inputs_x = [x for _ in range(self._nb_plays)]
-        # real_inputs_y = [y for _ in range(self._nb_plays)]
+        _x = [x for _ in range(self._nb_plays)]
+        _y = [y for _ in range(self._nb_plays)]
         # real_inputs = real_inputs_x + real_inputs_y
         # i = 0
         # epochs = 100
