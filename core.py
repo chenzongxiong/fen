@@ -10,13 +10,14 @@ from tensorflow.python.keras import regularizers
 from tensorflow.python.keras import activations
 from tensorflow.python.keras import initializers
 from tensorflow.python.keras import constraints
+from tensorflow.python.keras.engine import training_arrays
 from tensorflow.python.keras.utils import tf_utils
 import numpy as np
 
 import utils
 import colors
 import constants
-
+import trading_data as tdata
 import log as logging
 
 
@@ -34,404 +35,8 @@ def Phi(x, width=1.0):
     # return tf.maximum(x, 0) + tf.minimum(x+width, 0)
     return x
 
-
-# class PlayCell(Layer):
-#     def __init__(self,
-#                  weight=1.0,
-#                  width=1.0,
-#                  hysteretic_func=Phi,
-#                  kernel_initializer='glorot_uniform',
-#                  kernel_regularizer=None,
-#                  activity_regularizer=None,
-#                  # kernel_constraint=None,
-#                  kernel_constraint="non_neg",
-#                  **kwargs):
-
-#         self.debug = kwargs.pop("debug", False)
-
-#         super(PlayCell, self).__init__(
-#             activity_regularizer=regularizers.get(activity_regularizer), **kwargs)
-
-#         self.weight = weight
-#         self.width = width
-#         self.kernel_initializer = initializers.get(kernel_initializer)
-#         self.kernel_regularizer = regularizers.get(kernel_regularizer)
-#         # TODO: try non negative constraint
-#         self.kernel_constraint = constraints.get(kernel_constraint)
-
-#         self.hysteretic_func = hysteretic_func
-
-#     def build(self, input_shape):
-#         if self.debug:
-#             LOG.debug("Initialize *weight* as pre-defined...")
-#             self.kernel = tf.Variable(self.weight, name="kernel", dtype=tf.float32)
-#             if constants.DEBUG_INIT_TF_VALUE:
-#                 self.kernel = self.kernel.initialized_value()
-
-#             self._trainable_weights.append(self.kernel)
-#         else:
-#             LOG.debug("Initialize *weight* randomly...")
-#             self.kernel = self.add_weight(
-#                 'kernel',
-#                 shape=(),
-#                 initializer=self.kernel_initializer,
-#                 regularizer=self.kernel_regularizer,
-#                 constraint=self.kernel_constraint,
-#                 dtype=self.dtype,
-#                 trainable=True)
-
-#         self.built = True
-
-#     def call(self, inputs, state):
-#         """
-#         Parameters:
-#         ----------------
-#         inputs: `inputs` is a vector
-#         state: `state` is randomly initialized
-#         """
-
-#         # inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
-#         # if inputs.shape.ndims == 1:
-#         #     inputs = tf.reshape(inputs, shape=(1, -1))
-#         # elif inputs.shape.ndims > 2:
-#         #     raise Exception("len(inputs.shape) must be less or equal than 2, but got {}".format(inputs.shape.ndims))
-#         # outputs_ = tf.multiply(inputs, self.kernel)
-#         # outputs = [state]
-
-#         self._inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
-#         self._state = ops.convert_to_tensor(state, dtype=self.dtype)
-#         if self._inputs.shape.ndims == 1:
-#             self._inputs = tf.reshape(self._inputs, shape=(1, -1))
-#         elif self._inputs.shape.ndims > 2:
-#             raise Exception("len(inputs.shape) must be less or equal than 2, but got {}".format(self._inputs.shape.ndims))
-
-#         outputs_ = tf.multiply(self._inputs, self.kernel)
-#         # outputs = [self._state]
-
-#         # for index in range(outputs_.shape[-1].value):
-#         #     phi_ = self.hysteretic_func(outputs_[:, index]-outputs[-1], width=self.width) + outputs[-1]
-#         #     outputs.append(phi_)
-
-#         # outputs = tf.convert_to_tensor(outputs[1:])
-#         outputs = tf.convert_to_tensor(outputs_)
-
-#         outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
-#         # LOG.debug("{} inputs.shape: {}, output.shape: {}".format(colors.red("PlayCell"),
-#         #                                                          inputs.shape, outputs.shape))
-
-#         # LOG.debug("{} inputs.shape: {}, output.shape: {}".format(colors.red("PlayCell"),
-#         #                                                          self._inputs.shape, outputs.shape))
-
-#         return outputs
-
-#     def compute_output_shape(self, input_shape):
-#         input_shape = tensor_shape.TensorShape(input_shape)
-#         return input_shape
-
-#     def get_config(self):
-#         config = {
-#             "debug": self.debug,
-#             "weight": self.weight,
-#             "width": self.width,
-#             "kernel_initializer": initializers.serialize(self.kernel_initializer),
-#             "kernel_regularizer": regularizers.serialize(self.kernel_regularize),
-#             "kernel_constraint": constraints.serialize(self.kernel_constraint),
-#             "activity_regularizer": regularizers.serialize(self.activity_regularizer),
-#         }
-#         base_config = super(PlayCell, self).get_config()
-#         return dict(list(base_config.items()) + list(config.items()))
-
-
-# class Play(Layer):
-#     def __init__(self,
-#                  units,
-#                  cell,
-#                  nbr_of_chunks=1,
-#                  activation="tanh",
-#                  use_bias=True,
-#                  fixed_state=True,
-#                  kernel_initializer='glorot_uniform',
-#                  bias_initializer='zeros',
-#                  kernel_regularizer=None,
-#                  bias_regularizer=None,
-#                  activity_regularizer=None,
-#                  kernel_constraint=None,
-#                  bias_constraint=None,
-#                  **kwargs):
-
-#         self.debug = kwargs.pop("debug", False)
-
-#         super(Play, self).__init__(
-#             activity_regularizer=regularizers.get(activity_regularizer), **kwargs)
-
-#         self.units = int(units)
-#         self.cell = cell
-#         self.nbr_of_chunks = nbr_of_chunks
-
-#         if self.debug:
-#             self.units = 4
-
-#         self.activation = activations.get(activation)
-#         self.use_bias = use_bias
-#         self.kernel_initializer = initializers.get(kernel_initializer)
-#         self.bias_initializer = initializers.get(bias_initializer)
-#         self.kernel_regularizer = regularizers.get(kernel_regularizer)
-#         self.bias_regularizer = regularizers.get(bias_regularizer)
-#         self.kernel_constraint = constraints.get(kernel_constraint)
-#         self.bias_constraint = constraints.get(bias_constraint)
-
-#     def build(self, input_shape):
-#         if self.debug:
-#             LOG.debug("Initalize *theta* as pre-defined...")
-#             self.kernel1 = tf.Variable([[1],
-#                                        [2],
-#                                        [3],
-#                                        [4]],
-#                                       name="theta1",
-#                                       dtype=tf.float32)
-
-#             self.bias1 = tf.Variable([[1],
-#                                       [2],
-#                                       [-1],
-#                                       [-2]],
-#                                     name="bias1",
-#                                     dtype=tf.float32)
-
-#             self.kernel2 = tf.Variable([[1],
-#                                         [2],
-#                                         [3],
-#                                         [4]],
-#                                        name="theta2",
-#                                        dtype=tf.float32)
-
-#             self.bias2 = tf.Variable(1,
-#                                      name="bias2",
-#                                      dtype=tf.float32)
-
-#             self._state = tf.Variable(0,
-#                                      name="state",
-#                                      dtype=tf.float32)
-#             if constants.DEBUG_INIT_TF_VALUE:
-#                 self.kernel1 = self.kernel1.initialized_value()
-#                 self.kernel2 = self.kernel2.initialized_value()
-#                 self.bias1 = self.bias1.initialized_value()
-#                 self.bias2 = self.bias2.initialized_value()
-#                 self._state = self._state.initialized_value()
-
-#             self._trainable_weights.append(self.kernel1)
-#             self._trainable_weights.append(self.kernel2)
-#             self._trainable_weights.append(self.bias1)
-#             self._trainable_weights.append(self.bias2)
-#             self._trainable_weights.append(self._state)
-
-#         else:
-#             LOG.debug("Initalize *theta* randomly...")
-#             self.kernel1 = self.add_weight(
-#                 'theta1',
-#                 shape=(self.units, 1),
-#                 initializer=self.kernel_initializer,
-#                 regularizer=self.kernel_regularizer,
-#                 constraint=self.kernel_constraint,
-#                 dtype=self.dtype,
-#                 trainable=True)
-
-#             self.kernel2 = self.add_weight(
-#                 'theta2',
-#                 shape=(self.units, 1),
-#                 initializer=self.kernel_initializer,
-#                 regularizer=self.kernel_regularizer,
-#                 constraint=self.kernel_constraint,
-#                 dtype=self.dtype,
-#                 trainable=True)
-
-#             self._state = self.add_weight(
-#                 'state',
-#                 # shape=(self.nbr_of_cells, 1),
-#                 shape=(),
-#                 initializer=self.kernel_initializer,
-#                 regularizer=self.kernel_regularizer,
-#                 constraint=self.kernel_constraint,
-#                 dtype=self.dtype,
-#                 trainable=True)
-
-#             if self.use_bias:
-#                 self.bias1 = self.add_weight(
-#                     'bias1',
-#                     shape=(self.units, 1),
-#                     initializer=self.bias_initializer,
-#                     regularizer=self.bias_regularizer,
-#                     constraint=self.bias_constraint,
-#                     dtype=self.dtype,
-#                     trainable=True)
-
-#                 self.bias2 = self.add_weight(
-#                     'bias2',
-#                     shape=(),
-#                     initializer=self.bias_initializer,
-#                     regularizer=self.bias_regularizer,
-#                     constraint=self.bias_constraint,
-#                     dtype=self.dtype,
-#                     trainable=True)
-#             else:
-#                 self.bias1 = None
-#                 self.bias2 = None
-
-#         self.built = True
-
-#     def call(self, inputs):
-#         self._inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
-#         outputs1_ = self.cell(self._inputs, self._state)
-#         # outputs1_ = self.cell(inputs, self._state)
-#         outputs1 = outputs1_ * self.kernel1
-#         assert outputs1.shape.ndims == 2
-
-#         if self.bias1 is not None:
-#             outputs1 += self.bias1
-#         if self.activation is not None:
-#             outputs1 =  self.activation(outputs1)
-
-#         # move forward
-#         outputs2 = outputs1 * self.kernel2
-#         outputs2 = tf.reduce_sum(outputs2, axis=0)
-
-#         if self.bias2 is not None:
-#             outputs2 += self.bias2
-
-#         # LOG.debug("{}, inputs.shape: {}, outputs.shape: {}".format(colors.red("Play"),
-#         #                                                            inputs.shape, outputs2.shape))
-
-#         return outputs2
-
-#     def compute_output_shape(self, input_shape):
-#         return tensor_shape.TensorShape(input_shape)
-
-#     def get_config(self):
-#         config = {
-#             "debug": self.debug,
-#             "units": self.units,
-#             "activation": activations.serialize(self.activation),
-#             "use_bias": self.use_bias,
-#             "kernel_initializer": initializers.serialize(self.kernel_initializer),
-#             "bias_initializer": initializers.serialize(self.bias_initializer),
-#             "kernel_regularizer": regularizers.serialize(self.kernel_regularizer),
-#             "bias_regularizer": regularizers.serialize(self.bias_regularizer),
-#             "activity_regularizer": regularizers.serialize(self.activity_regularizer),
-#             "kernel_constraint": constraints.serialize(self.kernel_constraint),
-#             "bias_constraint": constraints.serialize(self.bias_constraint),
-#         }
-#         base_config = super(Play, self).get_config()
-#         return dict(list(base_config.items()) + list(config.items()))
-
-
-
-# class PlayModel(tf.keras.Model):
-#     def __init__(self, nb_plays, units=4, batch_size=1, *args, **kwargs):
-#         super(PlayModel, self).__init__(name="play_model")
-
-#         self.debug = kwargs.pop("debug", False)
-
-#         self._nb_plays = nb_plays
-#         self._plays = []
-#         # self._batch_size = batch_size
-
-#         for _ in range(self._nb_plays):
-#             cell = PlayCell(debug=self.debug)
-#             play = Play(units=units, cell=cell, debug=self.debug)
-#             self._plays.append(play)
-#         self.plays_outputs = None
-
-#     def call(self, inputs, debug=False):
-#         """
-#         Parameters:
-#         ----------------
-#         inputs: `inputs` is a vector, assert len(inputs.shape) == 1
-#         """
-#         outputs = []
-#         self._inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
-#         # inputs = self._inputs
-#         for play in self._plays:
-#             outputs.append(play(self._inputs))
-#             # outputs.append(play(inputs))
-
-#         outputs = tf.convert_to_tensor(outputs, dtype=self.dtype)
-#         self.plays_outputs = outputs
-#         # LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
-#         #                                         outputs.shape))
-#         outputs = tf.reduce_sum(outputs, axis=0)
-#         # LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
-#         #                                         outputs.shape))
-#         outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
-#         if debug is True:
-#             return outputs, self.plays_outputs
-#         else:
-#             return outputs
-
-#     def get_config(self):
-#         config = {
-#             "nb_plays": self._nb_plays,
-#             "debug": self.debug,
-#         }
-
-#         return config
-
-#     def get_plays_outputs(self, inputs, batch_size=1):
-#         assert len(inputs.shape) == 2
-#         sess = utils.get_session()
-#         samples, _ = inputs.shape
-#         plays_outputs_list = []
-#         for x in range(samples):
-#             outputs, plays_outputs = self.__call__(inputs[x,:], debug=True)
-#             outputs_eval = sess.run(outputs)
-#             plays_outputs_eval = sess.run(plays_outputs)
-#             plays_outputs_list.append(plays_outputs_eval)
-
-#         return np.hstack(plays_outputs_list).T
-
-
-# class PlayModel2(Layer):
-#     def __init__(self, nb_plays, units=4, batch_size=1,
-#                  activity_regularizer=None,
-#                  **kwargs):
-#         self.debug = kwargs.pop("debug", False)
-#         super(PlayModel2, self).__init__(
-#             activity_regularizer=regularizers.get(activity_regularizer), **kwargs)
-
-#         self._nb_plays = nb_plays
-#         self._plays = []
-#         for _ in range(self._nb_plays):
-#             cell = PlayCell(debug=self.debug)
-#             play = Play(units=units, cell=cell, debug=self.debug)
-#             self._plays.append(play)
-#         self.plays_outputs = None
-
-#     def call(self, inputs, debug=False):
-#         """
-#         Parameters:
-#         ----------------
-#         inputs: `inputs` is a vector, assert len(inputs.shape) == 1
-#         """
-#         outputs = []
-#         self._inputs = ops.convert_to_tensor(inputs, dtype=self.dtype)
-
-#         for play in self._plays:
-#             outputs.append(play(self._inputs))
-
-#         outputs = tf.convert_to_tensor(outputs, dtype=self.dtype)
-#         # LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
-#         #                                         outputs.shape))
-#         outputs = tf.reduce_sum(outputs, axis=0)
-#         # LOG.debug("{} outputs.shape: {}".format(colors.red("PlayModel"),
-#         #                                         outputs.shape))
-#         outputs = tf.reshape(outputs, shape=(-1, outputs.shape[0].value))
-
-#         return outputs
-
 def myloss(y_true, y_pred):
-    # import ipdb; ipdb.set_trace()
-    # return tf.keras.backend.mean(tf.math.square(y_pred - y_true), axis=-1)
-    # return tf.keras.backend.mean(tf.math.square(y_pred), axis=-1)
     loss = tf.keras.backend.sum(y_pred, axis=[1])
-    # return tf.keras.backend.sum(y_pred, axis=[1])
     LOG.debug("my loss is called, loss is: {}".format(loss))
     return loss
 
@@ -471,8 +76,8 @@ class PhiCell(Layer):
         if self.debug:
             LOG.debug("Initialize *weight* as pre-defined...")
             self.kernel = tf.Variable([[self._weight]], name="weight", dtype=tf.float32)
-            if constants.DEBUG_INIT_TF_VALUE:
-                self.kernel = self.kernel.initialized_value()
+            # if constants.DEBUG_INIT_TF_VALUE:
+            #     self.kernel = self.kernel.initialized_value()
 
             self._trainable_weights.append(self.kernel)
         else:
@@ -512,7 +117,6 @@ class PhiCell(Layer):
         state = tf.reshape(state, shape=(1, 1))
 
         return outputs, [state]
-
 
 
 class Operator(RNN):
@@ -566,10 +170,14 @@ class MyDense(Layer):
     def build(self, input_shape):
         if self._debug:
             self.kernel = tf.Variable([[self._weight, 2*self._weight]], name="weight", dtype=tf.float32)
-            if constants.DEBUG_INIT_TF_VALUE:
-                self.kernel = self.kernel.initialized_value()
+            # if constants.DEBUG_INIT_TF_VALUE:
+            #     self.kernel = self.kernel.initialized_value()
 
             self._trainable_weights.append(self.kernel)
+            if self.use_bias is True:
+                self.bias = tf.Variable(0, name="bias", dtype=tf.float32)
+                self._trainable_weights.append(self.bias)
+
         else:
             self.kernel = self.add_weight(
                 "kernel",
@@ -626,6 +234,7 @@ class MyDense(Layer):
         # outputs = tf.reshape(outputs, shape=(1, -1, 1))
         return outputs
 
+
 class MyLoss(Layer):
     def __init__(self, model, **kwargs):
         super(MyLoss, self).__init__(**kwargs)
@@ -662,7 +271,8 @@ class Play():
                  activation="tanh",
                  loss="mse",
                  optimizer="adam",
-                 network_type=constants.NetworkType.OPERATOR):
+                 network_type=constants.NetworkType.OPERATOR,
+                 use_bias=True):
 
         if debug:
             self._weight = weight
@@ -672,13 +282,14 @@ class Play():
         self.activation = activation
         self.loss = loss
         self.optimizer = optimizer
-        # self.optimizer = tf.train.GradientDescentOptimizer(0.01)
 
         self.batch_size = batch_size
         self.units = units
 
         self._network_type = network_type
         self.built = False
+        self._need_compile = False
+        self.use_bias = use_bias
 
     def build(self, inputs):
         _inputs = ops.convert_to_tensor(inputs, tf.float32)
@@ -704,18 +315,18 @@ class Play():
         if self._network_type == constants.NetworkType.PLAY:
             self.model.add(MyDense(self.units,
                                    activation=self.activation,
+                                   use_bias=self.use_bias,
                                    debug=getattr(self, "_debug", False)))
             self.model.add(tf.keras.layers.Dense(1,
                                                  activation=None,
-                                                 use_bias=True))
+                                                 use_bias=self.use_bias))
             # DOING: add loss layer
             # self.model.add(tf.keras.layers.Reshape(target_shape=(length,)))
-            self.model.add(MyLoss(self.model))
-
-        self.model.compile(loss=self.loss,
-                           optimizer=self.optimizer,
-                           # metrics=["mse"])
-                           metrics=[self.loss])
+            # self.model.add(MyLoss(self.model))
+        if self._need_compile is True:
+            self.model.compile(loss=self.loss,
+                               optimizer=self.optimizer,
+                               metrics=[self.loss])
 
         self._early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor="loss", patience=100)
         self._tensor_board_callback = tf.keras.callbacks.TensorBoard(log_dir=constants.LOG_DIR,
@@ -745,12 +356,15 @@ class Play():
     def fit(self, inputs, outputs, epochs=100, verbose=0, steps_per_epoch=1):
         inputs = ops.convert_to_tensor(inputs, tf.float32)
         outputs = ops.convert_to_tensor(outputs, tf.float32)
-
+        self._need_compile = True
         if not self.built:
             self.build(inputs)
 
         x, y = self.reshape(inputs, outputs)
-        # y = None
+
+        init = tf.global_variables_initializer()
+        utils.get_session().run(init)
+
         self.model.fit(x,
                        y,
                        epochs=epochs,
@@ -790,16 +404,17 @@ class Play():
         if self._network_type == constants.NetworkType.PLAY:
             phi_weight = self.model._layers[1].cell.kernel
             mydense_weights = self.model._layers[3].kernel
-            mydense_bias = self.model._layers[3].bias
             dense_weights = self.model._layers[4].kernel
-            dense_bias = self.model._layers[4].bias
 
             weights = {}
             weights['phi_weight'] = session.run(phi_weight)
             weights['mydense_weigths'] = session.run(mydense_weights)
-            weights['mydense_bias'] = session.run(mydense_bias)
             weights['dense_weights'] = session.run(dense_weights)
-            weights['dense_bias'] = session.run(dense_bias)
+            if self.use_bias is True:
+                mydense_bias = self.model._layers[3].bias
+                dense_bias = self.model._layers[4].bias
+                weights['mydense_bias'] = session.run(mydense_bias)
+                weights['dense_bias'] = session.run(dense_bias)
 
             return weights
 
@@ -811,11 +426,144 @@ class Play():
         return len(self.model._layers)
 
 
+class Agent:
+    def __init__(self, nb_plays=1,
+                 units=1,
+                 batch_size=1,
+                 weight=1.0,
+                 width=1.0,
+                 debug=False,
+                 activation='tanh',
+                 loss='mse',
+                 optimizer='adam'):
+
+        self.plays = []
+        self._nb_plays = nb_plays
+        for nb_play in range(nb_plays):
+            play = Play(units=units,
+                        batch_size=batch_size,
+                        weight=weight,
+                        width=width,
+                        debug=debug,
+                        activation=activation,
+                        loss=loss,
+                        optimizer=optimizer,
+                        network_type=constants.NetworkType.PLAY)
+            self.plays.append(play)
+
+    def build(self, inputs):
+        pass
+
+    def fit(self, inputs, outputs, epochs=100, verbose=0, steps_per_epoch=1):
+        inputs = ops.convert_to_tensor(inputs, tf.float32)
+        outputs = ops.convert_to_tensor(outputs, tf.float32)
+
+        for play in self.plays:
+            play._need_compile = True
+            play.build(inputs)
+
+        x, y = self.plays[0].reshape(inputs, outputs)
+
+        params_list = []
+        model_inputs = []
+        model_outputs = []
+        feed_inputs = []
+        feed_targets = []
+        play = self.plays[0]
+        import ipdb; ipdb.set_trace()
+        # for play in self.plays:
+            # play.fit(inputs, outputs, epochs=epochs, verbose=verbose,
+            #          steps_per_epoch=steps_per_epoch)
+            # play.model.fit(x, y, epochs=epochs, verbose=verbose,
+            #                shuffle=False, steps_per_epoch=steps_per_epoch)
+
+            # _x, _y, sample_weights = play.model._standardize_user_data(
+            #     x,
+            #     y,
+            #     sample_weight=None)
+
+            # training_arrays.fit_loop(
+            #     play.model, _x, _y, epochs=epochs, verbose=verbose,
+            #     steps_per_epoch=steps_per_epoch, shuffle=False)
+
+
+        feed_targets = []
+        for i in range(len(play.model.outputs)):
+            shape = tf.keras.backend.int_shape(play.model.outputs[i])
+            name = 'test'
+            target = tf.keras.backend.placeholder(
+                ndim=len(shape),
+                name=name + '_target',
+                dtype=tf.keras.backend.dtype(play.model.outputs[i]))
+
+            feed_targets.append(target)
+        play.model._feed_targets = feed_targets
+
+        if True:
+            inputs = play.model._layers[0].input
+            outputs = play.model._layers[-1].output
+            model_inputs.append(inputs)
+            model_outputs.append(outputs)
+            feed_inputs.append(inputs)
+            update_inputs = play.model.get_updates_for(inputs)
+            params_list = play.model.trainable_weights
+
+        if self._nb_plays > 1:
+            y_pred = tf.keras.layers.Average()(model_outputs)
+        else:
+            y_pred = model_outputs[0]
+
+        loss = tf.keras.backend.mean(tf.math.square(y_pred - y))
+        # self.optimizer = tf.keras.optimizers.Adam()
+        play.model.optimizer = tf.keras.optimizers.Adam()
+        play.model.loss = loss
+        play.model.metrics = [loss]
+        with tf.name_scope('training'):
+            with tf.name_scope(play.model.optimizer.__class__.__name__):
+                # updates = self.optimizer.get_updates(params=params_list,
+                #                                      loss=loss)
+                updates = play.model.optimizer.get_updates(params=params_list,
+                                                           loss=loss)
+            updates += update_inputs
+
+            training_inputs = feed_inputs + feed_targets
+            play.model.train_function = tf.keras.backend.function(training_inputs,
+                                                                  [loss],
+                                                                  updates=updates)
+
+        play.model.loss_weights = None
+        # _x, _y, sample_weights = play.model._standardize_user_data(
+        #     x,
+        #     y,
+        #     sample_weight=None)
+        _x = [x]
+        _y = [y]
+
+        # training_arrays.fit_loop(
+        #     play.model, _x, _y, epochs=epochs, verbose=verbose,
+        #     steps_per_epoch=steps_per_epoch, shuffle=False)
+
+        # init = tf.global_variables_initializer()
+        # utils.get_session().run(init)
+
+        # real_inputs_x = [x for _ in range(self._nb_plays)]
+        # real_inputs_y = [y for _ in range(self._nb_plays)]
+        # real_inputs = real_inputs_x + real_inputs_y
+        # i = 0
+        # epochs = 100
+        real_inputs = _x + _y
+        while i < epochs:
+            i += 1
+            for j in range(steps_per_epoch):
+                cost = play.model.train_function(real_inputs)
+            LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
+
+
 if __name__ == "__main__":
     # set random seed to make results reproducible
 
-    # tf.random.set_random_seed(123)
-    # np.random.seed(123)
+    tf.random.set_random_seed(123)
+    np.random.seed(123)
 
     ## Test
     # from tensorflow.python.ops import standard_ops
@@ -919,7 +667,7 @@ if __name__ == "__main__":
     # LOG.debug("score: {}".format(score))
     # LOG.debug("weight: {}".format(play.weight))
 
-    import trading_data as tdata
+    # import trading_data as tdata
 
     # batch_size = 10
     # # epochs = 100 // batch_size
@@ -948,21 +696,28 @@ if __name__ == "__main__":
     # LOG.debug("number of layer is: {}".format(play.number_of_layers))
     # LOG.debug("weight: {}".format(play.weight))
 
-    # LOG.debug("Test Play")
-    # fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
+    LOG.debug(colors.red("Test Play"))
+    batch_size = 10
+    units = 2
+    epochs = 5000 // batch_size
+    steps_per_epoch = batch_size
 
-    # inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    # length = 1000
-    # inputs, outputs = inputs[:length], outputs[:length]
+    fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
 
-    # LOG.debug("timestap is: {}".format(inputs.shape[0]))
+    inputs, outputs = tdata.DatasetLoader.load_data(fname)
+    length = 100
+    inputs, outputs = inputs[:length], outputs[:length]
+
+    LOG.debug("timestap is: {}".format(inputs.shape[0]))
+
     # import time
     # start = time.time()
     # play = Play(batch_size=batch_size,
     #             units=units,
     #             activation="tanh",
     #             network_type=constants.NetworkType.PLAY,
-    #             loss=myloss)
+    #             loss='mse',
+    #             debug=True)
 
     # play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
     # end = time.time()
@@ -979,24 +734,55 @@ if __name__ == "__main__":
     # print("d: ", utils.get_session().run(d))
     # import ipdb; ipdb.set_trace()
 
-    LOG.debug("Test Loss")
-    batch_size = 1
-    epochs = 10 // batch_size
-    steps_per_epoch = batch_size
-    units = 1
-    points = 10
-    mu = 4
-    sigma = 0.001
+    # LOG.debug("Test Loss")
+    # batch_size = 1
+    # epochs = 10 // batch_size
+    # steps_per_epoch = batch_size
+    # units = 1
+    # points = 10
+    # mu = 4
+    # sigma = 0.001
 
-    inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(points=points, mu=mu, sigma=sigma)
-    play = Play(batch_size=batch_size,
-                units=units,
-                activation=None,
-                network_type=constants.NetworkType.PLAY,
-                loss=myloss)
+    # inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(points=points, mu=mu, sigma=sigma)
+    # play = Play(batch_size=batch_size,
+    #             units=units,
+    #             activation=None,
+    #             network_type=constants.NetworkType.PLAY,
+    #             loss=myloss)
 
 
-    play.fit(inputs, inputs[1:], epochs=epochs, verbose=1)
-    import ipdb; ipdb.set_trace()
-    LOG.debug("number of layer is: {}".format(play.number_of_layers))
-    LOG.debug("weight: {}".format(play.weight))
+    # play.fit(inputs, inputs[1:], epochs=epochs, verbose=1)
+    # import ipdb; ipdb.set_trace()
+    # LOG.debug("number of layer is: {}".format(play.number_of_layers))
+    # LOG.debug("weight: {}".format(play.weight))
+
+    LOG.debug(colors.red("Test multiple plays"))
+
+    # batch_size = 10
+    # units = 1
+    # epochs = 5000 // batch_size
+    # steps_per_epoch = batch_size
+
+    # fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
+
+    # inputs, outputs = tdata.DatasetLoader.load_data(fname)
+    # length = 100
+    # inputs, outputs = inputs[:length], outputs[:length]
+
+    LOG.debug("timestap is: {}".format(inputs.shape[0]))
+    import time
+    start = time.time()
+    agent = Agent(batch_size=batch_size,
+                  units=units,
+                  activation="tanh",
+                  loss='mse',
+                  nb_plays=1)
+
+    agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    end = time.time()
+    LOG.debug("time cost: {}s".format(end-start))
+    i = 1
+    for play in agent.plays:
+        LOG.debug("Play #{}, number of layer is: {}".format(i, play.number_of_layers))
+        LOG.debug("Play #{}, weight: {}".format(i, play.weight))
+        i += 1
