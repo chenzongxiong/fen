@@ -10,6 +10,7 @@ from tensorflow.python.keras import regularizers
 from tensorflow.python.keras import activations
 from tensorflow.python.keras import initializers
 from tensorflow.python.keras import constraints
+from tensorflow.python.keras import optimizers
 from tensorflow.python.keras.engine import training_arrays
 from tensorflow.python.keras.utils import tf_utils
 import numpy as np
@@ -320,10 +321,8 @@ class Play():
             self.model.add(tf.keras.layers.Dense(1,
                                                  activation=None,
                                                  use_bias=self.use_bias))
-            # DOING: add loss layer
-            # self.model.add(tf.keras.layers.Reshape(target_shape=(length,)))
-            # self.model.add(MyLoss(self.model))
         if self._need_compile is True:
+            LOG.info(colors.yellow("Start to comple this model"))
             self.model.compile(loss=self.loss,
                                optimizer=self.optimizer,
                                metrics=[self.loss])
@@ -446,10 +445,13 @@ class Agent:
                         width=width,
                         debug=debug,
                         activation=activation,
-                        loss=loss,
-                        optimizer=optimizer,
+                        loss=None,
+                        optimizer=None,
                         network_type=constants.NetworkType.PLAY)
             self.plays.append(play)
+
+        self.optimzer = optimizers.get(optimizer)
+
 
     def fit(self, inputs, outputs, epochs=100, verbose=0, steps_per_epoch=1):
         inputs = ops.convert_to_tensor(inputs, tf.float32)
@@ -735,14 +737,14 @@ if __name__ == "__main__":
     # length = 100
     # inputs, outputs = inputs[:length], outputs[:length]
 
-    LOG.debug("timestap is: {}".format(inputs.shape[0]))
     nb_plays = 10
+    LOG.debug("timestap is: {}".format(inputs.shape[0]))
     import time
     start = time.time()
     agent = Agent(batch_size=batch_size,
                   units=units,
                   activation="tanh",
-                  loss='mse',
+                  # loss='mse',
                   nb_plays=nb_plays)
 
     agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
