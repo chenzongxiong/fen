@@ -451,15 +451,11 @@ class Agent:
                         network_type=constants.NetworkType.PLAY)
             self.plays.append(play)
 
-    def build(self, inputs):
-        pass
-
     def fit(self, inputs, outputs, epochs=100, verbose=0, steps_per_epoch=1):
         inputs = ops.convert_to_tensor(inputs, tf.float32)
         outputs = ops.convert_to_tensor(outputs, tf.float32)
 
         for play in self.plays:
-            play._need_compile = True
             play.build(inputs)
 
         x, y = self.plays[0].reshape(inputs, outputs)
@@ -469,36 +465,8 @@ class Agent:
         model_outputs = []
         feed_inputs = []
         feed_targets = []
-        # play = self.plays[0]
-        import ipdb; ipdb.set_trace()
-        # for play in self.plays:
-            # play.fit(inputs, outputs, epochs=epochs, verbose=verbose,
-            #          steps_per_epoch=steps_per_epoch)
-            # play.model.fit(x, y, epochs=epochs, verbose=verbose,
-            #                shuffle=False, steps_per_epoch=steps_per_epoch)
-
-            # _x, _y, sample_weights = play.model._standardize_user_data(
-            #     x,
-            #     y,
-            #     sample_weight=None)
-
-            # training_arrays.fit_loop(
-            #     play.model, _x, _y, epochs=epochs, verbose=verbose,
-            #     steps_per_epoch=steps_per_epoch, shuffle=False)
-
-
-        feed_targets = []
-        # for i in range(len(play.model.outputs)):
-        #     shape = tf.keras.backend.int_shape(play.model.outputs[i])
-        #     name = 'test'
-        #     target = tf.keras.backend.placeholder(
-        #         ndim=len(shape),
-        #         name=name + '_target',
-        #         dtype=tf.keras.backend.dtype(play.model.outputs[i]))
-
-        #     feed_targets.append(target)
-        # play.model._feed_targets = feed_targets
         update_inputs = []
+
         for play in self.plays:
             inputs = play.model._layers[0].input
             outputs = play.model._layers[-1].output
@@ -526,50 +494,35 @@ class Agent:
 
         loss = tf.keras.backend.mean(tf.math.square(y_pred - y))
         self.optimizer = tf.keras.optimizers.Adam()
-        # play.model.optimizer = tf.keras.optimizers.Adam()
-        # play.model.loss = loss
-        # play.model.metrics = [loss]
+
         with tf.name_scope('training'):
-            # with tf.name_scope(play.model.optimizer.__class__.__name__):
             with tf.name_scope(self.optimizer.__class__.__name__):
                 updates = self.optimizer.get_updates(params=params_list,
                                                      loss=loss)
-                # updates = play.model.optimizer.get_updates(params=params_list,
-                #                                            loss=loss)
             updates += update_inputs
 
             training_inputs = feed_inputs + feed_targets
-            play.model.train_function = tf.keras.backend.function(training_inputs,
-                                                                  [loss],
-                                                                  updates=updates)
-
-        # play.model.loss_weights = None
-
-        # _x, _y, sample_weights = play.model._standardize_user_data(
-        #     x,
-        #     y,
-        #     sample_weight=None)
-        # _x = [x, x]
-        # _y = [y, y]
-
-        # training_arrays.fit_loop(
-        #     play.model, _x, _y, epochs=epochs, verbose=verbose,
-        #     steps_per_epoch=steps_per_epoch, shuffle=False)
-
-        # init = tf.global_variables_initializer()
-        # utils.get_session().run(init)
+            train_function = tf.keras.backend.function(training_inputs,
+                                                       [loss],
+                                                       updates=updates)
 
         _x = [x for _ in range(self._nb_plays)]
         _y = [y for _ in range(self._nb_plays)]
-        # real_inputs = real_inputs_x + real_inputs_y
-        # i = 0
-        # epochs = 100
-        real_inputs = _x + _y
+        ins = _x + _y
         while i < epochs:
             i += 1
             for j in range(steps_per_epoch):
-                cost = play.model.train_function(real_inputs)
+                cost = train_function(ins)
             LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
+
+    @property
+    def weights(self):
+        i = 1
+        for play in agent.plays:
+            LOG.debug("Play #{}, number of layer is: {}".format(i, play.number_of_layers))
+            LOG.debug("Play #{}, weight: {}".format(i, play.weight))
+            i += 1
+
 
 
 if __name__ == "__main__":
@@ -712,7 +665,7 @@ if __name__ == "__main__":
     LOG.debug(colors.red("Test Play"))
     batch_size = 10
     units = 2
-    epochs = 10000 // batch_size
+    epochs = 15000 // batch_size
     steps_per_epoch = batch_size
 
     fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
@@ -783,7 +736,7 @@ if __name__ == "__main__":
     # inputs, outputs = inputs[:length], outputs[:length]
 
     LOG.debug("timestap is: {}".format(inputs.shape[0]))
-    nb_plays = 2
+    nb_plays = 10
     import time
     start = time.time()
     agent = Agent(batch_size=batch_size,
@@ -795,8 +748,4 @@ if __name__ == "__main__":
     agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
-    i = 1
-    for play in agent.plays:
-        LOG.debug("Play #{}, number of layer is: {}".format(i, play.number_of_layers))
-        LOG.debug("Play #{}, weight: {}".format(i, play.weight))
-        i += 1
+    agent.weights
