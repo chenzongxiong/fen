@@ -33,7 +33,8 @@ def Phi(x, width=1.0):
            = x + width , if x < - width
            = 0         , otherwise
     """
-    return tf.maximum(x, 0) + tf.minimum(x+width, 0)
+    # return tf.maximum(x, 0) + tf.minimum(x+width, 0)
+    return x
 
 
 class PhiCell(Layer):
@@ -126,7 +127,8 @@ class Operator(RNN):
             return_sequences=True,
             # return_state=True
             return_state=False,
-            stateful=True
+            stateful=True,
+            unroll=True
             )
 
     def call(self, inputs, initial_state=None):
@@ -392,6 +394,104 @@ class Play():
 
         return len(self.model._layers)
 
+    def fit2(self, inputs, mean, sigma, epochs, verbose=0, steps_per_epoch=1):
+        _inputs = ops.convert_to_tensor(inputs, tf.float32)
+        if not self.built:
+            self._need_compile = False
+            self.build(_inputs)
+
+        self.model.optimizer = optimizers.get(self.optimizer)
+
+        x = self.reshape(_inputs)
+
+        self._model_input = self.model.layers[0].input
+        self._model_output = self.model.layers[-1].output
+
+        mean = tf.Variable(mean, name="mean", dtype=tf.float32)
+        std = tf.Variable(sigma, name="sigma", dtype=tf.float32)
+
+        feed_inputs = [self._model_input]
+        target_mean = tf.keras.backend.placeholder(
+            ndim=0,
+            name="mean_target",
+            dtype=tf.float32
+        )
+        target_std = tf.keras.backend.placeholder(
+            ndim=0,
+            name="sigma_target",
+            dtype=tf.float32
+        )
+        feed_targets = [target_mean, target_std]
+
+        with tf.name_scope('training'):
+            J = tf.keras.backend.gradients(self._model_output, self._model_input)
+            detJ = tf.reshape(tf.keras.backend.abs(J[0]), shape=self._model_output.shape)
+            diff = self._model_output[:, 1:, :] - self._model_output[:, :-1, :]
+            _loss = (tf.keras.backend.square((diff - mean) / std) + tf.keras.backend.log(std*std)) + tf.keras.backend.log(detJ[:, 1:, :])
+            loss = tf.keras.backend.mean(_loss)
+
+            params = self.model.trainable_weights
+            with tf.name_scope(self.model.optimizer.__class__.__name__):
+                updates = self.model.optimizer.get_updates(params=params,
+                                                           loss=loss)
+
+            updates += self.model.get_updates_for(self._model_input)
+
+            inputs = feed_inputs + feed_targets
+            self.train_function = tf.keras.backend.function(inputs,
+                                                            [loss],
+                                                            updates=updates)
+        self._max_retry = 10
+        self.retry = False
+
+        def fit2_loop(ins):
+            self.retry = False
+            i = 0
+            while i < epochs:
+                i += 1
+                for j in range(steps_per_epoch):
+                    cost = self.train_function(ins)[0]
+                    if np.isnan(cost):
+                        LOG.debug(colors.cyan("loss runs into NaN, retry to train the neural network"))
+                        self.retry = True
+                        break
+
+                if np.isnan(cost):
+                    self.retry = True
+                    break
+
+                LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
+
+        ins = [x, mean, std]
+        retry_count = 0
+        while retry_count < self._max_retry:
+            init = tf.global_variables_initializer()
+            utils.get_session().run(init)
+
+            fit2_loop(ins)
+            if self.retry is False:
+                LOG.debug("Train neural network sucessfully, retry count: {}".format(retry_count))
+                break
+
+            retry_count += 1
+            LOG.debug("Retry to train the neural network, retry count: {}".format(retry_count))
+
+
+    def predict2(self, inputs, steps_per_epoch=1):
+        _inputs = ops.convert_to_tensor(inputs, tf.float32)
+        if not self.built:
+            self._need_compile = False
+            self.build(_inputs)
+
+        x = self.reshape(_inputs)
+        output = self.model.predict(x, steps=steps_per_epoch)
+        output = output.reshape(-1)
+        diff = output[1:] - output[:-1]
+        mean = diff.mean()
+        std = diff.std()
+
+        return outputs, mean, std
+
 
 class MyModel:
     def __init__(self, nb_plays=1,
@@ -478,6 +578,7 @@ class MyModel:
         _x = [x for _ in range(self._nb_plays)]
         _y = [y for _ in range(self._nb_plays)]
         ins = _x + _y
+
         while i < epochs:
             i += 1
             for j in range(steps_per_epoch):
@@ -611,37 +712,37 @@ if __name__ == "__main__":
     # units = 4
 
     LOG.debug(colors.red("Test Operator"))
-    fname = constants.FNAME_FORMAT["operators"].format(method="sin", weight=1, width=1)
-
-    inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    LOG.debug("timestap is: {}".format(inputs.shape[0]))
-
-    batch_size = 20
-    epochs = 5000 // batch_size
-    steps_per_epoch = batch_size
-    units = 10
-
-    play = Play(batch_size=batch_size,
-                units=units,
-                activation=None,
-                network_type=constants.NetworkType.OPERATOR)
-
-    play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
-
-    LOG.debug("number of layer is: {}".format(play.number_of_layers))
-    LOG.debug("weight: {}".format(play.weight))
-
-    # LOG.debug(colors.red("Test Play"))
-    # batch_size = 10
-    # units = 2
-    # epochs = 15000 // batch_size
-    # steps_per_epoch = batch_size
-
-    # fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
+    # fname = constants.FNAME_FORMAT["operators"].format(method="sin", weight=1, width=1)
 
     # inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    # length = 1000
-    # inputs, outputs = inputs[:length], outputs[:length]
+    # LOG.debug("timestap is: {}".format(inputs.shape[0]))
+
+    # batch_size = 20
+    # epochs = 5000 // batch_size
+    # steps_per_epoch = batch_size
+    # units = 10
+
+    # play = Play(batch_size=batch_size,
+    #             units=units,
+    #             activation=None,
+    #             network_type=constants.NetworkType.OPERATOR)
+
+    # play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+
+    # LOG.debug("number of layer is: {}".format(play.number_of_layers))
+    # LOG.debug("weight: {}".format(play.weight))
+
+    LOG.debug(colors.red("Test Play"))
+    batch_size = 10
+    units = 2
+    epochs = 1500 // batch_size
+    steps_per_epoch = batch_size
+
+    fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
+
+    inputs, outputs = tdata.DatasetLoader.load_data(fname)
+    length = 20
+    inputs, outputs = inputs[:length], outputs[:length]
 
     # LOG.debug("timestap is: {}".format(inputs.shape[0]))
 
@@ -667,29 +768,7 @@ if __name__ == "__main__":
     # d = b * c
     # print("c: ", utils.get_session().run(c))
     # print("d: ", utils.get_session().run(d))
-    # import ipdb; ipdb.set_trace()
 
-    # LOG.debug("Test Loss")
-    # batch_size = 1
-    # epochs = 10 // batch_size
-    # steps_per_epoch = batch_size
-    # units = 1
-    # points = 10
-    # mu = 4
-    # sigma = 0.001
-
-    # inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(points=points, mu=mu, sigma=sigma)
-    # play = Play(batch_size=batch_size,
-    #             units=units,
-    #             activation=None,
-    #             network_type=constants.NetworkType.PLAY,
-    #             loss=myloss)
-
-
-    # play.fit(inputs, inputs[1:], epochs=epochs, verbose=1)
-    # import ipdb; ipdb.set_trace()
-    # LOG.debug("number of layer is: {}".format(play.number_of_layers))
-    # LOG.debug("weight: {}".format(play.weight))
 
     LOG.debug(colors.red("Test multiple plays"))
 
@@ -704,17 +783,53 @@ if __name__ == "__main__":
     # length = 100
     # inputs, outputs = inputs[:length], outputs[:length]
 
-    nb_plays = 10
-    LOG.debug("timestap is: {}".format(inputs.shape[0]))
+    # nb_plays = 10
+    # LOG.debug("timestap is: {}".format(inputs.shape[0]))
+    # import time
+    # start = time.time()
+    # agent = MyModel(batch_size=batch_size,
+    #                 units=units,
+    #                 activation="tanh",
+    #                 nb_plays=nb_plays)
+
+    # agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    # end = time.time()
+    # LOG.debug("time cost: {}s".format(end-start))
+    # LOG.debug("print weights info")
+    # agent.weights
+
+
+    LOG.debug(colors.red("Test play with MLE"))
+    batch_size = 10
+    epochs = 1500 // batch_size
+    steps_per_epoch = batch_size
+    units = 3
+    points = 100
+    mu = 1
+
+    sigma = 0.01
+
+    inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(points=points, mu=mu, sigma=sigma)
+    # fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
+
+    # inputs, outputs = tdata.DatasetLoader.load_data(fname)
+    # length = 200
+    # inputs, outputs = inputs[:length], outputs[:length]
+
+    play = Play(batch_size=batch_size,
+                units=units,
+                # activation='tanh',
+                activation=None,
+                network_type=constants.NetworkType.PLAY,
+                loss=None,
+                debug=False)
+
     import time
     start = time.time()
-    agent = MyModel(batch_size=batch_size,
-                    units=units,
-                    activation="tanh",
-                    nb_plays=nb_plays)
 
-    agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    play.fit2(inputs, mu, sigma, epochs=epochs, verbose=1, steps_per_epoch=steps_per_epoch)
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
-    LOG.debug("print weights info")
-    agent.weights
+    # import ipdb; ipdb.set_trace()
+    predictions, mean, std = play.predict2(inputs)
+    LOG.debug("Predicted mean: {}, sigma: {}".format(mean, std))

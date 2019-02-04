@@ -68,7 +68,7 @@ class DatasetGenerator(object):
     @staticmethod
     def systhesis_markov_chain_generator(points, mu, sigma, b0=0):
         B = [b0]
-        for i in range(points):
+        for i in range(points-1):
             bi = np.random.normal(loc=B[-1] + mu, scale=sigma)
             B.append(bi)
 
