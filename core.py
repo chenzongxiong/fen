@@ -393,7 +393,7 @@ class Play():
         return len(self.model._layers)
 
 
-class Agent:
+class MyModel:
     def __init__(self, nb_plays=1,
                  units=1,
                  batch_size=1,
@@ -708,10 +708,10 @@ if __name__ == "__main__":
     LOG.debug("timestap is: {}".format(inputs.shape[0]))
     import time
     start = time.time()
-    agent = Agent(batch_size=batch_size,
-                  units=units,
-                  activation="tanh",
-                  nb_plays=nb_plays)
+    agent = MyModel(batch_size=batch_size,
+                    units=units,
+                    activation="tanh",
+                    nb_plays=nb_plays)
 
     agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
     end = time.time()
