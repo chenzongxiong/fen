@@ -801,7 +801,7 @@ if __name__ == "__main__":
 
     LOG.debug(colors.red("Test play with MLE"))
     batch_size = 10
-    epochs = 1500 // batch_size
+    epochs = 15000 // batch_size
     steps_per_epoch = batch_size
     units = 3
     points = 100
@@ -810,16 +810,16 @@ if __name__ == "__main__":
     sigma = 0.01
 
     inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(points=points, mu=mu, sigma=sigma)
-    # fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
+    fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
 
-    # inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    # length = 200
-    # inputs, outputs = inputs[:length], outputs[:length]
+    inputs, outputs = tdata.DatasetLoader.load_data(fname)
+    length = 100
+    inputs, outputs = inputs[:length], outputs[:length]
 
     play = Play(batch_size=batch_size,
                 units=units,
-                # activation='tanh',
-                activation=None,
+                activation='tanh',
+                # activation=None,
                 network_type=constants.NetworkType.PLAY,
                 loss=None,
                 debug=False)
