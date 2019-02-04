@@ -33,8 +33,8 @@ def Phi(x, width=1.0):
            = x + width , if x < - width
            = 0         , otherwise
     """
-    # return tf.maximum(x, 0) + tf.minimum(x+width, 0)
-    return x
+    return tf.maximum(x, 0) + tf.minimum(x+width, 0)
+    # return x
 
 
 class PhiCell(Layer):
@@ -232,7 +232,7 @@ class MyDense(Layer):
         return outputs
 
 
-class Play():
+class Play(object):
     def __init__(self, inputs=None,
                  units=1,
                  batch_size=1,
@@ -304,6 +304,8 @@ class Play():
                                                                      write_graph=True,
                                                                      write_grads=False,
                                                                      write_images=False)
+
+        utils.init_tf_variables()
         self.built = True
 
     def reshape(self, inputs, outputs=None):
@@ -330,9 +332,6 @@ class Play():
             self.build(inputs)
 
         x, y = self.reshape(inputs, outputs)
-
-        init = tf.global_variables_initializer()
-        utils.get_session().run(init)
 
         self.model.fit(x,
                        y,
@@ -476,7 +475,6 @@ class Play():
             retry_count += 1
             LOG.debug("Retry to train the neural network, retry count: {}".format(retry_count))
 
-
     def predict2(self, inputs, steps_per_epoch=1):
         _inputs = ops.convert_to_tensor(inputs, tf.float32)
         if not self.built:
@@ -490,10 +488,10 @@ class Play():
         mean = diff.mean()
         std = diff.std()
 
-        return outputs, mean, std
+        return output, mean, std
 
 
-class MyModel:
+class MyModel(object):
     def __init__(self, nb_plays=1,
                  units=1,
                  batch_size=1,

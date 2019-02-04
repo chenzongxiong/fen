@@ -98,3 +98,10 @@ def get_tf_summary_writer(fpath):
 def get_session():
     import tensorflow as tf
     return tf.keras.backend.get_session()
+
+
+def init_tf_variables():
+    import tensorflow as tf
+    sess = tf.keras.backend.get_session()
+    init = tf.global_variables_initializer()
+    sess.run(init)

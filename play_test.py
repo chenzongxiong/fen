@@ -1,5 +1,6 @@
 # import sys
 # import argparse
+import time
 import numpy as np
 import tensorflow as tf
 
@@ -13,14 +14,22 @@ writer = utils.get_tf_summary_writer("./log/plays")
 sess = utils.get_session()
 LOG = logging.getLogger(__name__)
 epochs = constants.EPOCHS
+EPOCHS = constants.EPOCHS
 
 
-def fit(inputs, outputs, units, activation, width, true_weight):
+def fit(inputs, outputs, units, activation, width, true_weight, loss='mse'):
 
     units = units
     batch_size = 10
-    epochs = 15000 // batch_size
+    epochs = EPOCHS // batch_size
+    epochs = 1
     steps_per_epoch = batch_size
+
+    total_timesteps = inputs.shape[0]
+    train_timesteps = int(total_timesteps * 0.5)
+
+    train_inputs, train_outputs = inputs[:train_timesteps], outputs[:train_timesteps]
+    test_inputs, test_outputs = inputs[train_timesteps:], outputs[train_timesteps:]
 
     import time
     start = time.time()
@@ -28,18 +37,45 @@ def fit(inputs, outputs, units, activation, width, true_weight):
                 units=units,
                 activation="tanh",
                 network_type=constants.NetworkType.PLAY,
-                loss='mse',
-                debug=True)
+                loss=loss,
+                debug=False)
 
-    play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    if loss == 'mse':
+        play.fit(train_inputs, train_outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+
+        train_loss, metrics = play.evaluate(train_inputs, train_outputs, steps_per_epoch=steps_per_epoch)
+        test_loss, metrics = play.evaluate(test_inputs, test_outputs, steps_per_epoch=steps_per_epoch)
+
+        train_predictions = play.predict(train_inputs, steps_per_epoch=1)
+        test_predictions = play.predict(test_inputs, steps_per_epoch=1)
+
+        train_mu = train_sigma = test_mu = test_sigma = -1
+    elif loss == 'mle':
+        mu = 0
+        sigma = 0.0001
+        play.fit2(train_inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+
+        train_loss = test_loss = -1
+
+        import ipdb; ipdb.set_trace()
+        train_predictions, train_mu, train_sigma = play.predict2(train_inputs, steps_per_epoch=1)
+        test_predictions, test_mu, test_sigma = play.predict2(test_inputs, steps_per_epoch=1)
+
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
     LOG.debug("number of layer is: {}".format(play.number_of_layers))
     LOG.debug("weight: {}".format(play.weight))
 
-    loss, metrics = play.evaluate(inputs, outputs, steps_per_epoch=steps_per_epoch)
-    predictions = play.predict(inputs, steps_per_epoch=1)
-    predicitons = predictions.reshape(-1)
+    train_predictions = train_predictions.reshape(-1)
+    test_predictions = test_predictions.reshape(-1)
+
+    predictions = np.hstack([train_predictions, test_predictions])
+    if np.any(np.isnan(predictions)):
+        predictions = np.zeros(predictions.shape)
+        train_mu = train_sigma = test_mu = test_sigma = -1
+
+    loss = [train_loss, test_loss, train_mu, test_mu, train_sigma, test_sigma]
+
     return predictions, loss
 
 
@@ -48,7 +84,7 @@ if __name__ == "__main__":
     weights = constants.WEIGHTS
     widths = constants.WIDTHS
     _units = constants.UNITS
-
+    loss_name = 'mle'
     activation = "tanh"
 
     for method in methods:
@@ -57,9 +93,10 @@ if __name__ == "__main__":
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
                 fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width)
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
+                inputs, outputs_ = inputs[:40], outputs_[:40]
                 # increase *units* in order to increase the capacity of the model
                 for units in _units:
-                    predictions, loss = fit(inputs, outputs_, units, activation, width, weight)
+                    predictions, loss = fit(inputs, outputs_, units, activation, width, weight, loss_name)
                     fname = constants.FNAME_FORMAT["plays_loss"].format(method=method, weight=weight,
                                                                         width=width, activation=activation, units=units)
                     tdata.DatasetSaver.save_loss({"loss": loss}, fname)

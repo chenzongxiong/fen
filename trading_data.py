@@ -5,7 +5,7 @@ import core
 import utils
 import colors
 import log as logging
-
+import constants
 
 LOG = logging.getLogger(__name__)
 
@@ -22,16 +22,45 @@ class DatasetGenerator(object):
         return inputs
 
     @classmethod
+    def systhesis_sin_input_generator(cls, points, mu, sigma):
+        # NOTE: x = sin(t) + 3 sin(1.3 t)  + 1.2 sin (1.6 t)
+        inputs1 = np.sin(np.linspace(-2*np.pi, 2*np.pi, points))
+        inputs2 = 3 * np.sin(1.3* np.linspace(-2*np.pi, 2*np.pi, points))
+        inputs3 = 1.2 * np.sin(1.6 * np.linspace(-2*np.pi, 2*np.pi, points))
+        inputs = (inputs1 + inputs2 + inputs3).astype(np.float32)
+        LOG.debug("Generate the input sequence according to formula {}".format(colors.red("[x = sin(t) + 3 sin(1.3 t)  + 1.2 sin (1.6 t)]")))
+
+        noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
+        inputs += noise
+        return inputs
+
+    @classmethod
+    def systhesis_cos_input_generator(cls, points, mu, sigma):
+        # NOTE: x = cos(t) + 1.5 cos(3.0 t) + 2.5 sin(2.3 t)
+        inputs1 = np.cos(np.linspace(-2*np.pi, 2*np.pi, points))
+        inputs2 = 1.5 * np.cos(3.0* np.linspace(-2*np.pi, 2*np.pi, points))
+        inputs3 = 2.5 * np.sin(2.3 * np.linspace(-2*np.pi, 2*np.pi, points))
+        inputs = (inputs1 + inputs2 + inputs3).astype(np.float32)
+        LOG.debug("Generate the input sequence according to formula {}".format(colors.red("[x = cos(t) + 1.5 cos(3.0 t)  + 2.5 sin (2.3 t)]")))
+
+        noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
+        inputs += noise
+        return inputs
+
+    @classmethod
     def systhesis_operator_generator(cls, points=1000, weight=1, width=1, state=0):
         _inputs = cls.systhesis_input_generator(points)
         weight = float(weight)
         width = float(width)
         state = float(state)
 
-        cell = core.PlayCell(weight=weight, width=width, debug=True)
-        outputs = cell(_inputs, state)
-        sess = utils.get_session()
-        _outputs = sess.run(outputs)
+        operator = core.Play(weight=weight,
+                             width=width,
+                             debug=True,
+                             network_type=constants.NetworkType.OPERATOR)
+
+        _outputs = operator.predict(_inputs)
+        _outputs = _outputs.reshape(-1)
         return _inputs, _outputs
 
     @classmethod
@@ -41,13 +70,11 @@ class DatasetGenerator(object):
         else:
             _inputs = inputs
 
-        cell = core.PlayCell(debug=True)
-        layer = core.Play(units=4,
-                          cell=cell,
-                          debug=True)
-        outputs = layer(_inputs)
-        sess = utils.get_session()
-        _outputs = sess.run(outputs)
+        play = core.Play(debug=True,
+                         network_type=constants.NetworkType.PLAY)
+
+        _outputs = play.predict(_inputs)
+        _outputs = _outputs.reshape(-1)
         return _inputs, _outputs
 
     @classmethod

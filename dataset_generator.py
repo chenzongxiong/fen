@@ -14,10 +14,8 @@ weights = constants.WEIGHTS
 widths = constants.WIDTHS
 NB_PLAYS = constants.NB_PLAYS
 points = constants.POINTS
-points = 100
 
 def operator_generator():
-    # states = [0, 1, 4, 7, 10 -1, -4, -7, -10]
     states = [1, 4, 10 -1, -4, -10]
 
     for method in methods:
@@ -33,7 +31,7 @@ def operator_generator():
                                                                                             state=state)
                     inputs.append(inputs_)
                     outputs.append(outputs_)
-                fname = "./training-data/operators/{}-{}-{}.csv".format(method, weight, width)
+                fname = constants.FNAME_FORMAT['operators'].format(method=method, weight=weight, width=width)
                 inputs = np.hstack(inputs)
                 outputs = np.hstack(outputs)
                 outputs = outputs.T
@@ -52,7 +50,7 @@ def play_generator():
                     inputs = None
 
                 inputs, outputs = tdata.DatasetGenerator.systhesis_play_generator(points=points, inputs=inputs)
-                fname = "./training-data/plays/{}-{}-{}-tanh.csv".format(method, weight, width)
+                fname = constants.FNAME_FORMAT['plays'].format(method=method, weight=weight, width=width)
                 tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
 

@@ -1,14 +1,14 @@
 # SETTINGS
 import os
 
-DEBUG_INIT_TF_VALUE = True
+DEBUG_INIT_TF_VALUE = False
 WEIGHTS = [1]
 WIDTHS = [1]
 METHODS = ["sin"]
 UNITS = [4, 8, 16]
 NB_PLAYS = [1, 2, 3, 4, 8]
 EPOCHS = 1000
-POINTS = 1000
+POINTS = 100
 # NOTE: trick here, batch_size must be always equal to 1
 BATCH_SIZE = 1
 
