@@ -34,12 +34,6 @@ def Phi(x, width=1.0):
            = 0         , otherwise
     """
     return tf.maximum(x, 0) + tf.minimum(x+width, 0)
-    # return x
-
-def myloss(y_true, y_pred):
-    loss = tf.keras.backend.sum(y_pred, axis=[1])
-    LOG.debug("my loss is called, loss is: {}".format(loss))
-    return loss
 
 
 class PhiCell(Layer):
@@ -236,32 +230,6 @@ class MyDense(Layer):
         return outputs
 
 
-class MyLoss(Layer):
-    def __init__(self, model, **kwargs):
-        super(MyLoss, self).__init__(**kwargs)
-        self._model = model
-
-    def build(self, input_shape):
-        self.built = True
-
-    def call(self, inputs):
-        # _inputs = tf.reshape(inputs, shape=(-1, ))
-        # import ipdb; ipdb.set_trace()
-        # J = tf.gradients(inputs, self._model.inputs)
-        # detJ = tf.cumprod(J[0], axis=1)
-        diff = inputs[:, 1:, :] - inputs[:, :-1, :]
-
-        mean = tf.keras.backend.mean(diff)
-        std  = tf.keras.backend.std(diff)
-        tau  = 1.0 / tf.keras.backend.square(std)
-        # import ipdb; ipdb.set_trace()
-        # outputs.shape == (1, 10, 1)
-        # detJ.shape    == (1, 11, 1)
-        outputs = tf.keras.backend.square(diff - mean) * tau - tf.keras.backend.log(tau)
-        # outputs = outputs * detJ[:, 1:, :]
-        return outputs
-
-
 class Play():
     def __init__(self, inputs=None,
                  units=1,
@@ -322,7 +290,7 @@ class Play():
                                                  activation=None,
                                                  use_bias=self.use_bias))
         if self._need_compile is True:
-            LOG.info(colors.yellow("Start to comple this model"))
+            LOG.info(colors.yellow("Start to compile this model"))
             self.model.compile(loss=self.loss,
                                optimizer=self.optimizer,
                                metrics=[self.loss])
@@ -451,7 +419,6 @@ class Agent:
             self.plays.append(play)
 
         self.optimzer = optimizers.get(optimizer)
-
 
     def fit(self, inputs, outputs, epochs=100, verbose=0, steps_per_epoch=1):
         inputs = ops.convert_to_tensor(inputs, tf.float32)
@@ -643,40 +610,40 @@ if __name__ == "__main__":
     # steps_per_epoch = batch_size
     # units = 4
 
-    # LOG.debug("Test Operator")
-    # fname = constants.FNAME_FORMAT["operators"].format(method="sin", weight=1, width=1)
-
-    # inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    # LOG.debug("timestap is: {}".format(inputs.shape[0]))
-
-    # batch_size = 20
-    # epochs = 5000 // batch_size
-    # steps_per_epoch = batch_size
-    # units = 10
-
-    # play = Play(batch_size=batch_size,
-    #             units=units,
-    #             activation=None,
-    #             network_type=constants.NetworkType.OPERATOR)
-
-    # play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
-
-    # LOG.debug("number of layer is: {}".format(play.number_of_layers))
-    # LOG.debug("weight: {}".format(play.weight))
-
-    LOG.debug(colors.red("Test Play"))
-    batch_size = 10
-    units = 2
-    epochs = 15000 // batch_size
-    steps_per_epoch = batch_size
-
-    fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
+    LOG.debug(colors.red("Test Operator"))
+    fname = constants.FNAME_FORMAT["operators"].format(method="sin", weight=1, width=1)
 
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    length = 1000
-    inputs, outputs = inputs[:length], outputs[:length]
-
     LOG.debug("timestap is: {}".format(inputs.shape[0]))
+
+    batch_size = 20
+    epochs = 5000 // batch_size
+    steps_per_epoch = batch_size
+    units = 10
+
+    play = Play(batch_size=batch_size,
+                units=units,
+                activation=None,
+                network_type=constants.NetworkType.OPERATOR)
+
+    play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+
+    LOG.debug("number of layer is: {}".format(play.number_of_layers))
+    LOG.debug("weight: {}".format(play.weight))
+
+    # LOG.debug(colors.red("Test Play"))
+    # batch_size = 10
+    # units = 2
+    # epochs = 15000 // batch_size
+    # steps_per_epoch = batch_size
+
+    # fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
+
+    # inputs, outputs = tdata.DatasetLoader.load_data(fname)
+    # length = 1000
+    # inputs, outputs = inputs[:length], outputs[:length]
+
+    # LOG.debug("timestap is: {}".format(inputs.shape[0]))
 
     # import time
     # start = time.time()
@@ -744,10 +711,10 @@ if __name__ == "__main__":
     agent = Agent(batch_size=batch_size,
                   units=units,
                   activation="tanh",
-                  # loss='mse',
                   nb_plays=nb_plays)
 
     agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
+    LOG.debug("print weights info")
     agent.weights

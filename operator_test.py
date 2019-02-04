@@ -3,7 +3,7 @@ import argparse
 import numpy as np
 import tensorflow as tf
 
-from core import Phi, PlayCell
+from core import Play
 import utils
 import trading_data as tdata
 import log as logging
@@ -16,35 +16,26 @@ LOG = logging.getLogger(__name__)
 epochs = constants.EPOCHS
 
 def fit(inputs, outputs, width, method, true_weight):
-    state = tf.random_uniform(shape=(), minval=0, maxval=10, dtype=tf.float32)
-    cell = PlayCell(width=width,
-                    kernel_constraint="non_neg",
-                    debug=False)
+    LOG.debug("timestap is: {}".format(inputs.shape[0]))
 
-    predictions = cell(inputs, state)
-    loss = tf.losses.mean_squared_error(labels=outputs,
-                                        predictions=predictions)
+    batch_size = 20
+    epochs = 5000 // batch_size
+    steps_per_epoch = batch_size
+    units = 10
 
-    loss_summary = tf.summary.scalar("loss", loss)
+    play = Play(batch_size=batch_size,
+                units=units,
+                activation=None,
+                network_type=constants.NetworkType.OPERATOR)
 
-    optimizer = tf.train.GradientDescentOptimizer(0.01)
-    opt = optimizer.minimize(loss)
+    play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
 
-    init = tf.global_variables_initializer()
-    sess.run(init)
-
-    loss_value = None
-    for i in range(epochs):
-        _, loss_value = sess.run((opt, loss))
-        if i % 10 == 0:         # every 10 times
-            summary = sess.run(loss_summary)
-            writer.add_summary(summary, i)
-
-        LOG.debug("epoch {}, loss: {}".format(i, loss_value))
-
-    state = tf.constant(0, dtype=tf.float32)
-    predictions = cell(inputs, state)
-    return sess.run(predictions), float(loss_value)
+    LOG.debug("number of layer is: {}".format(play.number_of_layers))
+    LOG.debug("weight: {}".format(play.weight))
+    loss, metrics = play.evaluate(inputs, outputs, steps_per_epoch=steps_per_epoch)
+    predictions = play.predict(inputs, steps_per_epoch=1)
+    predictions = predictions.reshape(-1)
+    return predictions, loss
 
 
 if __name__ == '__main__':
@@ -59,6 +50,7 @@ if __name__ == '__main__':
                 fname = constants.FNAME_FORMAT["operators"].format(method=method, weight=weight, width=width)
                 inputs, outputs = tdata.DatasetLoader.load_data(fname)
                 predictions, loss = fit(inputs, outputs, width, method, weight)
+
                 fname = constants.FNAME_FORMAT["operators_loss"].format(method=method, weight=weight, width=width)
                 tdata.DatasetSaver.save_loss({"loss": loss}, fname)
                 fname = constants.FNAME_FORMAT["operators_predictions"].format(method=method, weight=weight, width=width)
