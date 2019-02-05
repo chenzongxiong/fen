@@ -406,8 +406,8 @@ class Play(object):
         self._model_input = self.model.layers[0].input
         self._model_output = self.model.layers[-1].output
 
-        mean = tf.Variable(mean, name="mean", dtype=tf.float32)
-        std = tf.Variable(sigma, name="sigma", dtype=tf.float32)
+        self.mean = tf.Variable(mean, name="mean", dtype=tf.float32)
+        self.std = tf.Variable(sigma, name="sigma", dtype=tf.float32)
 
         feed_inputs = [self._model_input]
         target_mean = tf.keras.backend.placeholder(
@@ -425,8 +425,12 @@ class Play(object):
         with tf.name_scope('training'):
             J = tf.keras.backend.gradients(self._model_output, self._model_input)
             detJ = tf.reshape(tf.keras.backend.abs(J[0]), shape=self._model_output.shape)
+            # avoid zeros
+            detJ = tf.keras.backend.clip(detJ, min_value=1e-5, max_value=1e9)
+
             diff = self._model_output[:, 1:, :] - self._model_output[:, :-1, :]
-            _loss = (tf.keras.backend.square((diff - mean) / std) + tf.keras.backend.log(std*std)) + tf.keras.backend.log(detJ[:, 1:, :])
+            # _loss = (tf.keras.backend.square((diff - self.mean) / self.std) + tf.keras.backend.log(self.std*self.std)) + tf.keras.backend.log(detJ[:, 1:, :])
+            _loss = tf.keras.backend.square((diff-self.mean)/self.std)/2.0 - tf.keras.backend.log(detJ[:, 1:, :])
             loss = tf.keras.backend.mean(_loss)
 
             params = self.model.trainable_weights
@@ -438,6 +442,7 @@ class Play(object):
 
             inputs = feed_inputs + feed_targets
             self.train_function = tf.keras.backend.function(inputs,
+                                                            # [loss, self._model_output, detJ],
                                                             [loss],
                                                             updates=updates)
         self._max_retry = 10
@@ -450,6 +455,7 @@ class Play(object):
                 i += 1
                 for j in range(steps_per_epoch):
                     cost = self.train_function(ins)[0]
+                    # cost, output, J = self.train_function(ins)
                     if np.isnan(cost):
                         LOG.debug(colors.cyan("loss runs into NaN, retry to train the neural network"))
                         self.retry = True
@@ -459,9 +465,18 @@ class Play(object):
                     self.retry = True
                     break
 
+                # if cost < 10:
+                #     import ipdb; ipdb.set_trace()
+                #     predictions, mu, sigma = self.predict2(inputs)
+                #     LOG.debug("Predicted mean: {}, sigma: {}".format(mean, std))
+                #     LOG.debug("weight: {}".format(self.weight))
+
                 LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
 
-        ins = [x, mean, std]
+            # if cost > 10:
+            #     self.retry = True
+
+        ins = [x, self.mean, self.std]
         retry_count = 0
         while retry_count < self._max_retry:
             init = tf.global_variables_initializer()
@@ -488,7 +503,7 @@ class Play(object):
         mean = diff.mean()
         std = diff.std()
 
-        return output, mean, std
+        return output, float(mean), float(std)
 
 
 class MyModel(object):
@@ -799,18 +814,19 @@ if __name__ == "__main__":
 
     LOG.debug(colors.red("Test play with MLE"))
     batch_size = 10
-    epochs = 15000 // batch_size
+    epochs = 5000 // batch_size
     steps_per_epoch = batch_size
-    units = 3
+    units = 1
     points = 100
-    mu = 1
+    mu = 0
 
-    sigma = 0.01
+    sigma = 0.001
 
     inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(points=points, mu=mu, sigma=sigma)
     fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
 
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
+
     length = 100
     inputs, outputs = inputs[:length], outputs[:length]
 

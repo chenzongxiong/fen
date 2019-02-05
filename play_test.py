@@ -1,5 +1,5 @@
-# import sys
-# import argparse
+import sys
+import argparse
 import time
 import numpy as np
 import tensorflow as tf
@@ -54,10 +54,7 @@ def fit(inputs, outputs, units, activation, width, true_weight, loss='mse'):
         mu = 0
         sigma = 0.0001
         play.fit2(train_inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
-
         train_loss = test_loss = -1
-
-        import ipdb; ipdb.set_trace()
         train_predictions, train_mu, train_sigma = play.predict2(train_inputs, steps_per_epoch=1)
         test_predictions, test_mu, test_sigma = play.predict2(test_inputs, steps_per_epoch=1)
 
@@ -84,7 +81,13 @@ if __name__ == "__main__":
     weights = constants.WEIGHTS
     widths = constants.WIDTHS
     _units = constants.UNITS
-    loss_name = 'mle'
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--loss", dest="loss",
+                        required=True)
+    argv = parser.parse_args(sys.argv[1:])
+
+    loss_name = argv.loss
     activation = "tanh"
 
     for method in methods:
