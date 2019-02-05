@@ -6,13 +6,13 @@ WEIGHTS = [1]
 WIDTHS = [1]
 METHODS = ["sin"]
 UNITS = [4, 8, 16]
-NB_PLAYS = [1, 2, 3, 4, 8]
-EPOCHS = 1000
+NB_PLAYS = [1, 4, 10, 20]
+EPOCHS = 5000
 POINTS = 100
 # NOTE: trick here, batch_size must be always equal to 1
 BATCH_SIZE = 1
 
-BATCH_SIZE_LIST = [4, 16, 64, 320, 1600]
+BATCH_SIZE_LIST = [10]
 
 FNAME_FORMAT = dict(
     operators="./training-data/operators/{method}-{weight}-{width}.csv",
@@ -56,6 +56,34 @@ FNAME_FORMAT = dict(
     models_F_predictions="./training-data/F/{method}-{weight}-{width}-{nb_plays}-{batch_size}-predictions.csv",
     models_F_gif="./pics/F/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}.gif",
     models_F_gif_snake="./pics/F/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-snake.gif",
+
+
+    # operator noise
+    operators_noise="./training-data/operators/{method}-{weight}-{width}-{mu}-{sigma}.csv",
+    operators_noise_predictions="./training-data/operators/{method}-{weight}-{width}-{mu}-{sigma}-predictions.csv",
+    operators_noise_loss="./training-data/operators/{method}-{weight}-{width}-{mu}-{sigma}-loss.csv",
+    operators_noise_loss_histroy="./training-data/operators/{method}-{weight}-{width}-{mu}-{sigma}-loss-history.csv",
+    operators_noise_gif="./pics/operators/{method}-{weight}-{width}-{mu}-{sigma}.gif",
+    operators_noise_gif_snake="./pics/operators/{method}-{weight}-{width}-{mu}-{sigma}-snake.gif",
+
+    # play noise
+    plays_noise="./training-data/plays/{method}-{weight}-{width}-{mu}-{sigma}-tanh.csv",
+    plays_noise_predictions="./training-data/plays/{method}-{weight}-{width}-{activation}-{units}-{mu}-{sigma}-predictions.csv",
+    plays_noise_loss="./training-data/plays/{method}-{weight}-{width}-{activation}-{units}-{mu}-{sigma}-loss.csv",
+    plays_noise_loss_history="./training-data/plays/{method}-{weight}-{width}-{activation}-{units}-{mu}-{sigma}-loss-history.csv",
+    plays_noise_gif="./pics/plays/{method}-{weight}-{width}-{activation}-{units}-{mu}-{sigma}.gif",
+    plays_noise_gif_snake="./pics/plays/{method}-{weight}-{width}-{activation}-{units}-{mu}-{sigma}-snake.gif",
+
+    # model noise
+    models_noise="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{mu}-{sigma}.csv",
+    models_noise_loss_history="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-{mu}-{sigma}-loss-history.csv",
+    models_noise_loss="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-{mu}-{sigma}-loss.csv",
+    models_noise_predictions="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-{mu}-{sigma}-predictions.csv",
+    # models_noise_multi_predictions="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-multi-predictions.csv",
+    models_noise_gif="./pics/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-{mu}-{sigma}.gif",
+    # models_noise_multi_gif="./pics/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-multi.gif",
+    models_noise_gif_snake="./pics/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-{mu}-{sigma}-snake.gif",
+    # models_noise_multi_gif_snake="./pics/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-multi-snake.gif",
 )
 
 CPU_COUNTS = min(os.cpu_count(), 32)

@@ -48,8 +48,14 @@ class DatasetGenerator(object):
         return inputs
 
     @classmethod
-    def systhesis_operator_generator(cls, points=1000, weight=1, width=1, state=0):
-        _inputs = cls.systhesis_input_generator(points)
+    def systhesis_operator_generator(cls, points=1000, weight=1, width=1, state=0, with_noise=False, mu=0, sigma=0.01, method="sin"):
+        if with_noise is True:
+            if method == "sin":
+                _inputs = cls.systhesis_sin_input_generator(points, mu, sigma)
+            elif method == "cos":
+                _inputs = cls.systhesis_cos_input_generator(points, mu, sigma)
+        else:
+            _inputs = cls.systhesis_input_generator(points)
         weight = float(weight)
         width = float(width)
         state = float(state)

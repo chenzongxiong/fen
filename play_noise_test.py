@@ -10,7 +10,6 @@ import log as logging
 import constants
 import trading_data as tdata
 
-constants.LOG_DIR = "./log/plays"
 writer = utils.get_tf_summary_writer("./log/plays")
 sess = utils.get_session()
 LOG = logging.getLogger(__name__)
@@ -18,12 +17,12 @@ epochs = constants.EPOCHS
 EPOCHS = constants.EPOCHS
 
 
-def fit(inputs, outputs, units, activation, width, true_weight, loss='mse'):
+def fit(inputs, outputs, units, activation, width, true_weight, loss='mse', loss_file_name="./tmp/play_loss_history.csv"):
 
     units = units
     batch_size = 10
     epochs = EPOCHS // batch_size
-
+    # epochs = 1
     steps_per_epoch = batch_size
 
     total_timesteps = inputs.shape[0]
@@ -54,10 +53,17 @@ def fit(inputs, outputs, units, activation, width, true_weight, loss='mse'):
     elif loss == 'mle':
         mu = 0
         sigma = 0.0001
-        play.fit2(train_inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
-        train_loss = test_loss = -1
+
+        play.fit2(train_inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch, loss_file_name=loss_file_name)
+
         train_predictions, train_mu, train_sigma = play.predict2(train_inputs, steps_per_epoch=1)
         test_predictions, test_mu, test_sigma = play.predict2(test_inputs, steps_per_epoch=1)
+
+        train_loss = ((train_outputs - train_predictions) ** 2).mean()
+        test_loss = ((test_outputs - test_predictions) ** 2).mean()
+        train_loss = float(train_loss)
+        test_loss = float(test_loss)
+
 
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
@@ -90,20 +96,25 @@ if __name__ == "__main__":
 
     loss_name = argv.loss
     activation = "tanh"
-
+    mu = 1
+    sigma = 0.01
     for method in methods:
         for weight in weights:
             for width in widths:
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT["plays_noise"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
                 # inputs, outputs_ = inputs[:40], outputs_[:40]
                 # increase *units* in order to increase the capacity of the model
                 for units in _units:
-                    predictions, loss = fit(inputs, outputs_, units, activation, width, weight, loss_name)
-                    fname = constants.FNAME_FORMAT["plays_loss"].format(method=method, weight=weight,
-                                                                        width=width, activation=activation, units=units)
+                    loss_history_file = constants.FNAME_FORMAT["plays_noise_loss_history"].format(method=method, weight=weight,
+                                                                                      width=width, activation=activation, units=units, mu=mu, sigma=sigma)
+
+                    predictions, loss = fit(inputs, outputs_, units, activation, width, weight, loss_name, loss_history_file)
+                    fname = constants.FNAME_FORMAT["plays_noise_loss"].format(method=method, weight=weight,
+                                                                              width=width, activation=activation, units=units, mu=mu, sigma=sigma)
                     tdata.DatasetSaver.save_loss({"loss": loss}, fname)
-                    fname = constants.FNAME_FORMAT["plays_predictions"].format(method=method, weight=weight,
-                                                                               width=width, activation=activation, units=units)
+                    fname = constants.FNAME_FORMAT["plays_noise_predictions"].format(method=method, weight=weight,
+                                                                                     width=width, activation=activation, units=units,
+                                                                                     mu=mu, sigma=sigma)
                     tdata.DatasetSaver.save_data(inputs, predictions, fname)

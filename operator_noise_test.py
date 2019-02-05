@@ -17,14 +17,15 @@ LOG = logging.getLogger(__name__)
 epochs = constants.EPOCHS
 EPOCHS = constants.EPOCHS
 
-def fit(inputs, outputs, width, method, true_weight, loss='mse'):
+
+def fit(inputs, outputs, width, method, true_weight, loss='mse', mu=0, sigma=0.001, loss_file_name="./tmp/operator_loss_history.csv"):
     LOG.debug("timestap is: {}".format(inputs.shape[0]))
     total_timesteps = inputs.shape[0]
     train_timesteps = int(total_timesteps * 0.5)
 
     batch_size = 10
     epochs = EPOCHS // batch_size
-
+    # epochs = 1
     steps_per_epoch = batch_size
     units = 10
 
@@ -48,16 +49,17 @@ def fit(inputs, outputs, width, method, true_weight, loss='mse'):
         test_predictions = play.predict(test_inputs, steps_per_epoch=1)
 
         train_mu = train_sigma = test_mu = test_sigma = -1
+
     elif loss == 'mle':
-        mu = 0
-        sigma = 0.001
-        play.fit2(train_inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
-        train_loss = test_loss = -1
+        play.fit2(train_inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch, loss_file_name=loss_file_name)
         train_predictions, train_mu, train_sigma = play.predict2(train_inputs, steps_per_epoch=1)
         test_predictions, test_mu, test_sigma = play.predict2(test_inputs, steps_per_epoch=1)
+        train_loss = ((train_outputs - train_predictions) ** 2).mean()
+        test_loss = ((test_outputs - test_predictions) ** 2).mean()
+        train_loss = float(train_loss)
+        test_loss = float(test_loss)
 
     end = time.time()
-
     LOG.debug("time cost: {}s".format(end-start))
     LOG.debug("number of layer is: {}".format(play.number_of_layers))
     LOG.debug("weight: {}".format(play.weight))
@@ -77,15 +79,19 @@ if __name__ == '__main__':
     widths = constants.WIDTHS
     loss_name = 'mle'
     # train dataset
+    mu = 1
+    sigma = 0.01
     for method in methods:
         for weight in weights:
             for width in widths:
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = constants.FNAME_FORMAT["operators"].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT["operators_noise"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
                 inputs, outputs = tdata.DatasetLoader.load_data(fname)
-                predictions, loss = fit(inputs, outputs, width, method, weight, loss_name)
+                loss_file_name = constants.FNAME_FORMAT["operators_noise_loss_histroy"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+                # inputs, outputs = inputs[:40], outputs[:40]
+                predictions, loss = fit(inputs, outputs, width, method, weight, loss_name, mu, sigma, loss_file_name)
 
-                fname = constants.FNAME_FORMAT["operators_loss"].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT["operators_noise_loss"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
                 tdata.DatasetSaver.save_loss({"loss": loss}, fname)
-                fname = constants.FNAME_FORMAT["operators_predictions"].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT["operators_noise_predictions"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
                 tdata.DatasetSaver.save_data(inputs, predictions, fname)

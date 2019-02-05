@@ -393,7 +393,7 @@ class Play(object):
 
         return len(self.model._layers)
 
-    def fit2(self, inputs, mean, sigma, epochs, verbose=0, steps_per_epoch=1):
+    def fit2(self, inputs, mean, sigma, epochs, verbose=0, steps_per_epoch=1, loss_file_name="./tmp/tmp.csv"):
         _inputs = ops.convert_to_tensor(inputs, tf.float32)
         if not self.built:
             self._need_compile = False
@@ -442,24 +442,41 @@ class Play(object):
 
             inputs = feed_inputs + feed_targets
             self.train_function = tf.keras.backend.function(inputs,
-                                                            # [loss, self._model_output, detJ],
-                                                            [loss],
+                                                            [loss, self._model_output, detJ],
+                                                            # [loss],
                                                             updates=updates)
         self._max_retry = 10
         self.retry = False
+        self.cost_history = []
 
         def fit2_loop(ins):
+            self.cost_history = []
             self.retry = False
             i = 0
+            prev_cost = np.inf
+            patient_list = []
+            start_flag = True
+            cost = np.inf
             while i < epochs:
                 i += 1
-                for j in range(steps_per_epoch):
-                    cost = self.train_function(ins)[0]
-                    # cost, output, J = self.train_function(ins)
+                for j in range(steps_per_epoch):  # bugs when steps_per_epoch == 1
+                    prev_cost = cost
+                    # cost = self.train_function(ins)[0]
+                    cost, output, J = self.train_function(ins)
                     if np.isnan(cost):
                         LOG.debug(colors.cyan("loss runs into NaN, retry to train the neural network"))
                         self.retry = True
                         break
+
+                if prev_cost == cost:
+                    patient_list.append(cost)
+                else:
+                    start_flag = False
+                    patient_list = []
+                if len(patient_list) >= 50 and start_flag:
+                    self.retry = True
+                    LOG.debug("lost patient...")
+                    break
 
                 if np.isnan(cost):
                     self.retry = True
@@ -470,7 +487,7 @@ class Play(object):
                 #     predictions, mu, sigma = self.predict2(inputs)
                 #     LOG.debug("Predicted mean: {}, sigma: {}".format(mean, std))
                 #     LOG.debug("weight: {}".format(self.weight))
-
+                self.cost_history.append([i, cost])
                 LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
 
             # if cost > 10:
@@ -489,6 +506,9 @@ class Play(object):
 
             retry_count += 1
             LOG.debug("Retry to train the neural network, retry count: {}".format(retry_count))
+
+        cost_history = np.array(self.cost_history)
+        tdata.DatasetSaver.save_data(cost_history[:,0], cost_history[:, 1], loss_file_name)
 
     def predict2(self, inputs, steps_per_epoch=1):
         _inputs = ops.convert_to_tensor(inputs, tf.float32)
@@ -533,7 +553,7 @@ class MyModel(object):
 
         self.optimzer = optimizers.get(optimizer)
 
-    def fit(self, inputs, outputs, epochs=100, verbose=0, steps_per_epoch=1):
+    def fit(self, inputs, outputs, epochs=100, verbose=0, steps_per_epoch=1, loss_file_name="./tmp/mymodel_loss_history.csv"):
         inputs = ops.convert_to_tensor(inputs, tf.float32)
         outputs = ops.convert_to_tensor(outputs, tf.float32)
 
@@ -592,16 +612,39 @@ class MyModel(object):
         _y = [y for _ in range(self._nb_plays)]
         ins = _x + _y
 
+        self.cost_history = []
         while i < epochs:
             i += 1
             for j in range(steps_per_epoch):
-                cost = train_function(ins)
+                cost = train_function(ins)[0]
+            self.cost_history.append([i, cost])
             LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
+
+        cost_history = np.array(self.cost_history)
+        tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
+
+
+    def predict(self, inputs):
+        inputs = ops.convert_to_tensor(inputs, tf.float32)
+
+        for play in self.plays:
+            if not play.built:
+                play.build(inputs)
+
+        x = self.plays[0].reshape(inputs)
+        outputs = []
+        for play in self.plays:
+            outputs.append(play.predict(x))
+
+        outputs_ = np.array(outputs)
+        prediction = outputs_.mean(axis=0)
+        prediction = prediction.reshape(-1)
+        return prediction
 
     @property
     def weights(self):
         i = 1
-        for play in agent.plays:
+        for play in self.plays:
             LOG.debug("Play #{}, number of layer is: {}".format(i, play.number_of_layers))
             LOG.debug("Play #{}, weight: {}".format(i, play.weight))
             i += 1
@@ -818,17 +861,19 @@ if __name__ == "__main__":
     steps_per_epoch = batch_size
     units = 1
     points = 100
-    mu = 0
 
-    sigma = 0.001
-
+    mu = 1
+    sigma = 0.01
+    method = "sin"
+    width = 1
+    weight = 1
     inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(points=points, mu=mu, sigma=sigma)
-    fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
-
+    fname = constants.FNAME_FORMAT["plays_noise"].format(method="sin", weight=1, width=1, mu=mu, sigma=sigma)
+    # fname = constants.FNAME_FORMAT["operators_noise"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
 
-    length = 100
-    inputs, outputs = inputs[:length], outputs[:length]
+    # length = 500
+    # inputs, outputs = inputs[:length], outputs[:length]
 
     play = Play(batch_size=batch_size,
                 units=units,
@@ -847,3 +892,6 @@ if __name__ == "__main__":
     # import ipdb; ipdb.set_trace()
     predictions, mean, std = play.predict2(inputs)
     LOG.debug("Predicted mean: {}, sigma: {}".format(mean, std))
+    LOG.debug("weight: {}".format(play.weight))
+    import ipdb; ipdb.set_trace()
+    print("End")

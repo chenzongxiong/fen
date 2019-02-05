@@ -160,6 +160,55 @@ def GF_generator():
                             utils.save_animation(inputs, outputs, fname, step=10, colors=colors, mode="snake")
 
 
+def operator_generator_with_noise():
+    mu = 1
+    sigma = 0.01
+    for method in methods:
+        for weight in weights:
+            for width in widths:
+                LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
+                fname = constants.FNAME_FORMAT["operators_noise"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+                inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
+                fname = constants.FNAME_FORMAT["operators_noise_predictions"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+                _, predictions = tdata.DatasetLoader.load_data(fname)
+                inputs = np.vstack([inputs, inputs]).T
+                outputs = np.vstack([ground_truth, predictions]).T
+                colors = utils.generate_colors(outputs.shape[-1])
+                fname = constants.FNAME_FORMAT["operators_noise_gif"].format(method=method, weight=weight, width=width, sigma=sigma, mu=mu)
+                utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
+                fname = constants.FNAME_FORMAT["operators_noise_gif_snake"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+                utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
+
+
+
+def play_generator_with_noise():
+    activation = "tanh"
+    mu = 1
+    sigma = 0.01
+    for method in methods:
+        for weight in weights:
+            for width in widths:
+                LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
+                fname = constants.FNAME_FORMAT["plays_noise"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+                _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
+                inputs = np.vstack([_inputs, _inputs]).T
+                for _units in units:
+                    fname = constants.FNAME_FORMAT["plays_noise_predictions"].format(method=method, weight=weight,
+                                                                                     width=width, activation=activation,
+                                                                                     units=_units, mu=mu, sigma=sigma)
+                    _, predictions = tdata.DatasetLoader.load_data(fname)
+                    outputs = np.vstack([ground_truth, predictions]).T
+                    colors = utils.generate_colors(outputs.shape[-1])
+                    fname = constants.FNAME_FORMAT["plays_noise_gif"].format(method=method, weight=weight, width=width,
+                                                                             activation=activation, units=_units, mu=mu,
+                                                                             sigma=sigma)
+                    utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
+                    fname = constants.FNAME_FORMAT["plays_noise_gif_snake"].format(method=method, weight=weight, width=width,
+                                                                                   activation=activation, units=_units,
+                                                                                   mu=mu, sigma=sigma)
+                    utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
+
+
 
 
 if __name__ == "__main__":
@@ -180,6 +229,15 @@ if __name__ == "__main__":
                         required=False,
                         action="store_true",
                         help="generate G & F's dataset")
+    parser.add_argument("--operator-noise", dest="operator_noise",
+                        required=False,
+                        action="store_true")
+    parser.add_argument("--play-noise", dest="play_noise",
+                        required=False,
+                        action="store_true",
+                        help="generate plays' dataset")
+
+
     argv = parser.parse_args(sys.argv[1:])
 
     if argv.operator:
@@ -190,3 +248,7 @@ if __name__ == "__main__":
         model_generator()
     if argv.GF:
         GF_generator()
+    if argv.operator_noise:
+       operator_generator_with_noise()
+    if argv.play_noise:
+        play_generator_with_noise()
