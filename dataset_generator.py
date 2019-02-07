@@ -32,7 +32,7 @@ def operator_generator():
                                                                                             state=state)
                     inputs.append(inputs_)
                     outputs.append(outputs_)
-                fname = constants.FNAME_FORMAT['operators'].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT['operators'].format(method=method, weight=weight, width=width, points=points)
                 inputs = np.hstack(inputs)
                 outputs = np.hstack(outputs)
                 outputs = outputs.T
@@ -44,14 +44,14 @@ def play_generator():
         for weight in weights:
             for width in widths:
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = constants.FNAME_FORMAT['operators'].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT['operators'].format(method=method, weight=weight, width=width, points=points)
                 try:
                     inputs, _ = tdata.DatasetLoader.load_data(fname)
                 except FileNotFoundError:
                     inputs = None
 
                 inputs, outputs = tdata.DatasetGenerator.systhesis_play_generator(points=points, inputs=inputs)
-                fname = constants.FNAME_FORMAT['plays'].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT['plays'].format(method=method, weight=weight, width=width, points=points)
                 tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
 
@@ -64,7 +64,7 @@ def model_generator(units=1, nb_plays=1):
                 LOG.debug("generate data for method {}, weight {}, width {}, units {}, nb_plays {}".format(
                     method, weight, width, units, nb_plays
                 ))
-                fname = constants.FNAME_FORMAT['plays'].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT['plays'].format(method=method, weight=weight, width=width, points=points)
                 try:
                     inputs, _ = tdata.DatasetLoader.load_data(fname)
                 except FileNotFoundError:
@@ -73,7 +73,7 @@ def model_generator(units=1, nb_plays=1):
                                                                                    points=points,
                                                                                    units=units,
                                                                                    inputs=inputs)
-                fname = constants.FNAME_FORMAT['models'].format(method=method, weight=weight, width=width, nb_plays=nb_plays, units=units)
+                fname = constants.FNAME_FORMAT['models'].format(method=method, weight=weight, width=width, nb_plays=nb_plays, units=units, points=points)
                 tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
 
