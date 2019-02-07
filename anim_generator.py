@@ -18,22 +18,25 @@ nb_plays = constants.NB_PLAYS
 # batch_sizes = constants.BATCH_SIZE_LIST
 batch_sizes = [100]
 nb_plays = [1]
+points = constants.POINTS
+
 
 def operator_generator():
+    loss_name = 'mse'
     for method in methods:
         for weight in weights:
             for width in widths:
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = constants.FNAME_FORMAT["operators"].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT["operators"].format(method=method, weight=weight, width=width, points=points)
                 inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
-                fname = constants.FNAME_FORMAT["operators_predictions"].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT["operators_predictions"].format(method=method, weight=weight, width=width, points=points, loss=loss_name)
                 _, predictions = tdata.DatasetLoader.load_data(fname)
                 inputs = np.vstack([inputs, inputs]).T
                 outputs = np.vstack([ground_truth, predictions]).T
                 colors = utils.generate_colors(outputs.shape[-1])
-                fname = constants.FNAME_FORMAT["operators_gif"].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT["operators_gif"].format(method=method, weight=weight, width=width, points=points, loss=loss_name)
                 utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
-                fname = constants.FNAME_FORMAT["operators_gif_snake"].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT["operators_gif_snake"].format(method=method, weight=weight, width=width, points=points, loss=loss_name)
                 utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
 
 

@@ -16,6 +16,7 @@ sess = utils.get_session()
 LOG = logging.getLogger(__name__)
 epochs = constants.EPOCHS
 EPOCHS = constants.EPOCHS
+points = constants.POINTS
 
 
 def fit(inputs, outputs, units, activation, width, true_weight, loss='mse'):
@@ -95,15 +96,16 @@ if __name__ == "__main__":
         for weight in weights:
             for width in widths:
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points)
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
-                # inputs, outputs_ = inputs[:40], outputs_[:40]
+                inputs, outputs_ = inputs[:40], outputs_[:40]
                 # increase *units* in order to increase the capacity of the model
                 for units in _units:
                     predictions, loss = fit(inputs, outputs_, units, activation, width, weight, loss_name)
                     fname = constants.FNAME_FORMAT["plays_loss"].format(method=method, weight=weight,
-                                                                        width=width, activation=activation, units=units)
+                                                                        width=width, activation=activation, units=units, points=points, loss=loss_name)
                     tdata.DatasetSaver.save_loss({"loss": loss}, fname)
                     fname = constants.FNAME_FORMAT["plays_predictions"].format(method=method, weight=weight,
-                                                                               width=width, activation=activation, units=units)
+                                                                               width=width, activation=activation, units=units,
+                                                                               points=points, loss=loss_name)
                     tdata.DatasetSaver.save_data(inputs, predictions, fname)
