@@ -84,19 +84,16 @@ class DatasetGenerator(object):
         return _inputs, _outputs
 
     @classmethod
-    def systhesis_model_generator(cls, nb_plays=1, points=1000, debug_plays=False, inputs=None):
-        play_model = core.PlayModel(nb_plays=nb_plays, debug=True)
+    def systhesis_model_generator(cls, nb_plays=1, points=1000, units=1, debug_plays=False, inputs=None):
+        model = core.MyModel(nb_plays=nb_plays, units=units, debug=True)
         if inputs is None:
             _inputs = cls.systhesis_input_generator(points)
         else:
             _inputs = inputs
 
-        plays_outputs = play_model.get_plays_outputs(_inputs.reshape(1, -1))
-
-        if debug_plays is True:
-            return _inputs, plays_outputs.sum(axis=1), plays_outputs
-        else:
-            return _inputs, plays_outputs.sum(axis=1)
+        outputs = model.predict(_inputs)
+        _outputs = outputs.reshape(-1)
+        return _inputs, _outputs
 
     @staticmethod
     def systhesis_markov_chain_generator(points, mu, sigma, b0=0):

@@ -3,6 +3,7 @@ import tensorflow as tf
 
 from tensorflow.python.keras.engine.base_layer import Layer
 from tensorflow.python.keras.layers.recurrent import RNN
+from tensorflow.python.keras.layers import Dense
 
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.framework import ops
@@ -166,10 +167,9 @@ class MyDense(Layer):
 
     def build(self, input_shape):
         if self._debug:
-            self.kernel = tf.Variable([[self._weight, 2*self._weight]], name="weight", dtype=tf.float32)
-            # if constants.DEBUG_INIT_TF_VALUE:
-            #     self.kernel = self.kernel.initialized_value()
-
+            LOG.debug("init mydense kernel/bias as pre-defined")
+            _init_kernel = np.array([[self._weight * (i+1) for i in range(self.units)]])
+            self.kernel = tf.Variable(_init_kernel, name="weight", dtype=tf.float32)
             self._trainable_weights.append(self.kernel)
             if self.use_bias is True:
                 self.bias = tf.Variable(0, name="bias", dtype=tf.float32)
@@ -185,15 +185,6 @@ class MyDense(Layer):
                 dtype=tf.float32,
                 trainable=True)
 
-            # self.kernel2 = self.add_weight(
-            #     "kernel2",
-            #     shape=(1, self.units),
-            #     initializer=self.kernel_initializer,
-            #     regularizer=self.kernel_regularizer,
-            #     constraint=self.kernel_constraint,
-            #     dtype=tf.float32,
-            #     trainable=True)
-
             if self.use_bias:
                 self.bias = self.add_weight(
                     "bias",
@@ -204,16 +195,7 @@ class MyDense(Layer):
                     dtype=tf.float32,
                     trainable=True)
 
-                # self.bias2 = self.add_weight(
-                #     "bias2",
-                #     shape=(1, 1),
-                #     initializer=self.bias_initializer,
-                #     regularizer=self.bias_regularizer,
-                #     constraint=self.bias_constraint,
-                #     dtype=tf.float32,
-                #     trainable=True)
-
-            self.built = True
+        self.built = True
 
     def call(self, inputs):
         assert inputs.shape.ndims == 3
@@ -225,11 +207,34 @@ class MyDense(Layer):
         if self.activation is not None:
             outputs =  self.activation(outputs)
 
-        # outputs = outputs * self.kernel2
-        # outputs = tf.reduce_sum(outputs, axis=2)
-        # outputs += self.bias2
-        # outputs = tf.reshape(outputs, shape=(1, -1, 1))
         return outputs
+
+
+class MySimpleDense(Dense):
+    def __init__(self, **kwargs):
+        self._debug = kwargs.pop("debug", False)
+
+        super(MySimpleDense, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        assert self.units == 1
+        if self._debug is True:
+            LOG.debug("init mysimpledense kernel/bias as pre-defined")
+            _init_kernel = np.array([1 for _ in range(input_shape[-1].value)])
+            _init_kernel = _init_kernel.reshape(-1, 1)
+            self.kernel = tf.Variable(_init_kernel, name="kernel", dtype=tf.float32)
+            self._trainable_weights.append(self.kernel)
+
+            if self.use_bias:
+                self.bias = tf.Variable((0,), name="bias", dtype=tf.float32)
+                self._trainable_weights.append(self.bias)
+        else:
+            super(MySimpleDense, self).build(input_shape)
+
+        self.built = True
+
+    def call(self, inputs):
+        return super(MySimpleDense, self).call(inputs)
 
 
 class Play(object):
@@ -288,9 +293,10 @@ class Play(object):
                                    activation=self.activation,
                                    use_bias=self.use_bias,
                                    debug=getattr(self, "_debug", False)))
-            self.model.add(tf.keras.layers.Dense(1,
-                                                 activation=None,
-                                                 use_bias=self.use_bias))
+            self.model.add(MySimpleDense(units=1,
+                                         activation=None,
+                                         use_bias=self.use_bias,
+                                         debug=getattr(self, "_debug", False)))
         if self._need_compile is True:
             LOG.info(colors.yellow("Start to compile this model"))
             self.model.compile(loss=self.loss,
@@ -534,7 +540,7 @@ class MyModel(object):
                  width=1.0,
                  debug=False,
                  activation='tanh',
-                 loss='mse',
+                 # loss='mse',
                  optimizer='adam'):
 
         self.plays = []
@@ -857,7 +863,7 @@ if __name__ == "__main__":
 
     LOG.debug(colors.red("Test play with MLE"))
     batch_size = 10
-    epochs = 5000 // batch_size
+    epochs = 10000 // batch_size
     steps_per_epoch = batch_size
     units = 1
     points = 100
@@ -868,17 +874,17 @@ if __name__ == "__main__":
     width = 1
     weight = 1
     inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(points=points, mu=mu, sigma=sigma)
-    fname = constants.FNAME_FORMAT["plays_noise"].format(method="sin", weight=1, width=1, mu=mu, sigma=sigma)
-    # fname = constants.FNAME_FORMAT["operators_noise"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
-    inputs, outputs = tdata.DatasetLoader.load_data(fname)
+    # fname = constants.FNAME_FORMAT["plays_noise"].format(method="sin", weight=1, width=1, mu=mu, sigma=sigma)
+    # # fname = constants.FNAME_FORMAT["operators_noise"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+    # inputs, outputs = tdata.DatasetLoader.load_data(fname)
 
-    # length = 500
-    # inputs, outputs = inputs[:length], outputs[:length]
+    length = 100
+    inputs, outputs = inputs[:length], outputs[:length]
 
     play = Play(batch_size=batch_size,
                 units=units,
-                activation='tanh',
-                # activation=None,
+                # activation='tanh',
+                activation=None,
                 network_type=constants.NetworkType.PLAY,
                 loss=None,
                 debug=False)
@@ -893,5 +899,5 @@ if __name__ == "__main__":
     predictions, mean, std = play.predict2(inputs)
     LOG.debug("Predicted mean: {}, sigma: {}".format(mean, std))
     LOG.debug("weight: {}".format(play.weight))
-    import ipdb; ipdb.set_trace()
+    # import ipdb; ipdb.set_trace()
     print("End")

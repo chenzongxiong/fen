@@ -10,17 +10,18 @@ if __name__ == "__main__":
     mu = 1
     sigma = 5
 
-    inputs = trading_data.DatasetGenerator.systhesis_sin_input_generator(points, mu, sigma)
-    LOG.debug("sin inputs: {}".format(inputs))
-    inputs = trading_data.DatasetGenerator.systhesis_cos_input_generator(points, mu, sigma)
-    LOG.debug("cos inputs: {}".format(inputs))
+    # inputs = trading_data.DatasetGenerator.systhesis_sin_input_generator(points, mu, sigma)
+    # LOG.debug("sin inputs: {}".format(inputs))
+    # inputs = trading_data.DatasetGenerator.systhesis_cos_input_generator(points, mu, sigma)
+    # LOG.debug("cos inputs: {}".format(inputs))
 
-    inputs, outputs = trading_data.DatasetGenerator.systhesis_operator_generator(points)
+    # inputs, outputs = trading_data.DatasetGenerator.systhesis_operator_generator(points)
 
-    inputs, outputs = trading_data.DatasetGenerator.systhesis_play_generator(points)
-    # nb_plays = 3
-    # inputs, outputs, plays_outputs = trading_data.DatasetGenerator.systhesis_model_generator(nb_plays, points, debug_plays=True)
-    # LOG.debug("inputs.shape: {}, outputs.shape: {}, plays_outputs.shape: {}".format(inputs.shape, outputs.shape, plays_outputs.shape))
+    # inputs, outputs = trading_data.DatasetGenerator.systhesis_play_generator(points)
+    nb_plays = 3
+    units = 2
+    inputs, outputs = trading_data.DatasetGenerator.systhesis_model_generator(nb_plays, points, units)
+    LOG.debug("inputs.shape: {}, outputs.shape: {}".format(inputs.shape, outputs.shape))
 
     # fname = "./tmp/trading_data_test.txt"
     # trading_data.DatasetSaver.save_data(inputs, outputs, fname)

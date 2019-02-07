@@ -14,6 +14,7 @@ weights = constants.WEIGHTS
 widths = constants.WIDTHS
 NB_PLAYS = constants.NB_PLAYS
 points = constants.POINTS
+UNITS = constants.UNITS
 
 def operator_generator():
     states = [1, 4, 10 -1, -4, -10]
@@ -58,20 +59,18 @@ def model_generator():
     for method in methods:
         for weight in weights:
             for width in widths:
-                fname = "./training-data/plays/{}-{}-{}-tanh.csv".format(method, weight, width)
-                try:
-                    inputs, _ = tdata.DatasetLoader.load_data(fname)
-                except FileNotFoundError:
-                    inputs = None
+                for units in UNITS:
+                    for nb_plays in NB_PLAYS:
+                        LOG.debug("generate data for method {}, weight {}, width {}, units {}, nb_plays {}".format(
+                            method, weight, width, units, nb_plays
+                        ))
+                        inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(nb_plays=nb_plays,
+                                                                                           points=points,
+                                                                                           units=units)
 
-                for nb_plays in NB_PLAYS:
-                    inputs, outputs, plays_outputs = tdata.DatasetGenerator.systhesis_model_generator(
-                        nb_plays=nb_plays, points=points, debug_plays=True, inputs=inputs)
 
-                    fname = "./training-data/models/{}-{}-{}-{}.csv".format(method, weight, width, nb_plays)
-                    tdata.DatasetSaver.save_data(inputs, outputs, fname)
-                    fname = "./training-data/models/{}-{}-{}-{}-multi.csv".format(method, weight, width, nb_plays)
-                    tdata.DatasetSaver.save_data(inputs, plays_outputs, fname)
+                        fname = constants.FNAME_FORMAT['models'].format(method=method, weight=weight, width=width, nb_plays=nb_plays, units=units)
+                        tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
 
 def GF_generator():
