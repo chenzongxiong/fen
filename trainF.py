@@ -86,12 +86,15 @@ if __name__ == "__main__":
                         required=False)
     parser.add_argument("--sigma", dest="sigma",
                         required=False)
+    parser.add_argument("--units", dest="units",
+                        required=False)
 
     argv = parser.parse_args(sys.argv[1:])
 
     loss_name = argv.loss
     mu = argv.mu or 0
     sigma = argv.sigma or 0.01
+    units = argv.units or 1
 
     activation = "tanh"
 
@@ -102,9 +105,10 @@ if __name__ == "__main__":
                 fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points)
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
                 inputs, outputs_ = outputs_, inputs  # F neural network
-                # inputs, outputs_ = inputs[:40], outputs_[:40]
+                inputs, outputs_ = inputs[:40], outputs_[:40]
                 # increase *units* in order to increase the capacity of the model
-                for units in _units:
+                # for units in _units:
+                if True:
                     B, prices, predictions = fit(inputs, outputs_, units, activation, width, weight, loss_name, mu=mu, sigma=sigma)
                     fname = constants.FNAME_FORMAT['F'].format(method=method,
                                                                            weight=weight,

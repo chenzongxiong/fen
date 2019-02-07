@@ -87,9 +87,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--loss", dest="loss",
                         required=True)
+    parser.add_argument("--units", dest="units",
+                        required=False)
+
     argv = parser.parse_args(sys.argv[1:])
 
     loss_name = argv.loss
+    units = argv.units or 1
+
     activation = "tanh"
 
     for method in methods:
@@ -99,7 +104,8 @@ if __name__ == "__main__":
                 fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points)
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
                 # increase *units* in order to increase the capacity of the model
-                for units in _units:
+                # for units in _units:
+                if True:
                     predictions, loss = fit(inputs, outputs_, units, activation, width, weight, loss_name)
                     fname = constants.FNAME_FORMAT["plays_loss"].format(method=method, weight=weight,
                                                                         width=width, activation=activation, units=units, points=points, loss=loss_name)
