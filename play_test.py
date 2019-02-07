@@ -98,7 +98,6 @@ if __name__ == "__main__":
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
                 fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points)
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
-                inputs, outputs_ = inputs[:40], outputs_[:40]
                 # increase *units* in order to increase the capacity of the model
                 for units in _units:
                     predictions, loss = fit(inputs, outputs_, units, activation, width, weight, loss_name)
