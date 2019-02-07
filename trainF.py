@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 import utils
-from core import Play
+from core import Play, MyModel
 import log as logging
 import constants
 import trading_data as tdata
@@ -39,31 +39,37 @@ def fit(inputs, outputs, units, activation, width, true_weight, loss='mse', mu=0
 
     import time
     start = time.time()
-    play = Play(batch_size=batch_size,
-                units=units,
-                activation="tanh",
-                network_type=constants.NetworkType.PLAY,
-                loss=loss,
-                debug=False)
-
+    # play = Play(batch_size=batch_size,
+    #             units=units,
+    #             activation="tanh",
+    #             network_type=constants.NetworkType.PLAY,
+    #             loss=loss,
+    #             debug=False)
+    nb_plays = 4
+    batch_size = 1
+    play = MyModel(batch_size=batch_size,
+                    units=units,
+                    activation="tanh",
+                    nb_plays=nb_plays)
+    play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
     # train F neural network
-    if loss == 'mse':
-        play.fit(train_inputs, train_outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    # if loss == 'mse':
+    #     play.fit(train_inputs, train_outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
 
-        train_loss, metrics = play.evaluate(train_inputs, train_outputs, steps_per_epoch=steps_per_epoch)
-        train_predictions = play.predict(train_inputs, steps_per_epoch=1)
+    #     train_loss, metrics = play.evaluate(train_inputs, train_outputs, steps_per_epoch=steps_per_epoch)
+    #     train_predictions = play.predict(train_inputs, steps_per_epoch=1)
 
-        train_mu = train_sigma = test_mu = test_sigma = -1
-    elif loss == 'mle':
-        # play.fit2(train_inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
-        # train_loss = test_loss = -1
-        # train_predictions, train_mu, train_sigma = play.predict2(train_inputs, steps_per_epoch=1)
-        # test_predictions, test_mu, test_sigma = play.predict2(test_inputs, steps_per_epoch=1)
-        raise
+    #     train_mu = train_sigma = test_mu = test_sigma = -1
+    # elif loss == 'mle':
+    #     # play.fit2(train_inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    #     # train_loss = test_loss = -1
+    #     # train_predictions, train_mu, train_sigma = play.predict2(train_inputs, steps_per_epoch=1)
+    #     # test_predictions, test_mu, test_sigma = play.predict2(test_inputs, steps_per_epoch=1)
+    #     raise
 
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
-    LOG.debug("number of layer is: {}".format(play.number_of_layers))
+    # LOG.debug("number of layer is: {}".format(play.number_of_layers))
     LOG.debug("weight: {}".format(play.weight))
 
     train_predictions = train_predictions.reshape(-1)
@@ -108,7 +114,7 @@ if __name__ == "__main__":
                 fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points)
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
                 inputs, outputs_ = outputs_, inputs  # F neural network
-                inputs, outputs_ = inputs[:40], outputs_[:40]
+                inputs, outputs_ = inputs[:1000], outputs_[:1000]
                 # increase *units* in order to increase the capacity of the model
                 # for units in _units:
                 if True:
