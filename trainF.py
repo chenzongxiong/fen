@@ -19,7 +19,7 @@ EPOCHS = constants.EPOCHS
 points = constants.POINTS
 
 
-def fit(inputs, outputs, units, activation, width, true_weight, loss='mse', mu=0, sigma=0.01):
+def fit(inputs, outputs, units, activation, width, true_weight, loss='mse', mu=0, sigma=0.01, loss_file_name="./tmp/trainF-loss.csv"):
     mu = float(mu)
     sigma = float(sigma)
     fname = constants.FNAME_FORMAT['mc'].format(mu=mu, sigma=sigma, points=inputs.shape[-1])
@@ -33,50 +33,28 @@ def fit(inputs, outputs, units, activation, width, true_weight, loss='mse', mu=0
     units = units
     batch_size = 10
     epochs = EPOCHS // batch_size
+    epochs = 1
     steps_per_epoch = batch_size
 
     train_inputs, train_outputs = inputs, outputs
 
     import time
     start = time.time()
-    # play = Play(batch_size=batch_size,
-    #             units=units,
-    #             activation="tanh",
-    #             network_type=constants.NetworkType.PLAY,
-    #             loss=loss,
-    #             debug=False)
-    nb_plays = 4
+    nb_plays = 1
     batch_size = 1
     play = MyModel(batch_size=batch_size,
                     units=units,
                     activation="tanh",
                     nb_plays=nb_plays)
-    play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
-    # train F neural network
-    # if loss == 'mse':
-    #     play.fit(train_inputs, train_outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
-
-    #     train_loss, metrics = play.evaluate(train_inputs, train_outputs, steps_per_epoch=steps_per_epoch)
-    #     train_predictions = play.predict(train_inputs, steps_per_epoch=1)
-
-    #     train_mu = train_sigma = test_mu = test_sigma = -1
-    # elif loss == 'mle':
-    #     # play.fit2(train_inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
-    #     # train_loss = test_loss = -1
-    #     # train_predictions, train_mu, train_sigma = play.predict2(train_inputs, steps_per_epoch=1)
-    #     # test_predictions, test_mu, test_sigma = play.predict2(test_inputs, steps_per_epoch=1)
-    #     raise
-
+    play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch, loss_file_name=loss_file_name)
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
-    # LOG.debug("number of layer is: {}".format(play.number_of_layers))
-    LOG.debug("weight: {}".format(play.weight))
+    predictions = play.predict(inputs)
 
-    train_predictions = train_predictions.reshape(-1)
     prices = play.predict(B)
     B = B.reshape(-1)
     prices = prices.reshape(-1)
-    return B, prices, train_predictions
+    return B, prices, predictions
 
 
 if __name__ == "__main__":
@@ -114,20 +92,30 @@ if __name__ == "__main__":
                 fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points)
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
                 inputs, outputs_ = outputs_, inputs  # F neural network
-                inputs, outputs_ = inputs[:1000], outputs_[:1000]
+                inputs, outputs_ = inputs[:40], outputs_[:40]
                 # increase *units* in order to increase the capacity of the model
                 # for units in _units:
                 if True:
-                    B, prices, predictions = fit(inputs, outputs_, units, activation, width, weight, loss_name, mu=mu, sigma=sigma)
+                    loss_file_name = constants.FNAME_FORMAT['F_loss_history'].format(method=method,
+                                                                                     weight=weight,
+                                                                                     activation=activation,
+                                                                                     units=units,
+                                                                                     width=width,
+                                                                                     mu=mu,
+                                                                                     sigma=sigma,
+                                                                                     points=points,
+                                                                                     loss=loss_name)
+                    B, prices, predictions = fit(inputs, outputs_, units, activation, width, weight, loss_name, mu=mu, sigma=sigma, loss_file_name=loss_file_name)
+
                     fname = constants.FNAME_FORMAT['F'].format(method=method,
-                                                                           weight=weight,
-                                                                           activation=activation,
-                                                                           units=units,
-                                                                           width=width,
-                                                                           mu=mu,
-                                                                           sigma=sigma,
-                                                                           points=points,
-                                                                           loss=loss_name)
+                                                               weight=weight,
+                                                               activation=activation,
+                                                               units=units,
+                                                               width=width,
+                                                               mu=mu,
+                                                               sigma=sigma,
+                                                               points=points,
+                                                               loss=loss_name)
                     tdata.DatasetSaver.save_data(inputs, predictions, fname)
                     fname = constants.FNAME_FORMAT['F_predictions'].format(method=method,
                                                                            weight=weight,

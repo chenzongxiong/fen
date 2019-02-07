@@ -641,14 +641,14 @@ class MyModel(object):
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
 
-    def _build(self, play, inputs):
-        LOG.debug("build play: {}".format(play._name))
-        if not play.built:
-            play.build(inputs)
+    # def _build(self, play, inputs):
+    #     LOG.debug("build play: {}".format(play._name))
+    #     if not play.built:
+    #         play.build(inputs)
 
-    def _predict(self, play, x):
-        LOG.debug("predict play: {}".format(play._name))
-        return play.predict(x)
+    # def _predict(self, play, x):
+    #     LOG.debug("predict play: {}".format(play._name))
+    #     return play.predict(x)
 
     def predict(self, inputs):
         inputs = ops.convert_to_tensor(inputs, tf.float32)
@@ -683,6 +683,7 @@ class MyModel(object):
             LOG.debug("Play #{}, number of layer is: {}".format(i, play.number_of_layers))
             LOG.debug("Play #{}, weight: {}".format(i, play.weight))
             i += 1
+
 
 
 if __name__ == "__main__":
@@ -828,7 +829,7 @@ if __name__ == "__main__":
     epochs = 1500 // batch_size
     steps_per_epoch = batch_size
 
-    fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
+    fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1, points=500)
 
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
     length = 20
@@ -862,31 +863,31 @@ if __name__ == "__main__":
 
     LOG.debug(colors.red("Test multiple plays"))
 
-    # batch_size = 10
-    # units = 1
-    # epochs = 5000 // batch_size
-    # steps_per_epoch = batch_size
+    batch_size = 10
+    units = 1
+    epochs = 5000 // batch_size
+    steps_per_epoch = batch_size
 
-    # fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1)
+    fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1, points=500)
 
-    # inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    # length = 100
-    # inputs, outputs = inputs[:length], outputs[:length]
+    inputs, outputs = tdata.DatasetLoader.load_data(fname)
+    length = 100
+    inputs, outputs = inputs[:length], outputs[:length]
 
-    # nb_plays = 10
-    # LOG.debug("timestap is: {}".format(inputs.shape[0]))
-    # import time
-    # start = time.time()
-    # agent = MyModel(batch_size=batch_size,
-    #                 units=units,
-    #                 activation="tanh",
-    #                 nb_plays=nb_plays)
+    nb_plays = 3
+    LOG.debug("timestap is: {}".format(inputs.shape[0]))
+    import time
+    start = time.time()
+    agent = MyModel(batch_size=batch_size,
+                    units=units,
+                    activation="tanh",
+                    nb_plays=nb_plays)
 
-    # agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
-    # end = time.time()
-    # LOG.debug("time cost: {}s".format(end-start))
-    # LOG.debug("print weights info")
-    # agent.weights
+    agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    end = time.time()
+    LOG.debug("time cost: {}s".format(end-start))
+    LOG.debug("print weights info")
+    agent.weights
 
 
     LOG.debug(colors.red("Test play with MLE"))
