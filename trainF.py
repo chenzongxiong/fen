@@ -102,7 +102,7 @@ if __name__ == "__main__":
                 fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points)
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
                 inputs, outputs_ = outputs_, inputs  # F neural network
-                inputs, outputs_ = inputs[:40], outputs_[:40]
+                # inputs, outputs_ = inputs[:40], outputs_[:40]
                 # increase *units* in order to increase the capacity of the model
                 for units in _units:
                     B, prices, predictions = fit(inputs, outputs_, units, activation, width, weight, loss_name, mu=mu, sigma=sigma)
