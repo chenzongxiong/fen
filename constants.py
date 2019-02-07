@@ -11,24 +11,24 @@ UNITS = [1, 8, 20, 100]
 NB_PLAYS = [1, 20 , 40, 100]
 
 EPOCHS = 5000
-POINTS = 500
+POINTS = 10
 # NOTE: trick here, batch_size must be always equal to 1
 BATCH_SIZE = 1
 
 BATCH_SIZE_LIST = [10]
 
 FNAME_FORMAT = dict(
-    operators="./training-data/operators/{method}-{weight}-{width}.csv",
-    operators_predictions="./training-data/operators/{method}-{weight}-{width}-predictions.csv",
-    operators_loss="./training-data/operators/{method}-{weight}-{width}-loss.csv",
-    operators_gif="./pics/operators/{method}-{weight}-{width}.gif",
-    operators_gif_snake="./pics/operators/{method}-{weight}-{width}-snake.gif",
+    operators="./training-data/operators/method-{method}/weight-{weight}/width-{width}/base.csv",
+    operators_predictions="./training-data/operators/method-{method}/weight-{weight}/width-{width}/predictions.csv",
+    operators_loss="./training-data/operators/method-{method}/weight-{weight}/width-{width}/loss.csv",
+    operators_gif="./pics/operators/method-{method}/weight-{weight}/width-{width}/base.gif",
+    operators_gif_snake="./pics/operators/method-{method}/weight-{weight}/width-{width}/snake.gif",
 
-    plays="./training-data/plays/{method}-{weight}-{width}-tanh.csv",
-    plays_predictions="./training-data/plays/{method}-{weight}-{width}-{activation}-{units}-predictions.csv",
-    plays_loss = "./training-data/plays/{method}-{weight}-{width}-{activation}-{units}-loss.csv",
-    plays_gif="./pics/plays/{method}-{weight}-{width}-{activation}-{units}.gif",
-    plays_gif_snake="./pics/plays/{method}-{weight}-{width}-{activation}-{units}-snake.gif",
+    plays="./training-data/plays/method-{method}/weight-{weight}/weight-{width}/base.csv",
+    plays_predictions="./training-data/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/predictions.csv",
+    plays_loss = "./training-data/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units{units}/loss.csv",
+    plays_gif="./pics/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/base.gif",
+    plays_gif_snake="./pics/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/snake.gif",
 
     models="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/base.csv",
     models_loss="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/batch_size-{batch_size}/loss.csv",
