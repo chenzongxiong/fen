@@ -42,26 +42,29 @@ def operator_generator():
 
 def play_generator():
     activation = "tanh"
-
+    loss_name = 'mse'
     for method in methods:
         for weight in weights:
             for width in widths:
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points)
                 _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
                 inputs = np.vstack([_inputs, _inputs]).T
                 for _units in units:
                     fname = constants.FNAME_FORMAT["plays_predictions"].format(method=method, weight=weight,
                                                                                width=width, activation=activation,
-                                                                               units=_units)
+                                                                               units=_units, loss=loss_name,
+                                                                               points=points)
                     _, predictions = tdata.DatasetLoader.load_data(fname)
                     outputs = np.vstack([ground_truth, predictions]).T
                     colors = utils.generate_colors(outputs.shape[-1])
                     fname = constants.FNAME_FORMAT["plays_gif"].format(method=method, weight=weight, width=width,
-                                                                       activation=activation, units=_units)
+                                                                       activation=activation, units=_units,
+                                                                       points=points, loss=loss_name)
                     utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
                     fname = constants.FNAME_FORMAT["plays_gif_snake"].format(method=method, weight=weight, width=width,
-                                                                             activation=activation, units=_units)
+                                                                             activation=activation, units=_units,
+                                                                             loss=loss_name, points=points)
                     utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
 
 

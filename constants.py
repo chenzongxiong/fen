@@ -24,7 +24,7 @@ FNAME_FORMAT = dict(
     operators_gif="./pics/operators/method-{method}/weight-{weight}/width-{width}/points-{points}/base-{loss}.gif",
     operators_gif_snake="./pics/operators/method-{method}/weight-{weight}/width-{width}/points-{points}/snake-{loss}.gif",
 
-    plays="./training-data/plays/method-{method}/weight-{weight}/weight-{width}/points-{points}/base.csv",
+    plays="./training-data/plays/method-{method}/weight-{weight}/width-{width}/points-{points}/base.csv",
     plays_predictions="./training-data/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/points-{points}/predictions-{loss}.csv",
     plays_loss = "./training-data/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/points-{points}/loss-{loss}.csv",
     plays_gif="./pics/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/points-{points}/base-{loss}.gif",
