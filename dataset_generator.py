@@ -55,22 +55,20 @@ def play_generator():
                 tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
 
-def model_generator():
+def model_generator(units=1, nb_plays=1):
+    units = int(units)
+    nb_plays = int(nb_plays)
     for method in methods:
         for weight in weights:
             for width in widths:
-                for units in UNITS:
-                    for nb_plays in NB_PLAYS:
-                        LOG.debug("generate data for method {}, weight {}, width {}, units {}, nb_plays {}".format(
-                            method, weight, width, units, nb_plays
-                        ))
-                        inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(nb_plays=nb_plays,
-                                                                                           points=points,
-                                                                                           units=units)
-
-
-                        fname = constants.FNAME_FORMAT['models'].format(method=method, weight=weight, width=width, nb_plays=nb_plays, units=units)
-                        tdata.DatasetSaver.save_data(inputs, outputs, fname)
+                LOG.debug("generate data for method {}, weight {}, width {}, units {}, nb_plays {}".format(
+                    method, weight, width, units, nb_plays
+                ))
+                inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(nb_plays=nb_plays,
+                                                                                   points=points,
+                                                                                   units=units)
+                fname = constants.FNAME_FORMAT['models'].format(method=method, weight=weight, width=width, nb_plays=nb_plays, units=units)
+                tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
 
 def GF_generator():
@@ -150,6 +148,13 @@ if __name__ == "__main__":
                         action="store_true",
                         help="generate models' dataset")
 
+    parser.add_argument("--nb_plays", dest="nb_plays",
+                        required=True,
+                        type=int)
+    parser.add_argument("--units", dest="units",
+                        required=True,
+                        type=int)
+
     parser.add_argument("--GF", dest="GF",
                         required=False,
                         action="store_true",
@@ -172,7 +177,7 @@ if __name__ == "__main__":
     if argv.play:
         play_generator()
     if argv.model:
-        model_generator()
+        model_generator(argv.units, argv.nb_plays)
     if argv.GF:
         GF_generator()
     if argv.operator_noise:

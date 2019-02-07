@@ -11,7 +11,7 @@ UNITS = [1, 8, 20, 100]
 NB_PLAYS = [1, 20 , 40, 100]
 
 EPOCHS = 5000
-POINTS = 10
+POINTS = 500
 # NOTE: trick here, batch_size must be always equal to 1
 BATCH_SIZE = 1
 
@@ -32,6 +32,7 @@ FNAME_FORMAT = dict(
 
     models="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/base.csv",
     models_loss="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/batch_size-{batch_size}/loss.csv",
+    models_loss_history="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/batch_size-{batch_size}/history.csv",
     models_predictions="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/batch_size-{batch_size}/predictions.csv",
     models_gif="./pics/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/base.gif",
     models_gif_snake="./pics/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/snake.gif",

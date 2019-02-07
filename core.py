@@ -21,6 +21,8 @@ import colors
 import constants
 import trading_data as tdata
 import log as logging
+import pool
+import pickle
 
 
 LOG = logging.getLogger(__name__)
@@ -248,7 +250,8 @@ class Play(object):
                  loss="mse",
                  optimizer="adam",
                  network_type=constants.NetworkType.OPERATOR,
-                 use_bias=True):
+                 use_bias=True,
+                 name="play"):
 
         if debug:
             self._weight = weight
@@ -266,6 +269,7 @@ class Play(object):
         self.built = False
         self._need_compile = False
         self.use_bias = use_bias
+        self._name = name
 
     def build(self, inputs):
         _inputs = ops.convert_to_tensor(inputs, tf.float32)
@@ -532,6 +536,10 @@ class Play(object):
         return output, float(mean), float(std)
 
 
+    def save(self):
+        pass
+
+
 class MyModel(object):
     def __init__(self, nb_plays=1,
                  units=1,
@@ -545,6 +553,7 @@ class MyModel(object):
 
         self.plays = []
         self._nb_plays = nb_plays
+        self._pool = pool.ProcessPool()
         for nb_play in range(nb_plays):
             play = Play(units=units,
                         batch_size=batch_size,
@@ -554,8 +563,10 @@ class MyModel(object):
                         activation=activation,
                         loss=None,
                         optimizer=None,
-                        network_type=constants.NetworkType.PLAY)
+                        network_type=constants.NetworkType.PLAY,
+                        name="play-{}".format(nb_plays))
             self.plays.append(play)
+
 
         self.optimzer = optimizers.get(optimizer)
 
@@ -630,6 +641,15 @@ class MyModel(object):
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
 
+    def _build(self, play, inputs):
+        LOG.debug("build play: {}".format(play._name))
+        if not play.built:
+            play.build(inputs)
+
+    def _predict(self, play, x):
+        LOG.debug("predict play: {}".format(play._name))
+        return play.predict(x)
+
     def predict(self, inputs):
         inputs = ops.convert_to_tensor(inputs, tf.float32)
 
@@ -637,10 +657,19 @@ class MyModel(object):
             if not play.built:
                 play.build(inputs)
 
+        # args_list = [(play, inputs) for play in self.plays]
+        # self._pool.starmap(self._build, args_list)
+        # self._pool.join()
+
         x = self.plays[0].reshape(inputs)
         outputs = []
+
         for play in self.plays:
             outputs.append(play.predict(x))
+
+        # args_list = [(play, x) for play in self.plays]
+        # self._pool.startmap(self._predict, args_list)
+        # self._pool.join()
 
         outputs_ = np.array(outputs)
         prediction = outputs_.mean(axis=0)
@@ -654,7 +683,6 @@ class MyModel(object):
             LOG.debug("Play #{}, number of layer is: {}".format(i, play.number_of_layers))
             LOG.debug("Play #{}, weight: {}".format(i, play.weight))
             i += 1
-
 
 
 if __name__ == "__main__":
