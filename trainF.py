@@ -33,7 +33,6 @@ def fit(inputs, outputs, units, activation, width, true_weight, loss='mse', mu=0
     units = units
     batch_size = 10
     epochs = EPOCHS // batch_size
-    epochs = 1
     steps_per_epoch = batch_size
 
     train_inputs, train_outputs = inputs, outputs
@@ -67,11 +66,11 @@ def fit(inputs, outputs, units, activation, width, true_weight, loss='mse', mu=0
     LOG.debug("number of layer is: {}".format(play.number_of_layers))
     LOG.debug("weight: {}".format(play.weight))
 
-
+    train_predictions = train_predictions.reshape(-1)
     prices = play.predict(B)
     B = B.reshape(-1)
     prices = prices.reshape(-1)
-    return B, prices
+    return B, prices, train_predictions
 
 
 if __name__ == "__main__":
@@ -103,10 +102,20 @@ if __name__ == "__main__":
                 fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points)
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
                 inputs, outputs_ = outputs_, inputs  # F neural network
-
+                inputs, outputs_ = inputs[:40], outputs_[:40]
                 # increase *units* in order to increase the capacity of the model
                 for units in _units:
-                    B, predictions = fit(inputs, outputs_, units, activation, width, weight, loss_name, mu=mu, sigma=sigma)
+                    B, prices, predictions = fit(inputs, outputs_, units, activation, width, weight, loss_name, mu=mu, sigma=sigma)
+                    fname = constants.FNAME_FORMAT['F'].format(method=method,
+                                                                           weight=weight,
+                                                                           activation=activation,
+                                                                           units=units,
+                                                                           width=width,
+                                                                           mu=mu,
+                                                                           sigma=sigma,
+                                                                           points=points,
+                                                                           loss=loss_name)
+                    tdata.DatasetSaver.save_data(inputs, predictions, fname)
                     fname = constants.FNAME_FORMAT['F_predictions'].format(method=method,
                                                                            weight=weight,
                                                                            activation=activation,
@@ -117,4 +126,4 @@ if __name__ == "__main__":
                                                                            points=points,
                                                                            loss=loss_name)
 
-                    tdata.DatasetSaver.save_data(B, predictions, fname)
+                    tdata.DatasetSaver.save_data(B, prices, fname)
