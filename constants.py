@@ -85,7 +85,7 @@ FNAME_FORMAT = dict(
     models_noise_gif_snake="./pics/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-{mu}-{sigma}-snake.gif",
     # models_noise_multi_gif_snake="./pics/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-multi-snake.gif",
 
-
+    mc="./training-data/mc/points-{points}/mu-{mu}/sigma-{sigma}/base.csv",
 )
 
 CPU_COUNTS = min(os.cpu_count(), 32)

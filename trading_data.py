@@ -102,7 +102,7 @@ class DatasetGenerator(object):
             bi = np.random.normal(loc=B[-1] + mu, scale=sigma)
             B.append(bi)
 
-        return B
+        return np.array(B)
 
 
 class DatasetLoader(object):

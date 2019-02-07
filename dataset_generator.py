@@ -77,6 +77,15 @@ def model_generator(units=1, nb_plays=1):
                 tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
 
+def markov_chain(points, mu=0, sigma=0.001):
+    points = int(points)
+    mu = float(mu)
+    sigma = float(sigma)
+    B = tdata.DatasetGenerator.systhesis_markov_chain_generator(points, mu, sigma)
+    fname = constants.FNAME_FORMAT['mc'].format(points=points, mu=mu, sigma=sigma)
+    tdata.DatasetSaver.save_data(B, B, fname)
+
+
 def GF_generator():
     for method in methods:
         for weight in weights:
@@ -176,6 +185,21 @@ if __name__ == "__main__":
                         action="store_true",
                         help="generate plays' dataset")
 
+    parser.add_argument("--mc", dest="mc",
+                        required=False,
+                        action="store_true")
+    parser.add_argument("--mu", dest="mu",
+                        required=False,
+                        type=float)
+
+    parser.add_argument("--sigma", dest="sigma",
+                        required=False,
+                        type=float)
+    parser.add_argument("--points", dest="points",
+                        required=False,
+                        type=int)
+
+
     argv = parser.parse_args(sys.argv[1:])
 
     if argv.operator:
@@ -191,3 +215,5 @@ if __name__ == "__main__":
 
     if argv.play_noise:
         play_generator_with_noise()
+    if argv.mc:
+        markov_chain(argv.points, argv.mu, argv.sigma)
