@@ -10,7 +10,7 @@ UNITS = [1, 8, 20, 100]
 # NB_PLAYS = [1, 4, 10, 20]
 NB_PLAYS = [1, 20 , 40, 100]
 
-EPOCHS = 5000
+EPOCHS = 10000
 POINTS = 500
 # NOTE: trick here, batch_size must be always equal to 1
 BATCH_SIZE = 1
@@ -19,23 +19,23 @@ BATCH_SIZE_LIST = [10]
 
 FNAME_FORMAT = dict(
     operators="./training-data/operators/method-{method}/weight-{weight}/width-{width}/points-{points}/base.csv",
-    operators_predictions="./training-data/operators/method-{method}/weight-{weight}/width-{width}/points-{points}/predictions.csv",
-    operators_loss="./training-data/operators/method-{method}/weight-{weight}/width-{width}/points-{points}/loss.csv",
-    operators_gif="./pics/operators/method-{method}/weight-{weight}/width-{width}/points-{points}/base.gif",
-    operators_gif_snake="./pics/operators/method-{method}/weight-{weight}/width-{width}/points-{points}/snake.gif",
+    operators_predictions="./training-data/operators/method-{method}/weight-{weight}/width-{width}/points-{points}/predictions-{loss}.csv",
+    operators_loss="./training-data/operators/method-{method}/weight-{weight}/width-{width}/points-{points}/loss-{loss}.csv",
+    operators_gif="./pics/operators/method-{method}/weight-{weight}/width-{width}/points-{points}/base-{loss}.gif",
+    operators_gif_snake="./pics/operators/method-{method}/weight-{weight}/width-{width}/points-{points}/snake-{loss}.gif",
 
     plays="./training-data/plays/method-{method}/weight-{weight}/weight-{width}/points-{points}/base.csv",
-    plays_predictions="./training-data/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/points-{points}/predictions.csv",
-    plays_loss = "./training-data/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/points-{points}/loss.csv",
-    plays_gif="./pics/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/points-{points}/base.gif",
-    plays_gif_snake="./pics/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/points-{points}/snake.gif",
+    plays_predictions="./training-data/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/points-{points}/predictions-{loss}.csv",
+    plays_loss = "./training-data/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/points-{points}/loss-{loss}.csv",
+    plays_gif="./pics/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/points-{points}/base-{loss}.gif",
+    plays_gif_snake="./pics/plays/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/points-{points}/snake-{loss}.gif",
 
     models="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/points-{points}/base.csv",
-    models_loss="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/batch_size-{batch_size}/points-{points}/loss.csv",
-    models_loss_history="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/batch_size-{batch_size}/points-{points}/history.csv",
-    models_predictions="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/batch_size-{batch_size}/points-{points}/predictions.csv",
-    models_gif="./pics/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/points-{points}/base.gif",
-    models_gif_snake="./pics/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/points-{points}/snake.gif",
+    models_loss="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/batch_size-{batch_size}/points-{points}/loss-{loss}.csv",
+    models_loss_history="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/batch_size-{batch_size}/points-{points}/history-{loss}.csv",
+    models_predictions="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/batch_size-{batch_size}/points-{points}/predictions-{loss}.csv",
+    models_gif="./pics/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/points-{points}/base-{loss}.gif",
+    models_gif_snake="./pics/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/points-{points}/snake-{loss}.gif",
 
     models_rnn_loss="./training-data/models/rnn/{method}-{weight}-{width}-{nb_plays}-rnn-loss.csv",
     models_rnn_predictions="./training-data/models/rnn/{method}-{weight}-{width}-{nb_plays}-rnn-predictions.csv",

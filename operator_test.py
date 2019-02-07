@@ -16,6 +16,8 @@ sess = utils.get_session()
 LOG = logging.getLogger(__name__)
 epochs = constants.EPOCHS
 EPOCHS = constants.EPOCHS
+points = constants.POINTS
+
 
 def fit(inputs, outputs, width, method, true_weight, loss='mse'):
     LOG.debug("timestap is: {}".format(inputs.shape[0]))
@@ -75,17 +77,18 @@ if __name__ == '__main__':
     methods = constants.METHODS
     weights = constants.WEIGHTS
     widths = constants.WIDTHS
-    loss_name = 'mle'
+    loss_name = 'mse'
     # train dataset
     for method in methods:
         for weight in weights:
             for width in widths:
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = constants.FNAME_FORMAT["operators"].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT["operators"].format(method=method, weight=weight, width=width, points=points)
                 inputs, outputs = tdata.DatasetLoader.load_data(fname)
+
                 predictions, loss = fit(inputs, outputs, width, method, weight, loss_name)
 
-                fname = constants.FNAME_FORMAT["operators_loss"].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT["operators_loss"].format(method=method, weight=weight, width=width, points=points, loss=loss_name)
                 tdata.DatasetSaver.save_loss({"loss": loss}, fname)
-                fname = constants.FNAME_FORMAT["operators_predictions"].format(method=method, weight=weight, width=width)
+                fname = constants.FNAME_FORMAT["operators_predictions"].format(method=method, weight=weight, width=width, points=points, loss=loss_name)
                 tdata.DatasetSaver.save_data(inputs, predictions, fname)
