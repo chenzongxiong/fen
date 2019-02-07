@@ -88,7 +88,7 @@ if __name__ == "__main__":
     parser.add_argument("--loss", dest="loss",
                         required=True)
     parser.add_argument("--units", dest="units",
-                        required=False)
+                        required=False, type=int)
 
     argv = parser.parse_args(sys.argv[1:])
 
