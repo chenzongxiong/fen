@@ -10,7 +10,7 @@ UNITS = [1, 8, 20, 100]
 # NB_PLAYS = [1, 4, 10, 20]
 NB_PLAYS = [1, 20 , 40, 100]
 
-EPOCHS = 10000
+EPOCHS = 15000
 POINTS = 500
 # NOTE: trick here, batch_size must be always equal to 1
 BATCH_SIZE = 1
