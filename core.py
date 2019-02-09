@@ -640,16 +640,6 @@ class MyModel(object):
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
-
-    # def _build(self, play, inputs):
-    #     LOG.debug("build play: {}".format(play._name))
-    #     if not play.built:
-    #         play.build(inputs)
-
-    # def _predict(self, play, x):
-    #     LOG.debug("predict play: {}".format(play._name))
-    #     return play.predict(x)
-
     def predict(self, inputs):
         import time
         inputs = ops.convert_to_tensor(inputs, tf.float32)
@@ -686,6 +676,105 @@ class MyModel(object):
             LOG.debug("Play #{}, number of layer is: {}".format(i, play.number_of_layers))
             LOG.debug("Play #{}, weight: {}".format(i, play.weight))
             i += 1
+
+
+    def fit2(self, inputs, mean, sigma, epochs=100, verbose=0,
+             steps_per_epoch=1, loss_file_name="./tmp/mymodel_loss_history.csv"):
+        inputs = ops.convert_to_tensor(inputs, tf.float32)
+        import time
+        for play in self.plays:
+            if not play.built:
+                play._need_compile = False
+                start = time.time()
+                play.build(inputs)
+                end = time.time()
+                LOG.debug("play {} time cost: {} s".format(play._name, end-start))
+        # x, y = self.plays[0].reshape(inputs, outputs)
+        x = self.plays[0].reshape(inputs)
+
+        self.mean = tf.Variable(mean, name="mean", dtype=tf.float32)
+        self.sigma = tf.Variable(sigma, name="sigma", dtype=tf.float32)
+
+        params_list = []
+        model_inputs = []
+        model_outputs = []
+        feed_inputs = []
+        feed_targets = []
+        update_inputs = []
+
+        target_mean = tf.keras.backend.placeholder(ndim=0, name="mean_target", dtype=tf.float32)
+        target_sigma = tf.keras.backend.placeholder(ndim=0, name="mean_sigma", dtype=tf.float32)
+        # feed_targets = [target_mean, target_mean]
+
+        for play in self.plays:
+            inputs = play.model._layers[0].input
+            outputs = play.model._layers[-1].output
+            model_inputs.append(inputs)
+            model_outputs.append(outputs)
+            feed_inputs.append(inputs)
+
+            for i in range(len(play.model.outputs)):
+                shape = tf.keras.backend.int_shape(play.model.outputs[i])
+                name = 'test{}'.format(i)
+                target = tf.keras.backend.placeholder(
+                    ndim=len(shape),
+                    name=name + '_target',
+                    dtype=tf.keras.backend.dtype(play.model.outputs[i]))
+
+                feed_targets.append(target)
+
+            update_inputs += play.model.get_updates_for(inputs)
+            params_list += play.model.trainable_weights
+
+        if self._nb_plays > 1:
+            y_pred = tf.keras.layers.Average()(model_outputs)
+        else:
+            y_pred = model_outputs[0]
+
+
+        feed_inputs = model_inputs
+
+        self.optimizer = tf.keras.optimizers.Adam()
+
+        with tf.name_scope('training'):
+            # import ipdb; ipdb.set_trace()
+            J = tf.keras.backend.gradients(y_pred, model_inputs)
+            detJ = tf.reshape(tf.keras.backend.abs(J[0]), shape=y_pred.shape)
+            detJ = tf.keras.backend.clip(detJ, min_value=1e-5, max_value=1e9)
+
+            diff = y_pred[:, 1:, :] - y_pred[:, :-1, :]
+
+            _loss = tf.keras.backend.square((diff-self.mean)/self.sigma)/2.0 - tf.keras.backend.log(detJ[:, 1:, :])
+            loss = tf.keras.backend.mean(_loss)
+
+            with tf.name_scope(self.optimizer.__class__.__name__):
+                updates = self.optimizer.get_updates(params=params_list,
+                                                     loss=loss)
+            updates += update_inputs
+
+            training_inputs = feed_inputs + feed_targets
+            train_function = tf.keras.backend.function(training_inputs,
+                                                       [loss],
+                                                       updates=updates)
+
+        _x = [x for _ in range(self._nb_plays)]
+        # _y = [y for _ in range(self._nb_plays)]
+
+        _y = [self.mean, self.sigma]
+        ins = _x + _y
+        utils.init_tf_variables()
+
+        self.cost_history = []
+        while i < epochs:
+            i += 1
+            for j in range(steps_per_epoch):
+                cost = train_function(ins)[0]
+            self.cost_history.append([i, cost])
+            LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
+
+        cost_history = np.array(self.cost_history)
+        tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
+
 
 
 
@@ -877,7 +966,7 @@ if __name__ == "__main__":
     length = 100
     inputs, outputs = inputs[:length], outputs[:length]
 
-    nb_plays = 3
+    nb_plays = 2
     LOG.debug("timestap is: {}".format(inputs.shape[0]))
     import time
     start = time.time()
@@ -885,51 +974,52 @@ if __name__ == "__main__":
                     units=units,
                     activation="tanh",
                     nb_plays=nb_plays)
-
-    agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    mu = 0
+    sigma = 0.001
+    agent.fit2(inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
     LOG.debug("print weights info")
     agent.weights
 
 
-    LOG.debug(colors.red("Test play with MLE"))
-    batch_size = 10
-    epochs = 10000 // batch_size
-    steps_per_epoch = batch_size
-    units = 1
-    points = 100
+    # LOG.debug(colors.red("Test play with MLE"))
+    # batch_size = 10
+    # epochs = 10000 // batch_size
+    # steps_per_epoch = batch_size
+    # units = 1
+    # points = 100
 
-    mu = 1
-    sigma = 0.01
-    method = "sin"
-    width = 1
-    weight = 1
-    inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(points=points, mu=mu, sigma=sigma)
-    # fname = constants.FNAME_FORMAT["plays_noise"].format(method="sin", weight=1, width=1, mu=mu, sigma=sigma)
-    # # fname = constants.FNAME_FORMAT["operators_noise"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
-    # inputs, outputs = tdata.DatasetLoader.load_data(fname)
+    # mu = 1
+    # sigma = 0.01
+    # method = "sin"
+    # width = 1
+    # weight = 1
+    # inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(points=points, mu=mu, sigma=sigma)
+    # # fname = constants.FNAME_FORMAT["plays_noise"].format(method="sin", weight=1, width=1, mu=mu, sigma=sigma)
+    # # # fname = constants.FNAME_FORMAT["operators_noise"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+    # # inputs, outputs = tdata.DatasetLoader.load_data(fname)
 
-    length = 100
-    inputs, outputs = inputs[:length], outputs[:length]
+    # length = 100
+    # inputs, outputs = inputs[:length], outputs[:length]
 
-    play = Play(batch_size=batch_size,
-                units=units,
-                # activation='tanh',
-                activation=None,
-                network_type=constants.NetworkType.PLAY,
-                loss=None,
-                debug=False)
+    # play = Play(batch_size=batch_size,
+    #             units=units,
+    #             # activation='tanh',
+    #             activation=None,
+    #             network_type=constants.NetworkType.PLAY,
+    #             loss=None,
+    #             debug=False)
 
-    import time
-    start = time.time()
+    # import time
+    # start = time.time()
 
-    play.fit2(inputs, mu, sigma, epochs=epochs, verbose=1, steps_per_epoch=steps_per_epoch)
-    end = time.time()
-    LOG.debug("time cost: {}s".format(end-start))
-    # import ipdb; ipdb.set_trace()
-    predictions, mean, std = play.predict2(inputs)
-    LOG.debug("Predicted mean: {}, sigma: {}".format(mean, std))
-    LOG.debug("weight: {}".format(play.weight))
-    # import ipdb; ipdb.set_trace()
-    print("End")
+    # play.fit2(inputs, mu, sigma, epochs=epochs, verbose=1, steps_per_epoch=steps_per_epoch)
+    # end = time.time()
+    # LOG.debug("time cost: {}s".format(end-start))
+    # # import ipdb; ipdb.set_trace()
+    # predictions, mean, std = play.predict2(inputs)
+    # LOG.debug("Predicted mean: {}, sigma: {}".format(mean, std))
+    # LOG.debug("weight: {}".format(play.weight))
+    # # import ipdb; ipdb.set_trace()
+    # print("End")

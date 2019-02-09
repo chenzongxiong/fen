@@ -17,7 +17,7 @@ units = constants.UNITS
 nb_plays = constants.NB_PLAYS
 # batch_sizes = constants.BATCH_SIZE_LIST
 batch_sizes = [100]
-nb_plays = [1]
+nb_plays = [20, 40]
 points = constants.POINTS
 
 
@@ -69,20 +69,32 @@ def play_generator():
 
 
 def model_generator():
+    units = 8
+    points = 500
+    loss_name = 'mse'
     for method in methods:
         for weight in weights:
             for width in widths:
                 for _nb_plays in nb_plays:
                     LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
                     fname = constants.FNAME_FORMAT["models"].format(method=method, weight=weight,
-                                                                    width=width, nb_plays=_nb_plays)
+                                                                    width=width, nb_plays=_nb_plays, units=units, points=points)
                     _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
-                    for __nb_plays in nb_plays:
-                        for bz in batch_sizes:
-                            fname = constants.FNAME_FORMAT["models_predictions"].format(method=method, weight=weight,
-                                                                                        width=width, nb_plays=_nb_plays,
-                                                                                        nb_plays_=__nb_plays,
-                                                                                        batch_size=bz)
+                    # for __nb_plays in nb_plays:
+                    #     for bz in batch_sizes:
+                    __nb_plays = _nb_plays
+                    bz = 1
+                    if True:
+                        if True:
+                            # fname = constants.FNAME_FORMAT["models_predictions"].format(method=method, weight=weight,
+                            #                                                             width=width, nb_plays=_nb_plays,
+                            #                                                             nb_plays_=__nb_plays,
+                                                                                        # batch_size=bz)
+
+                            # fname = constants.FNAME_FORMAT["models_predictions"].format(method=method, weight=weight,
+                            #                                                             width=width, nb_plays=_nb_plays,
+                            #                                                             nb_plays_=__nb_plays,
+                            #                                                             batch_size=bz)
                             try:
                                 _, predictions = tdata.DatasetLoader.load_data(fname)
                             except:
@@ -94,12 +106,12 @@ def model_generator():
                             fname = constants.FNAME_FORMAT["models_gif"].format(method=method, weight=weight,
                                                                                 width=width, nb_plays=_nb_plays,
                                                                                 nb_plays_=__nb_plays,
-                                                                                batch_size=bz)
+                                                                                batch_size=bz, units=units, points=points, loss=loss_name)
                             utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
                             fname = constants.FNAME_FORMAT["models_gif_snake"].format(method=method, weight=weight,
                                                                                       width=width, nb_plays=_nb_plays,
                                                                                       nb_plays_=__nb_plays,
-                                                                                      batch_size=bz)
+                                                                                      batch_size=bz, units=units, points=points, loss=loss_name)
                             utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
 
 
@@ -219,7 +231,7 @@ def play_generator_with_noise():
 def F_generator():
     activation = "tanh"
     loss_name = 'mse'
-    _units = 1
+    _units = 10
     mu = 0
     sigma = 0.01
 
@@ -230,10 +242,11 @@ def F_generator():
                 fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points)
                 # _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
                 _inputs1, ground_truth = tdata.DatasetLoader.load_data(fname)
-                _inputs1, ground_truth = ground_truth, _inputs1
+                _inputs1, ground_truth = ground_truth[:1000], _inputs1[:1000]
+
                 # inputs = np.vstack([_inputs, _inputs]).T
                 # for _units in units:
-                _inputs1, ground_truth = _inputs1[:40], ground_truth[:40]
+                # _inputs1, ground_truth = _inputs1[:40], ground_truth[:40]
                 if True:
                     fname = constants.FNAME_FORMAT["F"].format(method=method, weight=weight,
                                                                width=width, activation=activation,
