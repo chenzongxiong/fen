@@ -40,7 +40,6 @@ def fit(inputs, outputs, units, activation, width, true_weight, loss='mse', mu=0
     import time
     start = time.time()
     nb_plays = 4
-    batch_size = 1
     play = MyModel(batch_size=batch_size,
                     units=units,
                     activation="tanh",
@@ -91,7 +90,7 @@ if __name__ == "__main__":
                 fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points)
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
                 inputs, outputs_ = outputs_, inputs  # F neural network
-                # inputs, outputs_ = inputs[:40], outputs_[:40]
+                inputs, outputs_ = inputs[:1000], outputs_[:1000]
                 # increase *units* in order to increase the capacity of the model
                 # for units in _units:
                 if True:
