@@ -69,10 +69,15 @@ def model_generator(units=1, nb_plays=1):
                     inputs, _ = tdata.DatasetLoader.load_data(fname)
                 except FileNotFoundError:
                     inputs = None
+                import time
+                start = time.time()
                 inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(nb_plays=nb_plays,
                                                                                    points=points,
                                                                                    units=units,
                                                                                    inputs=inputs)
+                end = time.time()
+                LOG.debug("time cost: {} s".format(end-start))
+
                 fname = constants.FNAME_FORMAT['models'].format(method=method, weight=weight, width=width, nb_plays=nb_plays, units=units, points=points)
                 tdata.DatasetSaver.save_data(inputs, outputs, fname)
 

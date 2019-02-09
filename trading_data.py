@@ -84,8 +84,8 @@ class DatasetGenerator(object):
         return _inputs, _outputs
 
     @classmethod
-    def systhesis_model_generator(cls, nb_plays=1, points=1000, units=1, debug_plays=False, inputs=None):
-        model = core.MyModel(nb_plays=nb_plays, units=units, debug=True)
+    def systhesis_model_generator(cls, nb_plays=1, points=1000, units=1, debug_plays=False, inputs=None, batch_size=50):
+        model = core.MyModel(nb_plays=nb_plays, units=units, debug=True, batch_size=batch_size)
         if inputs is None:
             _inputs = cls.systhesis_input_generator(points)
         else:

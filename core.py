@@ -651,12 +651,12 @@ class MyModel(object):
     #     return play.predict(x)
 
     def predict(self, inputs):
+        import time
         inputs = ops.convert_to_tensor(inputs, tf.float32)
 
         for play in self.plays:
             if not play.built:
                 play.build(inputs)
-
         # args_list = [(play, inputs) for play in self.plays]
         # self._pool.starmap(self._build, args_list)
         # self._pool.join()
@@ -665,7 +665,10 @@ class MyModel(object):
         outputs = []
 
         for play in self.plays:
+            start = time.time()
             outputs.append(play.predict(x))
+            end = time.time()
+            LOG.debug("play {} cost time {} s".format(play._name, end-start))
 
         # args_list = [(play, x) for play in self.plays]
         # self._pool.startmap(self._predict, args_list)
