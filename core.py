@@ -554,6 +554,7 @@ class MyModel(object):
         self.plays = []
         self._nb_plays = nb_plays
         self._pool = pool.ProcessPool()
+        i = 1
         for nb_play in range(nb_plays):
             play = Play(units=units,
                         batch_size=batch_size,
@@ -564,9 +565,9 @@ class MyModel(object):
                         loss=None,
                         optimizer=None,
                         network_type=constants.NetworkType.PLAY,
-                        name="play-{}".format(nb_plays))
+                        name="play-{}".format(i))
             self.plays.append(play)
-
+            i += 1
 
         self.optimzer = optimizers.get(optimizer)
 
@@ -677,7 +678,6 @@ class MyModel(object):
             LOG.debug("Play #{}, weight: {}".format(i, play.weight))
             i += 1
 
-
     def fit2(self, inputs, mean, sigma, epochs=100, verbose=0,
              steps_per_epoch=1, loss_file_name="./tmp/mymodel_loss_history.csv"):
         inputs = ops.convert_to_tensor(inputs, tf.float32)
@@ -775,8 +775,25 @@ class MyModel(object):
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
+    def predict2(self,  inputs):
+        _inputs = ops.convert_to_tensor(inputs, tf.float32)
+        for play in self.plays:
+            self._need_compile = False
+            if not play.built:
+                play.build(_inputs)
 
-
+        x = self.plays[0].reshape(inputs)
+        outputs = []
+        for play in self.plays:
+            outputs.append(play.predict(x))
+        outputs_ = np.array(outputs)
+        prediction = outputs_.mean(axis=0)
+        prediction = prediction.reshape(-1)
+        diff = prediction[1:] - prediction[:-1]
+        mean = diff.mean()
+        std = diff.std()
+        LOG.debug("mean: {}, std: {}".format(mean, std))
+        return prediction, float(mean), float(std)
 
 if __name__ == "__main__":
     # set random seed to make results reproducible
@@ -956,14 +973,17 @@ if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
     batch_size = 10
-    units = 1
-    epochs = 5000 // batch_size
+    units = 20
+    epochs = 100 // batch_size
     steps_per_epoch = batch_size
+    mu = 0
+    sigma = 0.01
 
-    fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1, points=500)
-
+    # fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1, points=500)
+    fname = constants.FNAME_FORMAT["F_predictions"].format(method="sin", weight=1, width=1, points=500, mu=mu, sigma=sigma, activation='tanh',
+                                                           units=1, loss='mse')
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    length = 100
+    length = 50
     inputs, outputs = inputs[:length], outputs[:length]
 
     nb_plays = 2
@@ -974,11 +994,16 @@ if __name__ == "__main__":
                     units=units,
                     activation="tanh",
                     nb_plays=nb_plays)
-    mu = 0
-    sigma = 0.001
     agent.fit2(inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
+    prediction, mu_prediction, sigma_prediction = agent.predict2(inputs)
+    point_ = prediction.shape[-1]
+    fname = constants.FNAME_FORMAT["G_predictions"].format(method="sin", weight=1, width=1, points=point_, mu=mu_prediction, sigma=sigma_prediction, activation='tanh',
+                                                           units=units, loss='mse')
+    tdata.DatasetSaver.save_data(inputs, prediction, fname)
+
     LOG.debug("print weights info")
     agent.weights
 

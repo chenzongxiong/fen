@@ -91,6 +91,9 @@ FNAME_FORMAT = dict(
     F_predictions="./training-data/F/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/predictions-{loss}.csv",
     F_gif="./pics/F/method-{method}/weigth-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-{loss}.gif",
     F_gif_snake="./pics/F/method-{method}/weigth-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/snake-{loss}.gif",
+G_predictions="./training-data/G/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/predictions-{loss}.csv",
+    G_gif="./pics/G/method-{method}/weigth-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-{loss}.gif",
+    G_gif_snake="./pics/F/method-{method}/weigth-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/snake-{loss}.gif",
 )
 
 CPU_COUNTS = min(os.cpu_count(), 32)
