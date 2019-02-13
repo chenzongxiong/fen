@@ -994,11 +994,12 @@ if __name__ == "__main__":
                     units=units,
                     activation="tanh",
                     nb_plays=nb_plays)
-    agent.fit2(inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
-
+    # agent.fit2(inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
-    prediction, mu_prediction, sigma_prediction = agent.predict2(inputs)
+    # prediction, mu_prediction, sigma_prediction = agent.predict2(inputs)
+    prediction = agent.predict(inputs)
     point_ = prediction.shape[-1]
     fname = constants.FNAME_FORMAT["G_predictions"].format(method="sin", weight=1, width=1, points=point_, mu=mu_prediction, sigma=sigma_prediction, activation='tanh',
                                                            units=units, loss='mse')
