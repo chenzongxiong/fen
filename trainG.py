@@ -63,7 +63,7 @@ if __name__ == "__main__":
     nb_plays = 4
     nb_plays_ = 4
     # train dataset
-    mu = 0
+    mu = 1.0
     sigma = 0.01
     activation = 'tanh'
 
@@ -77,7 +77,8 @@ if __name__ == "__main__":
                 fname = constants.FNAME_FORMAT["F_predictions"].format(method=method, weight=weight, width=width, points=points, activation='tanh', units=units, sigma=sigma, mu=mu, loss='mse')
 
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
-                inputs, outputs_ = inputs[:1000], outputs_[:1000]
+                # inputs, outputs_ = inputs[:1000], outputs_[:1000]
+                inputs, outputs_ = outputs_[:1000], inputs[:1000]
                 # inputs, outputs_ = inputs[:40], outputs_[:40]
                 # increase *units* in order to increase the capacity of the model
                 # for units in _units:
