@@ -20,7 +20,7 @@ EPOCHS = constants.EPOCHS
 def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method='sin', nb_plays=1, batch_size=10, loss='mse', loss_file_name="./tmp/my_model_loss_history.csv"):
 
     epochs = EPOCHS // batch_size
-    # epochs = 1
+    epochs = 300
     steps_per_epoch = batch_size
 
     start = time.time()
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     points = constants.POINTS
     loss_name = 'mse'
     nb_plays = 4
-    nb_plays_ = 1
+    nb_plays_ = 4
     # train dataset
     mu = 0
     sigma = 0.01
@@ -77,8 +77,8 @@ if __name__ == "__main__":
                 fname = constants.FNAME_FORMAT["F_predictions"].format(method=method, weight=weight, width=width, points=points, activation='tanh', units=units, sigma=sigma, mu=mu, loss='mse')
 
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
-
-                inputs, outputs_ = inputs[:40], outputs_[:40]
+                inputs, outputs_ = inputs[:1000], outputs_[:1000]
+                # inputs, outputs_ = inputs[:40], outputs_[:40]
                 # increase *units* in order to increase the capacity of the model
                 # for units in _units:
                 if True:
@@ -90,10 +90,10 @@ if __name__ == "__main__":
                     fname = constants.FNAME_FORMAT["G_loss"].format(method=method, weight=weight,
                                                                     width=width, activation=activation, units=units,
                                                                     nb_plays=nb_plays, nb_plays_=nb_plays_, batch_size=batch_size,
-                                                                    loss=loss_name, points=points)
+                                                                    loss=loss_name, points=points, mu=mu, sigma=sigma)
                     tdata.DatasetSaver.save_loss({"loss": loss}, fname)
                     fname = constants.FNAME_FORMAT["G_predictions"].format(method=method, weight=weight,
                                                                            width=width, activation=activation, units=units,
                                                                            nb_plays=nb_plays, nb_plays_=nb_plays_, batch_size=batch_size,
-                                                                           points=points, loss='mse')
+                                                                           points=points, loss='mse', mu=mu, sigma=sigma)
                     tdata.DatasetSaver.save_data(inputs, predictions, fname)
