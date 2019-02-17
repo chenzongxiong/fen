@@ -88,6 +88,7 @@ def loop(method, weight, width, nb_plays, neural_type="simple_rnn"):
     outputs = outputs.reshape(1, -1)
     units = outputs.shape[-1]
 
+    LOG.debug("neural type is: {}, units is: {}".format(neural_type, units))
     if neural_type == "simple_rnn":
         rnn_loss_fname = constants.FNAME_FORMAT["models_rnn_loss"].format(method=method, weight=weight,
                                                                           width=width, nb_plays=nb_plays)
@@ -126,7 +127,7 @@ if __name__ == "__main__":
                  for width in widths
                  for _nb_plays in nb_plays]
     # args_list = [('sin', 1, 1, 1, "simple_rnn"), ('sin', 1, 1, 2, "gru"), ('sin', 1, 1, 4, "lstm")]
-
+    args_list = [('sin', 1, 1, 1, "lstm")]
     pool = pool.ProcessPool()
     pool.starmap(loop, args_list)
     pool.close()
