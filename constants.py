@@ -75,15 +75,12 @@ FNAME_FORMAT = dict(
     plays_noise_gif_snake="./pics/plays/{method}-{weight}-{width}-{activation}-{units}-{mu}-{sigma}-snake.gif",
 
     # model noise
-    models_noise="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{mu}-{sigma}.csv",
-    models_noise_loss_history="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-{mu}-{sigma}-loss-history.csv",
-    models_noise_loss="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{batch_size}-{mu}-{sigma}-loss.csv",
-    models_noise_predictions="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-{mu}-{sigma}-predictions.csv",
-    # models_noise_multi_predictions="./training-data/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-multi-predictions.csv",
-    models_noise_gif="./pics/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-{mu}-{sigma}.gif",
-    # models_noise_multi_gif="./pics/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-multi.gif",
-    models_noise_gif_snake="./pics/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-{mu}-{sigma}-snake.gif",
-    # models_noise_multi_gif_snake="./pics/models/{method}-{weight}-{width}-{nb_plays}-{nb_plays_}-{batch_size}-multi-snake.gif",
+    models_noise="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base.csv",
+    models_noise_predictions="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/predictions-{loss}.csv",
+    models_noise_loss_history="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays}/batch_size-{batch_size}/loss-history-{loss}.csv",
+    models_noise_loss="./training-data/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/loss-{loss}.csv",
+    models_noise_gif="./pics/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/base-{loss}.gif",
+    models_noise_gif_snake="./pics/models/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/snake-{loss}.gif",
 
     mc="./training-data/mc/points-{points}/mu-{mu}/sigma-{sigma}/base.csv",
     F="./training-data/F/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-{loss}.csv",

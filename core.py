@@ -170,7 +170,7 @@ class MyDense(Layer):
     def build(self, input_shape):
         if self._debug:
             LOG.debug("init mydense kernel/bias as pre-defined")
-            _init_kernel = np.array([[self._weight * (i+1) for i in range(self.units)]])
+            _init_kernel = np.array([[1 for i in range(self.units)]])
             self.kernel = tf.Variable(_init_kernel, name="weight", dtype=tf.float32)
             self._trainable_weights.append(self.kernel)
             if self.use_bias is True:
@@ -280,7 +280,6 @@ class Play(object):
             if timesteps * self.batch_size != length:
                 raise Exception("The batch size cannot be divided by the length of input sequence.")
             self._batch_input_shape = tf.TensorShape([1, timesteps, self.batch_size])
-            # self._batch_input_shape = tf.TensorShape([self.batch_size, timesteps, 1])
         else:
             raise Exception("dimension of inputs must be equal to 1")
 
@@ -317,9 +316,11 @@ class Play(object):
                                                                      write_images=False)
 
         utils.init_tf_variables()
+        self.model.summary()
         self.built = True
 
     def reshape(self, inputs, outputs=None):
+        LOG.debug("reshape inputs to: {}".format(self._batch_input_shape))
         x = tf.reshape(inputs, shape=self._batch_input_shape)
         if outputs is not None:
             if self._network_type == constants.NetworkType.OPERATOR:
@@ -642,8 +643,8 @@ class MyModel(object):
                 cost = train_function(ins)[0]
             self.cost_history.append([i, cost])
             LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
-            summary = sess.run(loss_summary)
-            writer.add_summary(summary, i)
+            # summary = sess.run(loss_summary)
+            # writer.add_summary(summary, i)
 
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
