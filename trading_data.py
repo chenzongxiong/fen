@@ -51,6 +51,7 @@ class DatasetGenerator(object):
     def systhesis_operator_generator(cls, points=1000, weight=1, width=1, state=0, with_noise=False, mu=0, sigma=0.01, method="sin"):
         if with_noise is True:
             if method == "sin":
+                LOG.debug("Generate data with noise via sin method")
                 _inputs = cls.systhesis_sin_input_generator(points, mu, sigma)
             elif method == "cos":
                 _inputs = cls.systhesis_cos_input_generator(points, mu, sigma)

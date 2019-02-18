@@ -37,7 +37,6 @@ def Phi(x, width=1.0):
            = 0         , otherwise
     """
     return tf.maximum(x, 0) + tf.minimum(x+width, 0)
-    # return x
 
 
 class PhiCell(Layer):
@@ -81,6 +80,7 @@ class PhiCell(Layer):
             self._trainable_weights.append(self.kernel)
         else:
             LOG.debug("Initialize *weight* randomly...")
+            assert self.units == 1, "Phi Cell unit must be equal to 1"
             self.kernel = self.add_weight(
                 "weight",
                 shape=(self.units, self.units),
@@ -131,7 +131,7 @@ class Operator(RNN):
             # return_state=True
             return_state=False,
             stateful=True,
-            unroll=True
+            unroll=False
             )
 
     def call(self, inputs, initial_state=None):
@@ -280,6 +280,7 @@ class Play(object):
             if timesteps * self.batch_size != length:
                 raise Exception("The batch size cannot be divided by the length of input sequence.")
             self._batch_input_shape = tf.TensorShape([1, timesteps, self.batch_size])
+            # self._batch_input_shape = tf.TensorShape([self.batch_size, timesteps, 1])
         else:
             raise Exception("dimension of inputs must be equal to 1")
 
@@ -572,6 +573,8 @@ class MyModel(object):
         self.optimzer = optimizers.get(optimizer)
 
     def fit(self, inputs, outputs, epochs=100, verbose=0, steps_per_epoch=1, loss_file_name="./tmp/mymodel_loss_history.csv"):
+        writer = utils.get_tf_summary_writer("./log/mse")
+
         inputs = ops.convert_to_tensor(inputs, tf.float32)
         outputs = ops.convert_to_tensor(outputs, tf.float32)
 
@@ -631,12 +634,16 @@ class MyModel(object):
         ins = _x + _y
 
         self.cost_history = []
+        writer.add_graph(tf.get_default_graph())
+        loss_summary = tf.summary.scalar("loss", loss)
         while i < epochs:
             i += 1
             for j in range(steps_per_epoch):
                 cost = train_function(ins)[0]
             self.cost_history.append([i, cost])
             LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
+            summary = sess.run(loss_summary)
+            writer.add_summary(summary, i)
 
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
@@ -680,6 +687,7 @@ class MyModel(object):
 
     def fit2(self, inputs, mean, sigma, epochs=100, verbose=0,
              steps_per_epoch=1, loss_file_name="./tmp/mymodel_loss_history.csv"):
+        writer = utils.get_tf_summary_writer("./log/mle")
         inputs = ops.convert_to_tensor(inputs, tf.float32)
         import time
         for play in self.plays:
@@ -764,6 +772,7 @@ class MyModel(object):
         ins = _x + _y
         utils.init_tf_variables()
 
+        writer.add_graph(tf.get_default_graph())
         self.cost_history = []
         while i < epochs:
             i += 1
@@ -912,29 +921,29 @@ if __name__ == "__main__":
     # units = 4
 
     LOG.debug(colors.red("Test Operator"))
-    # fname = constants.FNAME_FORMAT["operators"].format(method="sin", weight=1, width=1)
+    fname = constants.FNAME_FORMAT["operators"].format(method="sin", weight=1, width=1)
 
-    # inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    # LOG.debug("timestap is: {}".format(inputs.shape[0]))
+    inputs, outputs = tdata.DatasetLoader.load_data(fname)
+    LOG.debug("timestap is: {}".format(inputs.shape[0]))
 
-    # batch_size = 20
-    # epochs = 5000 // batch_size
-    # steps_per_epoch = batch_size
-    # units = 10
+    batch_size = 20
+    epochs = 5000 // batch_size
+    steps_per_epoch = batch_size
+    units = 10
 
-    # play = Play(batch_size=batch_size,
-    #             units=units,
-    #             activation=None,
-    #             network_type=constants.NetworkType.OPERATOR)
+    play = Play(batch_size=batch_size,
+                units=units,
+                activation=None,
+                network_type=constants.NetworkType.OPERATOR)
 
-    # play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
 
     # LOG.debug("number of layer is: {}".format(play.number_of_layers))
     # LOG.debug("weight: {}".format(play.weight))
 
     LOG.debug(colors.red("Test Play"))
     batch_size = 10
-    units = 2
+    units = 20
     epochs = 1500 // batch_size
     steps_per_epoch = batch_size
 
@@ -994,12 +1003,12 @@ if __name__ == "__main__":
                     units=units,
                     activation="tanh",
                     nb_plays=nb_plays)
-    # agent.fit2(inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
-    agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    agent.fit2(inputs, mu, sigma, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    # agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
     # prediction, mu_prediction, sigma_prediction = agent.predict2(inputs)
-    prediction = agent.predict(inputs)
+    # prediction = agent.predict(inputs)
     point_ = prediction.shape[-1]
     fname = constants.FNAME_FORMAT["G_predictions"].format(method="sin", weight=1, width=1, points=point_, mu=mu_prediction, sigma=sigma_prediction, activation='tanh',
                                                            units=units, loss='mse')

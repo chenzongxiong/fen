@@ -83,7 +83,7 @@ def loop(method, weight, width, nb_plays, neural_type="simple_rnn"):
     fname = constants.FNAME_FORMAT["models"].format(method=method, weight=weight,
                                                     width=width, nb_plays=nb_plays)
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    # inputs, outputs = inputs[:10], outputs[:10]
+    inputs, outputs = inputs[:1000], outputs[:1000]
     inputs = inputs.reshape(1, -1, 1)
     outputs = outputs.reshape(1, -1)
     units = outputs.shape[-1]
@@ -127,8 +127,10 @@ if __name__ == "__main__":
                  for width in widths
                  for _nb_plays in nb_plays]
     # args_list = [('sin', 1, 1, 1, "simple_rnn"), ('sin', 1, 1, 2, "gru"), ('sin', 1, 1, 4, "lstm")]
-    args_list = [('sin', 1, 1, 1, "lstm")]
-    pool = pool.ProcessPool()
-    pool.starmap(loop, args_list)
-    pool.close()
-    pool.join()
+    # args_list = [('sin', 1, 1, 1, "lstm")]
+    # pool = pool.ProcessPool()
+    # pool.starmap(loop, args_list)
+    # pool.close()
+    # pool.join()
+
+    loop('sin', 1, 1, 1, 'lstm');

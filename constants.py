@@ -59,12 +59,12 @@ FNAME_FORMAT = dict(
 
 
     # operator noise
-    operators_noise="./training-data/operators/{method}-{weight}-{width}-{mu}-{sigma}.csv",
-    operators_noise_predictions="./training-data/operators/{method}-{weight}-{width}-{mu}-{sigma}-predictions.csv",
-    operators_noise_loss="./training-data/operators/{method}-{weight}-{width}-{mu}-{sigma}-loss.csv",
-    operators_noise_loss_histroy="./training-data/operators/{method}-{weight}-{width}-{mu}-{sigma}-loss-history.csv",
-    operators_noise_gif="./pics/operators/{method}-{weight}-{width}-{mu}-{sigma}.gif",
-    operators_noise_gif_snake="./pics/operators/{method}-{weight}-{width}-{mu}-{sigma}-snake.gif",
+    operators_noise="./training-data/operators/method-{method}/weight-{weight}/width-{width}/mu-{mu}/sigma-{sigma}/points-{points}/base.csv",
+    operators_noise_predictions="./training-data/operators/method-{method}/weight-{weight}/width-{width}/mu-{mu}/sigma-{sigma}/points-{points}/predictions-{loss}.csv",
+    operators_noise_loss="./training-data/operators/method-{method}/weight-{weight}/width-{width}/mu-{mu}/sigma-{sigma}/points-{points}/loss-{loss}.csv",
+    operators_noise_loss_histroy="./training-data/operators/method-{method}/weight-{weight}/width-{width}/mu-{mu}/sigma-{sigma}/loss-history-{loss}.csv",
+    operators_noise_gif="./pics/operators/method-{method}/weight-{weight}/width-{width}/mu-{mu}/sigma-{sigma}/points-{points}/base-{loss}.gif",
+    operators_noise_gif_snake="./pics/operators/method-{method}/weight-{weight}/width-{width}/mu-{mu}/sigma-{sigma}/points-{points}/snake-{loss}.gif",
 
     # play noise
     plays_noise="./training-data/plays/{method}-{weight}-{width}-{mu}-{sigma}-tanh.csv",

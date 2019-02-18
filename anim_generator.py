@@ -179,22 +179,24 @@ def GF_generator():
 
 
 def operator_generator_with_noise():
-    mu = 1
+    mu = 0
     sigma = 0.01
+    points = 1000
+    loss_name = 'mse'
     for method in methods:
         for weight in weights:
             for width in widths:
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = constants.FNAME_FORMAT["operators_noise"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+                fname = constants.FNAME_FORMAT["operators_noise"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma, points=points)
                 inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
-                fname = constants.FNAME_FORMAT["operators_noise_predictions"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+                fname = constants.FNAME_FORMAT["operators_noise_predictions"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma, points=points, loss=loss_name)
                 _, predictions = tdata.DatasetLoader.load_data(fname)
                 inputs = np.vstack([inputs, inputs]).T
                 outputs = np.vstack([ground_truth, predictions]).T
                 colors = utils.generate_colors(outputs.shape[-1])
-                fname = constants.FNAME_FORMAT["operators_noise_gif"].format(method=method, weight=weight, width=width, sigma=sigma, mu=mu)
+                fname = constants.FNAME_FORMAT["operators_noise_gif"].format(method=method, weight=weight, width=width, sigma=sigma, mu=mu, points=points, loss=loss_name)
                 utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
-                fname = constants.FNAME_FORMAT["operators_noise_gif_snake"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+                fname = constants.FNAME_FORMAT["operators_noise_gif_snake"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma, points=points, loss=loss_name)
                 utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
 
 
@@ -231,8 +233,8 @@ def play_generator_with_noise():
 def F_generator():
     activation = "tanh"
     loss_name = 'mse'
-    _units = 10
-    mu = 0
+    _units = 20
+    mu = 2.0
     sigma = 0.01
 
     for method in methods:
@@ -270,6 +272,62 @@ def F_generator():
                     utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
 
 
+def G_generator():
+    activation = "tanh"
+    loss_name = 'mse'
+    # _units = 10
+    units = 10
+    mu = 0
+    sigma = 0.01
+    nb_plays_ = 4
+    batch_size = 10
+    points = 500
+    for method in methods:
+        for weight in weights:
+            for width in widths:
+                LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
+                # fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points
+                # fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points)
+                # inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
+
+
+                fname = constants.FNAME_FORMAT["F_predictions"].format(method=method, weight=weight, width=width, points=points, activation='tanh', units=units, sigma=sigma, mu=mu, loss='mse')
+                # fname = constants.FNAME_FORMAT["F"].format(method=method, weight=weight, width=width, points=points, activation='tanh', units=units, sigma=sigma, mu=mu, loss='mse')
+                print("F_predictions: ", fname)
+                # _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
+                _inputs1, ground_truth = tdata.DatasetLoader.load_data(fname)
+                _inputs1, ground_truth = ground_truth[:1000], _inputs1[:1000]
+                # _inputs1, ground_truth = _inputs1[:1000], ground_truth[:1000]
+
+                # inputs = np.vstack([_inputs, _inputs]).T
+                # for _units in units:
+                # _inputs1, ground_truth = _inputs1[:40], ground_truth[:40]
+                if True:
+                    # fname = constants.FNAME_FORMAT["F"].format(method=method, weight=weight,
+                    #                                            width=width, activation=activation,
+                    #                                            units=_units, loss=loss_name,
+                    #                                            mu=mu, sigma=sigma,
+                    #                                            points=points)
+                    fname = constants.FNAME_FORMAT["G_predictions"].format(method=method, weight=weight,
+                                                                           width=width, activation=activation, units=units,
+                                                                           nb_plays=nb_plays, nb_plays_=nb_plays_, batch_size=batch_size,
+                                                                           points=points, loss='mse', mu=mu, sigma=sigma)
+                    print("G_predictions: ", fname)
+                    _inputs2, predictions = tdata.DatasetLoader.load_data(fname)
+                    inputs = np.vstack([_inputs1, _inputs2]).T
+                    outputs = np.vstack([ground_truth, predictions]).T
+                    colors = utils.generate_colors(outputs.shape[-1])
+                    fname = constants.FNAME_FORMAT["G_gif"].format(method=method, weight=weight, width=width,
+                                                                   activation=activation, units=units,
+                                                                   mu=mu, sigma=sigma,
+                                                                   points=points, loss=loss_name)
+                    utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
+                    fname = constants.FNAME_FORMAT["G_gif_snake"].format(method=method, weight=weight, width=width,
+                                                                         activation=activation, units=units,
+                                                                         mu=mu, sigma=sigma,
+                                                                         loss=loss_name, points=points)
+                    utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
+
 
 
 
@@ -304,6 +362,11 @@ if __name__ == "__main__":
                         action="store_true",
                         help="generate plays' dataset")
 
+    parser.add_argument("-G", dest="G",
+                        required=False,
+                        action="store_true",
+                        help="generate plays' dataset")
+
 
     argv = parser.parse_args(sys.argv[1:])
 
@@ -321,3 +384,6 @@ if __name__ == "__main__":
         play_generator_with_noise()
     if argv.F:
         F_generator()
+
+    if argv.G:
+        G_generator()

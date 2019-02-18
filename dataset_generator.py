@@ -17,8 +17,8 @@ points = constants.POINTS
 UNITS = constants.UNITS
 
 def operator_generator():
-    states = [1, 4, 10 -1, -4, -10]
-
+    # states = [1, 4, 10 -1, -4, -10]
+    states = [0]
     for method in methods:
         for weight in weights:
             for width in widths:
@@ -29,7 +29,8 @@ def operator_generator():
                     inputs_, outputs_ = tdata.DatasetGenerator.systhesis_operator_generator(points=points,
                                                                                             weight=weight,
                                                                                             width=width,
-                                                                                            state=state)
+                                                                                            state=state,
+                                                                                            with_noise=True)
                     inputs.append(inputs_)
                     outputs.append(outputs_)
                 fname = constants.FNAME_FORMAT['operators'].format(method=method, weight=weight, width=width, points=points)
@@ -109,9 +110,11 @@ def GF_generator():
 
 
 def operator_generator_with_noise():
-    states = [1, 4, 10 -1, -4, -10]
-    mu = 1
-    sigma = 0.01
+    # states = [1, 4, 10 -1, -4, -10]
+    states = [0]
+    mu = 0
+    sigma = 0.1
+    points = 1000
     for method in methods:
         for weight in weights:
             for width in widths:
@@ -128,7 +131,7 @@ def operator_generator_with_noise():
                                                                                             sigma=sigma)
                     inputs.append(inputs_)
                     outputs.append(outputs_)
-                fname = constants.FNAME_FORMAT['operators_noise'].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+                fname = constants.FNAME_FORMAT['operators_noise'].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma, points=points)
                 inputs = np.hstack(inputs)
                 outputs = np.hstack(outputs)
                 outputs = outputs.T

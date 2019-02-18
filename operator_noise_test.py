@@ -23,7 +23,8 @@ def fit(inputs, outputs, width, method, true_weight, loss='mse', mu=0, sigma=0.0
     total_timesteps = inputs.shape[0]
     train_timesteps = int(total_timesteps * 0.5)
 
-    batch_size = 10
+    batch_size = 1
+    EPOCHS = 1000
     epochs = EPOCHS // batch_size
     # epochs = 1
     steps_per_epoch = batch_size
@@ -77,21 +78,22 @@ if __name__ == '__main__':
     methods = constants.METHODS
     weights = constants.WEIGHTS
     widths = constants.WIDTHS
-    loss_name = 'mle'
+    loss_name = 'mse'
     # train dataset
-    mu = 1
+    mu = 0
     sigma = 0.01
+    points = 1000
     for method in methods:
         for weight in weights:
             for width in widths:
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = constants.FNAME_FORMAT["operators_noise"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+                fname = constants.FNAME_FORMAT["operators_noise"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma, points=points)
                 inputs, outputs = tdata.DatasetLoader.load_data(fname)
-                loss_file_name = constants.FNAME_FORMAT["operators_noise_loss_histroy"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+                loss_file_name = constants.FNAME_FORMAT["operators_noise_loss_histroy"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma, points=points, loss=loss_name)
                 # inputs, outputs = inputs[:40], outputs[:40]
                 predictions, loss = fit(inputs, outputs, width, method, weight, loss_name, mu, sigma, loss_file_name)
 
-                fname = constants.FNAME_FORMAT["operators_noise_loss"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+                fname = constants.FNAME_FORMAT["operators_noise_loss"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma, points=points, loss=loss_name)
                 tdata.DatasetSaver.save_loss({"loss": loss}, fname)
-                fname = constants.FNAME_FORMAT["operators_noise_predictions"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma)
+                fname = constants.FNAME_FORMAT["operators_noise_predictions"].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma, points=points, loss=loss_name)
                 tdata.DatasetSaver.save_data(inputs, predictions, fname)
