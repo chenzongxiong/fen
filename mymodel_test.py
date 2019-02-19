@@ -20,7 +20,7 @@ EPOCHS = constants.EPOCHS
 def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method='sin', nb_plays=1, batch_size=1, loss='mse', loss_file_name="./tmp/my_model_loss_history.csv"):
 
     # epochs = EPOCHS // batch_size
-    epochs = 1
+    epochs = 10000
     steps_per_epoch = batch_size
 
     start = time.time()
@@ -60,13 +60,14 @@ if __name__ == "__main__":
     # batch_size = constants.BATCH_SIZE_LIST[0]
     batch_size = 1
     points = constants.POINTS
-    points = 100
+    # not test (40, 100), (40, 1000), (40, 5000)
+    points = 5000
     loss_name = 'mse'
-    nb_plays = 20
-    nb_plays_ = 1
+    nb_plays = 40
+    nb_plays_ = nb_plays
     # train dataset
     mu = 0
-    sigma = 0.01
+    sigma = 0.1
     activation = 'tanh'
 
     # units = argv.units

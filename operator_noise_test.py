@@ -24,7 +24,7 @@ def fit(inputs, outputs, width, method, true_weight, loss='mse', mu=0, sigma=0.0
     train_timesteps = int(total_timesteps * 0.5)
 
     batch_size = 1
-    EPOCHS = 1000
+    EPOCHS = 10000
     epochs = EPOCHS // batch_size
     # epochs = 1
     steps_per_epoch = batch_size
@@ -81,8 +81,8 @@ if __name__ == '__main__':
     loss_name = 'mse'
     # train dataset
     mu = 0
-    sigma = 0.01
-    points = 1000
+    sigma = 0.1
+    points = 5000
     for method in methods:
         for weight in weights:
             for width in widths:
