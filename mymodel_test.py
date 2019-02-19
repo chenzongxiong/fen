@@ -17,10 +17,10 @@ epochs = constants.EPOCHS
 EPOCHS = constants.EPOCHS
 
 
-def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method='sin', nb_plays=1, batch_size=1, loss='mse', loss_file_name="./tmp/my_model_loss_history.csv"):
+def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method='sin', nb_plays=1, batch_size=1, loss='mse', loss_file_name="./tmp/my_model_loss_history.csv", learning_rate=0.001, weights_name='model.h5'):
 
     # epochs = EPOCHS // batch_size
-    epochs = 10000
+    epochs = 2000
     steps_per_epoch = batch_size
 
     start = time.time()
@@ -29,11 +29,16 @@ def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method
                     activation="tanh",
                     nb_plays=nb_plays)
 
-    agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch, loss_file_name=loss_file_name)
+    agent.load_weights(weights_fname)
+    LOG.debug("Learning rate is {}".format(learning_rate))
+    agent.fit(inputs, outputs, verbose=1, epochs=epochs,
+              steps_per_epoch=steps_per_epoch, loss_file_name=loss_file_name, learning_rate=learning_rate)
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
     LOG.debug("print weights info")
-    # agent.weights
+    agent.weights
+
+    agent.save_weights(weights_fname)
     # predictions = agent(inputs)
 
     predictions = agent.predict(inputs)
@@ -51,8 +56,6 @@ if __name__ == "__main__":
     parser.add_argument("--units", dest="units",
                         required=False, type=int)
 
-
-
     methods = constants.METHODS
     weights = constants.WEIGHTS
     widths = constants.WIDTHS
@@ -61,10 +64,11 @@ if __name__ == "__main__":
     batch_size = 1
     points = constants.POINTS
     # not test (40, 100), (40, 1000), (40, 5000)
-    points = 5000
+    points = 100
     loss_name = 'mse'
-    nb_plays = 40
+    nb_plays = 20
     nb_plays_ = nb_plays
+    # nb_plays_ = 1
     # train dataset
     mu = 0
     sigma = 0.1
@@ -72,6 +76,8 @@ if __name__ == "__main__":
 
     # units = argv.units
     units = 20
+
+    learning_rate = 0.01
 
     for method in methods:
         for weight in weights:
@@ -85,7 +91,6 @@ if __name__ == "__main__":
                                                                       mu=mu,
                                                                       sigma=sigma,
                                                                       points=points)
-
 
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
 
@@ -104,8 +109,19 @@ if __name__ == "__main__":
                                                                                                    batch_size=batch_size,
                                                                                                    loss=loss_name,
                                                                                                    points=points)
+                    weights_fname = constants.FNAME_FORMAT["models_noise_saved_weights"].format(method=method,
+                                                                                                weight=weight,
+                                                                                                width=width,
+                                                                                                nb_plays=nb_plays,
+                                                                                                units=units,
+                                                                                                mu=mu,
+                                                                                                sigma=sigma,
+                                                                                                nb_plays_=nb_plays_,
+                                                                                                batch_size=batch_size,
+                                                                                                loss=loss_name,
+                                                                                                points=points)
 
-                    predictions, loss = fit(inputs, outputs_, units, activation, width, weight, method, nb_plays_, batch_size, loss_name, loss_history_file)
+                    predictions, loss = fit(inputs, outputs_, units, activation, width, weight, method, nb_plays_, batch_size, loss_name, loss_history_file, learning_rate, weights_fname)
                     fname = constants.FNAME_FORMAT["models_noise_loss"].format(method=method,
                                                                                weight=weight,
                                                                                width=width,

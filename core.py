@@ -1,3 +1,4 @@
+import os
 import tensorflow as tf
 # tf.enable_eager_execution()
 
@@ -271,17 +272,24 @@ class Play(object):
         self.use_bias = use_bias
         self._name = name
 
-    def build(self, inputs):
-        _inputs = ops.convert_to_tensor(inputs, tf.float32)
+    def build(self, inputs=None):
+        if inputs is None and self._batch_input_shape is None:
+            raise Exception("Unknown input shape")
+        if inputs is not None:
+            _inputs = ops.convert_to_tensor(inputs, tf.float32)
 
-        if _inputs.shape.ndims == 1:
-            length = _inputs.shape[-1].value
-            timesteps = length // self.batch_size
-            if timesteps * self.batch_size != length:
-                raise Exception("The batch size cannot be divided by the length of input sequence.")
-            self._batch_input_shape = tf.TensorShape([1, timesteps, self.batch_size])
-        else:
-            raise Exception("dimension of inputs must be equal to 1")
+            if _inputs.shape.ndims == 1:
+                length = _inputs.shape[-1].value
+                timesteps = length // self.batch_size
+                if timesteps * self.batch_size != length:
+                    raise Exception("The batch size cannot be divided by the length of input sequence.")
+                self._batch_input_shape = tf.TensorShape([1, timesteps, self.batch_size])
+            else:
+                raise Exception("dimension of inputs must be equal to 1")
+
+
+        length = self._batch_input_shape[1].value * self._batch_input_shape[2].value
+        timesteps = self._batch_input_shape[1].value
 
         self.model = tf.keras.models.Sequential()
 
@@ -315,7 +323,9 @@ class Play(object):
                                                                      write_grads=False,
                                                                      write_images=False)
 
-        utils.init_tf_variables()
+        if not getattr(self, "_preload_weights", False):
+            utils.init_tf_variables()
+        LOG.debug(colors.yellow("SUMMARY of {}".format(self._name)))
         self.model.summary()
         self.built = True
 
@@ -573,14 +583,15 @@ class MyModel(object):
 
         self.optimzer = optimizers.get(optimizer)
 
-    def fit(self, inputs, outputs, epochs=100, verbose=0, steps_per_epoch=1, loss_file_name="./tmp/mymodel_loss_history.csv"):
+    def fit(self, inputs, outputs, epochs=100, verbose=0, steps_per_epoch=1, loss_file_name="./tmp/mymodel_loss_history.csv", learning_rate=0.001):
         writer = utils.get_tf_summary_writer("./log/mse")
 
         inputs = ops.convert_to_tensor(inputs, tf.float32)
         outputs = ops.convert_to_tensor(outputs, tf.float32)
 
         for play in self.plays:
-            play.build(inputs)
+            if not play.built:
+                play.build(inputs)
 
         x, y = self.plays[0].reshape(inputs, outputs)
 
@@ -617,7 +628,7 @@ class MyModel(object):
             y_pred = model_outputs[0]
 
         loss = tf.keras.backend.mean(tf.math.square(y_pred - y))
-        self.optimizer = tf.keras.optimizers.Adam()
+        self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
 
         with tf.name_scope('training'):
             with tf.name_scope(self.optimizer.__class__.__name__):
@@ -804,6 +815,41 @@ class MyModel(object):
         std = diff.std()
         LOG.debug("mean: {}, std: {}".format(mean, std))
         return prediction, float(mean), float(std)
+
+    def save_weights(self, fname):
+        suffix = fname.split(".")[-1]
+        for play in self.plays:
+            path = "{}/{}plays/{}.{}".format(fname[:-3], len(self.plays), play._name, suffix)
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            open(path, 'w').close()
+            LOG.debug(colors.cyan("Saving {}'s Weights to {}".format(play._name, path)))
+            play.model.save_weights(path)
+
+        LOG.debug(colors.cyan("riting input shape into disk..."))
+        with open("{}/{}plays/input_shape.txt".format(fname[:-3], len(self.plays)), "w") as f:
+            f.write(":".join(map(str, self.plays[0]._batch_input_shape.as_list())))
+
+    def load_weights(self, fname):
+        LOG.debug(colors.cyan("Trying to Load Weights first..."))
+        suffix = fname.split(".")[-1]
+        dirname = "{}/{}plays".format(fname[:-3], len(self.plays))
+        if not os.path.isdir(dirname):
+            LOG.debug(colors.red("Fail to Load Weights."))
+            return
+        LOG.debug(colors.red("Found trained Weights. Loading..."))
+        with open("{}/input_shape.txt".format(dirname), "r") as f:
+            line = f.read()
+
+        shape = list(map(int, line.split(":")))
+
+        for play in self.plays:
+            if not play.built:
+                play._batch_input_shape = tf.TensorShape(shape)
+                play._preload_weights = True
+                play.build()
+            path = "{}/{}.{}".format(dirname, play._name, suffix)
+            play.model.load_weights(path, by_name=False)
+
 
 if __name__ == "__main__":
     # set random seed to make results reproducible

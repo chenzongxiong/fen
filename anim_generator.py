@@ -330,18 +330,18 @@ def G_generator():
 
 def model_generator_with_noise():
     mu = 0
-    sigma = 0.1
-    points = 1000
+    sigma = 0.01
+    points = 5000
 
     units = 20
-    nb_plays = [20]
+    nb_plays = [40]
     loss_name = 'mse'
 
     for method in methods:
         for weight in weights:
             for width in widths:
                 for _nb_plays in nb_plays:
-                    LOG.debug("Processing method: {}, weight: {}, width: {}, points: {}".format(method, weight, width, points))
+                    LOG.debug("Processing method: {}, weight: {}, width: {}, points: {}, units: {}, np_plays: {}, sigma: {}, mu: {}, loss: {}".format(method, weight, width, points, units, nb_plays, sigma, mu, loss_name))
                     fname = constants.FNAME_FORMAT["models_noise"].format(method=method, weight=weight,
                                                                           width=width, nb_plays=_nb_plays, units=units, points=points, mu=mu, sigma=sigma)
                     _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
@@ -367,32 +367,47 @@ def model_generator_with_noise():
 
                             outputs = np.vstack([ground_truth, predictions]).T
                             colors = utils.generate_colors(outputs.shape[-1])
-                            inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
-                            fname = constants.FNAME_FORMAT["models_noise_gif"].format(method=method,
-                                                                                      weight=weight,
-                                                                                      width=width,
-                                                                                      nb_plays=_nb_plays,
-                                                                                      nb_plays_=__nb_plays,
-                                                                                      batch_size=bz,
-                                                                                      units=units,
-                                                                                      points=points,
-                                                                                      mu=mu,
-                                                                                      sigma=sigma,
-                                                                                      loss=loss_name)
-                            utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
-                            fname = constants.FNAME_FORMAT["models_noise_gif_snake"].format(method=method,
-                                                                                            weight=weight,
-                                                                                            width=width,
-                                                                                            nb_plays=_nb_plays,
-                                                                                            nb_plays_=__nb_plays,
-                                                                                            batch_size=bz,
-                                                                                            units=units,
-                                                                                            points=points,
-                                                                                            mu=mu,
-                                                                                            sigma=sigma,
-                                                                                            loss=loss_name)
-                            utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
+                            # inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
+                            # fname = constants.FNAME_FORMAT["models_noise_gif"].format(method=method,
+                            #                                                           weight=weight,
+                            #                                                           width=width,
+                            #                                                           nb_plays=_nb_plays,
+                            #                                                           nb_plays_=__nb_plays,
+                            #                                                           batch_size=bz,
+                            #                                                           units=units,
+                            #                                                           points=points,
+                            #                                                           mu=mu,
+                            #                                                           sigma=sigma,
+                            #                                                           loss=loss_name)
+                            # utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
+                            # fname = constants.FNAME_FORMAT["models_noise_gif_snake"].format(method=method,
+                            #                                                                 weight=weight,
+                            #                                                                 width=width,
+                            #                                                                 nb_plays=_nb_plays,
+                            #                                                                 nb_plays_=__nb_plays,
+                            #                                                                 batch_size=bz,
+                            #                                                                 units=units,
+                            #                                                                 points=points,
+                            #                                                                 mu=mu,
+                            #                                                                 sigma=sigma,
+                            #                                                                 loss=loss_name)
+                            # utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
 
+                            fname = constants.FNAME_FORMAT["models_noise_ts_outputs_gif"].format(method=method,
+                                                                                                 weight=weight,
+                                                                                                 width=width,
+                                                                                                 nb_plays=_nb_plays,
+                                                                                                 nb_plays_=__nb_plays,
+                                                                                                 batch_size=bz,
+                                                                                                 units=units,
+                                                                                                 points=points,
+                                                                                                 mu=mu,
+                                                                                                 sigma=sigma,
+                                                                                                 loss=loss_name)
+                            # steps = inputs.shape[-1]
+                            _inputs = np.arange(points)
+                            inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
+                            utils.save_animation(inputs, outputs, fname, step=points, colors=colors)
 
 
 
