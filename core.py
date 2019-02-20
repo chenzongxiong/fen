@@ -647,16 +647,20 @@ class MyModel(object):
         ins = _x + _y
 
         self.cost_history = []
+
+        path = "/".join(loss_file_name.split("/")[:-1])
         writer.add_graph(tf.get_default_graph())
         loss_summary = tf.summary.scalar("loss", loss)
+
         while i < epochs:
             i += 1
             for j in range(steps_per_epoch):
                 cost = train_function(ins)[0]
             self.cost_history.append([i, cost])
+            if i % 50 == 0:     # save weights every 50 epochs
+                fname = "{}/epochs-{}/weights-mse.h5".format(path, i)
+                self.save_weights(fname)
             LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
-            # summary = sess.run(loss_summary)
-            # writer.add_summary(summary, i)
 
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)

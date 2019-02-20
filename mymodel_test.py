@@ -20,7 +20,7 @@ EPOCHS = constants.EPOCHS
 def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method='sin', nb_plays=1, batch_size=1, loss='mse', loss_file_name="./tmp/my_model_loss_history.csv", learning_rate=0.001, weights_name='model.h5'):
 
     # epochs = EPOCHS // batch_size
-    epochs = 2000
+    epochs = 250
     steps_per_epoch = batch_size
 
     start = time.time()
