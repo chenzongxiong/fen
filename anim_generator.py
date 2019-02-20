@@ -427,12 +427,12 @@ def model_generator_with_noise():
 
 def model_noise_test_generator():
     sigma = 0.1
-    points = 1000
+    points = 5000
 
     units = 20
-    nb_plays = [20]
+    nb_plays = [40]
 
-    state = 0
+    state = 2
 
     mu = 0
     loss_name = 'mse'
