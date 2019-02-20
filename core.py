@@ -859,7 +859,7 @@ class MyModel(object):
                 play.build()
             path = "{}/{}.{}".format(dirname, play._name, suffix)
             play.model.load_weights(path, by_name=False)
-
+            LOG.debug(colors.red("Set Weights for {}".format(play._name)))
 
 if __name__ == "__main__":
     # set random seed to make results reproducible

@@ -426,15 +426,17 @@ def model_generator_with_noise():
 
 
 def model_noise_test_generator():
-    mu = 0
-    sigma = 0.01
+    sigma = 0.1
     points = 1000
 
     units = 20
     nb_plays = [20]
-    loss_name = 'mse'
+
     state = 0
 
+    mu = 0
+    loss_name = 'mse'
+    methods = ["mixed"]
     for method in methods:
         for weight in weights:
             for width in widths:
@@ -454,6 +456,19 @@ def model_noise_test_generator():
                                                                                        width=width, nb_plays=_nb_plays, units=units, points=points, mu=mu, sigma=sigma,
                                                                                        state=state)
                             try:
+                                fname = constants.FNAME_FORMAT["models_noise_test_predictions"].format(method=method,
+                                                                                                       weight=weight,
+                                                                                                       width=width,
+                                                                                                       nb_plays=_nb_plays,
+                                                                                                       nb_plays_=__nb_plays,
+                                                                                                       batch_size=bz,
+                                                                                                       units=units,
+                                                                                                       points=points,
+                                                                                                       mu=mu,
+                                                                                                       sigma=sigma,
+                                                                                                       loss=loss_name,
+                                                                                                       state=state)
+
                                 _, predictions = tdata.DatasetLoader.load_data(fname)
                             except:
                                 continue
@@ -568,4 +583,5 @@ if __name__ == "__main__":
     if argv.G:
         G_generator()
     if argv.model_noise:
-        model_generator_with_noise()
+        # model_generator_with_noise()
+        model_noise_test_generator()
