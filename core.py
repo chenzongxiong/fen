@@ -583,7 +583,7 @@ class MyModel(object):
 
         self.optimzer = optimizers.get(optimizer)
 
-    def fit(self, inputs, outputs, epochs=100, verbose=0, steps_per_epoch=1, loss_file_name="./tmp/mymodel_loss_history.csv", learning_rate=0.001):
+    def fit(self, inputs, outputs, epochs=100, verbose=0, steps_per_epoch=1, loss_file_name="./tmp/mymodel_loss_history.csv", learning_rate=0.001, decay=0.):
         writer = utils.get_tf_summary_writer("./log/mse")
 
         inputs = ops.convert_to_tensor(inputs, tf.float32)
@@ -628,7 +628,8 @@ class MyModel(object):
             y_pred = model_outputs[0]
 
         loss = tf.keras.backend.mean(tf.math.square(y_pred - y))
-        self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
+        # decay: decay learning rate to half every 100 steps
+        self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, decay=decay)
 
         with tf.name_scope('training'):
             with tf.name_scope(self.optimizer.__class__.__name__):
@@ -757,7 +758,7 @@ class MyModel(object):
         self.optimizer = tf.keras.optimizers.Adam()
 
         with tf.name_scope('training'):
-            # import ipdb; ipdb.set_trace()
+
             J = tf.keras.backend.gradients(y_pred, model_inputs)
             detJ = tf.reshape(tf.keras.backend.abs(J[0]), shape=y_pred.shape)
             detJ = tf.keras.backend.clip(detJ, min_value=1e-5, max_value=1e9)

@@ -77,7 +77,8 @@ if __name__ == "__main__":
     # units = argv.units
     units = 20
 
-    learning_rate = 0.01
+    # learning_rate = 0.01
+    learning_rate = 0.1
 
     for method in methods:
         for weight in weights:
