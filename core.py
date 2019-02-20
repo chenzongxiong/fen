@@ -325,7 +325,12 @@ class Play(object):
 
         if not getattr(self, "_preload_weights", False):
             utils.init_tf_variables()
-        LOG.debug(colors.yellow("SUMMARY of {}".format(self._name)))
+        if self._network_type == constants.NetworkType.OPERATOR:
+            LOG.debug(colors.yellow("SUMMARY of Operator"))
+        elif self._network_type == constants.NetworkType.PLAY:
+            LOG.debug(colors.yellow("SUMMARY of {}".format(self._name)))
+        else:
+            raise
         self.model.summary()
         self.built = True
 

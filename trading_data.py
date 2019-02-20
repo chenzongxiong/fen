@@ -35,13 +35,13 @@ class DatasetGenerator(object):
         return inputs
 
     @classmethod
-    def systhesis_cos_input_generator(cls, points, mu, sigma):
-        # NOTE: x = cos(t) + 1.5 cos(3.0 t) + 2.5 sin(2.3 t)
+    def systhesis_mixed_input_generator(cls, points, mu, sigma):
+        # NOTE: x = cos(t) + 0.7 cos(3.0 t) + 1.5 sin(2.3 t)
         inputs1 = np.cos(np.linspace(-2*np.pi, 2*np.pi, points))
-        inputs2 = 1.5 * np.cos(3.0* np.linspace(-2*np.pi, 2*np.pi, points))
-        inputs3 = 2.5 * np.sin(2.3 * np.linspace(-2*np.pi, 2*np.pi, points))
+        inputs2 = 0.7 * np.cos(3.0 * np.linspace(-2*np.pi, 2*np.pi, points))
+        inputs3 = 1.5 * np.sin(2.3 * np.linspace(-2*np.pi, 2*np.pi, points))
         inputs = (inputs1 + inputs2 + inputs3).astype(np.float32)
-        LOG.debug("Generate the input sequence according to formula {}".format(colors.red("[x = cos(t) + 1.5 cos(3.0 t)  + 2.5 sin (2.3 t)]")))
+        LOG.debug("Generate the input sequence according to formula {}".format(colors.red("[x = cos(t) + 0.7 cos(3.0 t)  + 1.5 sin (2.3 t)]")))
 
         noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
         inputs += noise
@@ -53,8 +53,13 @@ class DatasetGenerator(object):
             if method == "sin":
                 LOG.debug("Generate data with noise via sin method")
                 _inputs = cls.systhesis_sin_input_generator(points, mu, sigma)
+            elif method == "mixed":
+                LOG.debug("Generate data with noise via mixed method")
+                _inputs = cls.systhesis_mixed_input_generator(points, mu, sigma)
             elif method == "cos":
-                _inputs = cls.systhesis_cos_input_generator(points, mu, sigma)
+                LOG.debug("Generate data with noise via cos method")
+                # _inputs = cls.systhesis_mixed_input_generator(points, mu, sigma)
+                raise
         else:
             _inputs = cls.systhesis_input_generator(points)
         weight = float(weight)
@@ -88,7 +93,8 @@ class DatasetGenerator(object):
     def systhesis_model_generator(cls, nb_plays=1, points=1000, units=1, debug_plays=False, inputs=None, batch_size=50):
         model = core.MyModel(nb_plays=nb_plays, units=units, debug=True, batch_size=batch_size)
         if inputs is None:
-            _inputs = cls.systhesis_input_generator(points)
+            # _inputs = cls.systhesis_input_generator(points)
+            raise
         else:
             _inputs = inputs
 
