@@ -85,7 +85,7 @@ if __name__ == "__main__":
     loss_name = 'mse'
 
     points = 1000
-    nb_plays = 20
+    nb_plays = 40
     nb_plays_ = nb_plays
     # nb_plays_ = 1
     # train dataset
@@ -301,6 +301,9 @@ if __name__ == "__main__":
     #                                                                                            points=points)
     #                 tdata.DatasetSaver.save_data(inputs, predictions, fname)
 
+
+    ################################################################################
+    # do testing
     methods = ["mixed"]
 
     for method in methods:

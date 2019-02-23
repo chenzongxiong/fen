@@ -226,9 +226,9 @@ def operator_noise_test_generator():
 def model_noise_test_generator():
     mu = 0
     sigma = 0.1
-    points = 5000
+    points = 100
     nb_plays = 40
-    state = 2
+    state = 0
 
     units = 20
     methods = ["mixed"]
