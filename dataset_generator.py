@@ -257,6 +257,39 @@ def model_noise_test_generator():
 
 
 
+def model_nb_plays_generator_with_noise():
+    mu = 0
+    sigma = 0.1
+    points = 5000
+    units = 20
+    nb_plays = 40
+    for method in methods:
+        for weight in weights:
+            for width in widths:
+                LOG.debug("generate data for method {}, weight {}, width {}, units {}, nb_plays {}".format(
+                    method, weight, width, units, nb_plays
+                ))
+                fname = constants.FNAME_FORMAT['operators_noise'].format(method=method, weight=weight, width=width, points=points, mu=mu, sigma=sigma)
+                try:
+                    inputs, _ = tdata.DatasetLoader.load_data(fname)
+                except FileNotFoundError:
+                    inputs = None
+
+                import time
+                start = time.time()
+                inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(nb_plays=nb_plays,
+                                                                                   points=points,
+                                                                                   units=units,
+                                                                                   inputs=inputs,
+                                                                                   batch_size=1)
+                end = time.time()
+                LOG.debug("time cost: {} s".format(end-start))
+
+                fname = constants.FNAME_FORMAT['models_nb_plays_noise'].format(method=method, weight=weight, width=width, nb_plays=nb_plays, units=units, points=points, mu=mu, sigma=sigma)
+                tdata.DatasetSaver.save_data(inputs, outputs, fname)
+
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--operator", dest="operator",
@@ -333,4 +366,5 @@ if __name__ == "__main__":
         markov_chain(argv.points, argv.mu, argv.sigma)
     if argv.model_noise:
         # model_generator_with_noise()
-        model_noise_test_generator()
+        # model_noise_test_generator()
+        model_nb_plays_generator_with_noise()

@@ -73,7 +73,7 @@ class PhiCell(Layer):
 
     def build(self, input_shape):
         if self.debug:
-            LOG.debug("Initialize *weight* as pre-defined...")
+            LOG.debug("Initialize *weight* as pre-defined: {} ....".format(self._weight))
             self.kernel = tf.Variable([[self._weight]], name="weight", dtype=tf.float32)
             # if constants.DEBUG_INIT_TF_VALUE:
             #     self.kernel = self.kernel.initialized_value()
@@ -573,6 +573,9 @@ class MyModel(object):
         self._pool = pool.ProcessPool()
         i = 1
         for nb_play in range(nb_plays):
+            weight = np.random.uniform(0., 3.)
+            LOG.debug("MyModel geneartes Play {} with Weight: {}".format(i, weight))
+
             play = Play(units=units,
                         batch_size=batch_size,
                         weight=weight,
