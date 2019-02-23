@@ -227,9 +227,10 @@ def model_noise_test_generator():
     mu = 0
     sigma = 0.1
     points = 5000
-    units = 20
     nb_plays = 40
     state = 2
+
+    units = 20
     methods = ["mixed"]
     for method in methods:
         for weight in weights:
@@ -242,6 +243,7 @@ def model_noise_test_generator():
                     inputs, _ = tdata.DatasetLoader.load_data(fname)
                 except FileNotFoundError:
                     inputs = None
+
                 import time
                 start = time.time()
                 inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(nb_plays=nb_plays,
@@ -252,7 +254,7 @@ def model_noise_test_generator():
                 end = time.time()
                 LOG.debug("time cost: {} s".format(end-start))
 
-                fname = constants.FNAME_FORMAT['models_noise_test'].format(method=method, weight=weight, width=width, nb_plays=nb_plays, units=units, points=points, mu=mu, sigma=sigma, state=state)
+                fname = constants.FNAME_FORMAT['models_nb_plays_noise_test'].format(method=method, weight=weight, width=width, nb_plays=nb_plays, units=units, points=points, mu=mu, sigma=sigma, state=state)
                 tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
 
@@ -366,5 +368,5 @@ if __name__ == "__main__":
         markov_chain(argv.points, argv.mu, argv.sigma)
     if argv.model_noise:
         # model_generator_with_noise()
-        # model_noise_test_generator()
-        model_nb_plays_generator_with_noise()
+        model_noise_test_generator()
+        # model_nb_plays_generator_with_noise()
