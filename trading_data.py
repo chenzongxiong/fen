@@ -37,9 +37,13 @@ class DatasetGenerator(object):
     @classmethod
     def systhesis_mixed_input_generator(cls, points, mu, sigma):
         # NOTE: x = cos(t) + 0.7 cos(3.0 t) + 1.5 sin(2.3 t)
-        inputs1 = np.cos(np.linspace(-2*np.pi, 2*np.pi, points))
-        inputs2 = 0.7 * np.cos(3.0 * np.linspace(-2*np.pi, 2*np.pi, points))
-        inputs3 = 1.5 * np.sin(2.3 * np.linspace(-2*np.pi, 2*np.pi, points))
+        # NOTE: x = cos(0.1 t) + 0.7 cos(0.2 t) + 1.5 sin(2.3 t)
+        inputs1 = np.cos(0.2 * np.linspace(-2*np.pi, 2*np.pi, points))
+        # inputs2 = 0.7 * np.cos(2 * np.linspace(-2*np.pi, 2*np.pi, points))
+        # inputs3 = 1.5 * np.sin(2.3 * np.linspace(-2*np.pi, 2*np.pi, points))
+
+        inputs2 = 0.7 * np.cos(0.4 * np.linspace(-2*np.pi, 2*np.pi, points))
+        inputs3 = 1.5 * np.sin(0.8 * np.linspace(-2*np.pi, 2*np.pi, points))
         inputs = (inputs1 + inputs2 + inputs3).astype(np.float32)
         LOG.debug("Generate the input sequence according to formula {}".format(colors.red("[x = cos(t) + 0.7 cos(3.0 t)  + 1.5 sin (2.3 t)]")))
 
@@ -90,11 +94,10 @@ class DatasetGenerator(object):
         return _inputs, _outputs
 
     @classmethod
-    def systhesis_model_generator(cls, nb_plays=1, points=1000, units=1, debug_plays=False, inputs=None, batch_size=50):
-        model = core.MyModel(nb_plays=nb_plays, units=units, debug=True, batch_size=batch_size)
+    def systhesis_model_generator(cls, nb_plays=1, points=1000, units=1, debug_plays=False, inputs=None, batch_size=50, mu=0, sigma=0.01):
+        model = core.MyModel(nb_plays=nb_plays, units=units, debug=True, batch_size=batch_size, activation=None)
         if inputs is None:
-            # _inputs = cls.systhesis_input_generator(points)
-            raise
+            _inputs = cls.systhesis_mixed_input_generator(points, mu, sigma)
         else:
             _inputs = inputs
 

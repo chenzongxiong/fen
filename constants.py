@@ -125,17 +125,24 @@ FNAME_FORMAT = dict(
 
 
     mc="./training-data/mc/points-{points}/mu-{mu}/sigma-{sigma}/base.csv",
-    F="./training-data/F/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-{loss}.csv",
-    F_loss_history="./training-data/F/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-loss-history-{loss}.csv",
-    F_predictions="./training-data/F/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/predictions-{loss}.csv",
-    F_gif="./pics/F/method-{method}/weigth-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-{loss}.gif",
-    F_gif_snake="./pics/F/method-{method}/weigth-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/snake-{loss}.gif",
-    G_predictions="./training-data/G/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/predictions-{loss}.csv",
-    G_loss="./training-data/G/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-loss-{loss}.csv",
-    G_loss_history="./training-data/G/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-loss-history-{loss}.csv",
-    G_gif="./pics/G/method-{method}/weigth-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-{loss}.gif",
-    G_gif_snake="./pics/F/method-{method}/weigth-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/snake-{loss}.gif",
-)
+    # F="./training-data/F/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-{loss}.csv",
+    # F_loss_history="./training-data/F/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-loss-history-{loss}.csv",
+    # F_predictions="./training-data/F/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/predictions-{loss}.csv",
+    # F_gif="./pics/F/method-{method}/weigth-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-{loss}.gif",
+    # F_gif_snake="./pics/F/method-{method}/weigth-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/snake-{loss}.gif",
+    # G_predictions="./training-data/G/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/predictions-{loss}.csv",
+    # G_loss="./training-data/G/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-loss-{loss}.csv",
+    # G_loss_history="./training-data/G/method-{method}/weight-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-loss-history-{loss}.csv",
+    # G_gif="./pics/G/method-{method}/weigth-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/base-{loss}.gif",
+    # G_gif_snake="./pics/F/method-{method}/weigth-{weight}/width-{width}/activation-{activation}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/snake-{loss}.gif",
+
+    F="./training-data/F/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/base-{loss}.csv",
+    F_predictions="./training-data/F/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/predictions-{loss}.csv",
+    F_loss_history="./training-data/F/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/loss_history-{loss}.csv",
+    F_saved_weights="./training-data/F/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/weights-{loss}.h5",
+    F_gif="./pics/F/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/base-{loss}.gif",
+    F_gif_snake="./pics/F/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/snake-{loss}.gif",
+    )
 
 CPU_COUNTS = min(os.cpu_count(), 32)
 

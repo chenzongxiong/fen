@@ -113,7 +113,6 @@ if __name__ == "__main__":
     #                                                                   mu=mu,
     #                                                                   sigma=sigma,
     #                                                                   points=points)
-
     #             inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
 
     #             # inputs, outputs_ = inputs[:40], outputs_[:40]

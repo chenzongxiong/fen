@@ -19,37 +19,40 @@ EPOCHS = constants.EPOCHS
 points = constants.POINTS
 
 
-def fit(inputs, outputs, units, activation, width, true_weight, loss='mse', mu=0, sigma=0.01, loss_file_name="./tmp/trainF-loss.csv"):
-    mu = float(mu)
-    sigma = float(sigma)
-    fname = constants.FNAME_FORMAT['mc'].format(mu=mu, sigma=sigma, points=inputs.shape[-1])
-    try:
-        B, _ = tdata.DatasetLoader.load_data(fname)
-    except:
-        B = tdata.DatasetGenerator.systhesis_markov_chain_generator(inputs.shape[-1], mu, sigma)
-        fname = constants.FNAME_FORMAT['mc'].format(points=inputs.shape[-1], mu=mu, sigma=sigma)
-        tdata.DatasetSaver.save_data(B, B, fname)
+def fit(inputs, outputs, units, activation, width, true_weight, loss='mse', mu=0, sigma=0.01, loss_file_name="./tmp/trainF-loss.csv", nb_plays=1, learning_rate=0.1, weights_fname="model.h5"):
+    # mu = float(mu)
+    # sigma = float(sigma)
+    # fname = constants.FNAME_FORMAT['mc'].format(mu=mu, sigma=sigma, points=inputs.shape[-1])
+    # try:
+    #     B, _ = tdata.DatasetLoader.load_data(fname)
+    # except:
+    B = tdata.DatasetGenerator.systhesis_markov_chain_generator(inputs.shape[-1], mu, sigma)
+    # fname = constants.FNAME_FORMAT['mc'].format(points=inputs.shape[-1], mu=mu, sigma=sigma)
+    # tdata.DatasetSaver.save_data(B, B, fname)
 
     units = units
-    batch_size = 10
-    epochs = EPOCHS // batch_size
+    batch_size = 1
+    epochs = 200
+    # epochs = EPOCHS // batch_size
     steps_per_epoch = batch_size
 
     train_inputs, train_outputs = inputs, outputs
 
     import time
     start = time.time()
-    nb_plays = 4
-    play = MyModel(batch_size=batch_size,
-                    units=units,
-                    activation="tanh",
-                    nb_plays=nb_plays)
-    play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch, loss_file_name=loss_file_name)
+    agent = MyModel(batch_size=batch_size,
+                   units=units,
+                   activation="tanh",
+                   nb_plays=nb_plays)
+    agent.load_weights(weights_fname)
+    agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch, loss_file_name=loss_file_name,
+              learning_rate=learning_rate)
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
-    predictions = play.predict(inputs)
+    predictions = agent.predict(inputs)
+    agent.save_weights(weights_fname)
 
-    prices = play.predict(B)
+    prices = agent.predict(B)
     B = B.reshape(-1)
     prices = prices.reshape(-1)
     return B, prices, predictions
@@ -63,7 +66,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--loss", dest="loss",
-                        required=True)
+                        required=False)
     parser.add_argument("--mu", dest="mu",
                         required=False,
                         type=float)
@@ -76,53 +79,102 @@ if __name__ == "__main__":
 
     argv = parser.parse_args(sys.argv[1:])
 
-    loss_name = argv.loss
-    mu = argv.mu or 0
-    sigma = argv.sigma or 0.01
-    units = argv.units or 1
+    learning_rate = 0.006
+    # loss_name = argv.loss
+    loss_name = 'mse'
 
+    mu = 0
+    sigma = 0.01
+    nb_plays = 20
+    units = 20
+
+    points = 1000
+    state = 0
     activation = "tanh"
 
     for method in methods:
         for weight in weights:
             for width in widths:
-                LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points)
+                LOG.debug("Processing method: {}, weight: {}, width: {}, units: {}, nb_plays: {}, mu: {}, sigma: {}, points: {}, state: {}".format(method, weight, width, units, nb_plays, mu, sigma, points, state))
+                fname = constants.FNAME_FORMAT["models_noise"].format(method=method,
+                                                                      weight=weight,
+                                                                      width=width,
+                                                                      nb_plays=nb_plays,
+                                                                      units=units,
+                                                                      mu=mu,
+                                                                      sigma=sigma,
+                                                                      points=points)
+
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
                 inputs, outputs_ = outputs_, inputs  # F neural network
-                inputs, outputs_ = inputs[:1000], outputs_[:1000]
-                # increase *units* in order to increase the capacity of the model
-                # for units in _units:
+                # inputs, outputs_ = inputs[:1000], outputs_[:1000]
                 if True:
                     loss_file_name = constants.FNAME_FORMAT['F_loss_history'].format(method=method,
                                                                                      weight=weight,
-                                                                                     activation=activation,
-                                                                                     units=units,
                                                                                      width=width,
+                                                                                     nb_plays=nb_plays,
+                                                                                     units=units,
                                                                                      mu=mu,
                                                                                      sigma=sigma,
                                                                                      points=points,
-                                                                                     loss=loss_name)
-                    B, prices, predictions = fit(inputs, outputs_, units, activation, width, weight, loss_name, mu=mu, sigma=sigma, loss_file_name=loss_file_name)
+                                                                                     loss=loss_name,
+                                                                                     nb_plays_=nb_plays,
+                                                                                     batch_size=1,
+                                                                                     state=state)
+                    weights_fname = constants.FNAME_FORMAT['F_saved_weights'].format(method=method,
+                                                                                     weight=weight,
+                                                                                     width=width,
+                                                                                     nb_plays=nb_plays,
+                                                                                     units=units,
+                                                                                     mu=mu,
+                                                                                     sigma=sigma,
+                                                                                     points=points,
+                                                                                     loss=loss_name,
+                                                                                     nb_plays_=nb_plays,
+                                                                                     batch_size=1,
+                                                                                     state=state)
+
+
+                    B, prices, predictions = fit(inputs=inputs,
+                                                 outputs=outputs_,
+                                                 units=units,
+                                                 activation=activation,
+                                                 width=width,
+                                                 true_weight=weight,
+                                                 loss=loss_name,
+                                                 mu=mu,
+                                                 sigma=sigma,
+                                                 loss_file_name=loss_file_name,
+                                                 nb_plays=nb_plays,
+                                                 learning_rate=learning_rate,
+                                                 weights_fname=weights_fname)
 
                     fname = constants.FNAME_FORMAT['F'].format(method=method,
                                                                weight=weight,
-                                                               activation=activation,
-                                                               units=units,
                                                                width=width,
+                                                               nb_plays=nb_plays,
+                                                               units=units,
                                                                mu=mu,
                                                                sigma=sigma,
                                                                points=points,
-                                                               loss=loss_name)
+                                                               loss=loss_name,
+                                                               nb_plays_=nb_plays,
+                                                               batch_size=1,
+                                                               state=state)
+
                     tdata.DatasetSaver.save_data(inputs, predictions, fname)
+
                     fname = constants.FNAME_FORMAT['F_predictions'].format(method=method,
                                                                            weight=weight,
-                                                                           activation=activation,
-                                                                           units=units,
                                                                            width=width,
+                                                                           nb_plays=nb_plays,
+                                                                           units=units,
                                                                            mu=mu,
                                                                            sigma=sigma,
                                                                            points=points,
-                                                                           loss=loss_name)
+                                                                           loss=loss_name,
+                                                                           nb_plays_=nb_plays,
+                                                                           batch_size=1,
+                                                                           state=state)
 
                     tdata.DatasetSaver.save_data(B, prices, fname)

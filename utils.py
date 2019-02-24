@@ -32,8 +32,11 @@ def update(i, *fargs):
         for x in range(len(colors)):
             ax.scatter(inputs[i:i+step, x], outputs[i:i+step, x], color=colors[x])
     elif mode == "snake":
+        inputs_len = inputs.shape[0] // 2
         for x in range(len(colors)):
-            ax.scatter(inputs[i:i+10, x], outputs[i:i+10, x], color=colors[x])
+            ax.scatter(inputs[0:inputs_len, x], outputs[0:inputs_len, x], color='cyan')
+        for x in range(len(colors)):
+            ax.scatter(inputs[i+inputs_len:i+step+inputs_len, x], outputs[i+inputs_len:i+step+inputs_len, x], color=colors[x])
 
 
 def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
@@ -62,8 +65,9 @@ def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
     ax.set_ylim(ylim)
     fargs=(inputs, outputs, ax, colors, mode, step, xlim, ylim)
 
-    anim = FuncAnimation(fig, update, frames=np.arange(0, points, step),
-                         fargs=fargs, interval=300)
+    anim = FuncAnimation(fig, update, frames=np.arange(0, points//2, step),
+                         fargs=fargs, interval=400)
+
     anim.save(fname, dpi=40, writer='imagemagick')
 
 
