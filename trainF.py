@@ -32,7 +32,7 @@ def fit(inputs, outputs, units, activation, width, true_weight, loss='mse', mu=0
 
     units = units
     batch_size = 1
-    epochs = 200
+    epochs = 500
     # epochs = EPOCHS // batch_size
     steps_per_epoch = batch_size
 
@@ -79,13 +79,14 @@ if __name__ == "__main__":
 
     argv = parser.parse_args(sys.argv[1:])
 
-    learning_rate = 0.006
+    learning_rate = 0.005
     # loss_name = argv.loss
     loss_name = 'mse'
 
     mu = 0
     sigma = 0.01
     nb_plays = 20
+    nb_plays_ = 80
     units = 20
 
     points = 1000
@@ -118,7 +119,7 @@ if __name__ == "__main__":
                                                                                      sigma=sigma,
                                                                                      points=points,
                                                                                      loss=loss_name,
-                                                                                     nb_plays_=nb_plays,
+                                                                                     nb_plays_=nb_plays_,
                                                                                      batch_size=1,
                                                                                      state=state)
                     weights_fname = constants.FNAME_FORMAT['F_saved_weights'].format(method=method,
@@ -130,7 +131,7 @@ if __name__ == "__main__":
                                                                                      sigma=sigma,
                                                                                      points=points,
                                                                                      loss=loss_name,
-                                                                                     nb_plays_=nb_plays,
+                                                                                     nb_plays_=nb_plays_,
                                                                                      batch_size=1,
                                                                                      state=state)
 
@@ -145,7 +146,7 @@ if __name__ == "__main__":
                                                  mu=mu,
                                                  sigma=sigma,
                                                  loss_file_name=loss_file_name,
-                                                 nb_plays=nb_plays,
+                                                 nb_plays=nb_plays_,
                                                  learning_rate=learning_rate,
                                                  weights_fname=weights_fname)
 
@@ -158,7 +159,7 @@ if __name__ == "__main__":
                                                                sigma=sigma,
                                                                points=points,
                                                                loss=loss_name,
-                                                               nb_plays_=nb_plays,
+                                                               nb_plays_=nb_plays_,
                                                                batch_size=1,
                                                                state=state)
 
@@ -173,7 +174,7 @@ if __name__ == "__main__":
                                                                            sigma=sigma,
                                                                            points=points,
                                                                            loss=loss_name,
-                                                                           nb_plays_=nb_plays,
+                                                                           nb_plays_=nb_plays_,
                                                                            batch_size=1,
                                                                            state=state)
 
