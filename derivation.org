@@ -1,0 +1,92 @@
+#+AUTHOR:
+First we only consider *one play*
+\begin{eqnarray}
+G(P_{n}, w^{1}) = \sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} P_{n} + \theta_{i0}) + \tilde{\theta_{0}}
+\end{eqnarray}
+
+Where \(P_{n} = [p_{1}, p_{2}, p_{3}, ..., p_{n}]\), \(G(P_{n}, w^{1}) = [y_{1}, y_{2}, y_{3}, ..., y_{n}]\)
+
+\(\forall{i} \in [1, ..., S]\), \(\theta_{i} P_{n} = (\theta_{i} p_{1}, \theta_{i} p_{2}, \theta_{i} p_{3}, ..., \theta_{i} p_{n})\),
+
+So
+\(\tanh(\theta_{i} P_{n} + \theta_{i0}) =
+[\tanh(\theta_{i} p_{1} + \theta_{i0}),
+\tanh(\theta_{i} p_{2} + \theta_{i0}),
+\tanh(\theta_{i} p_{3} + \theta_{i0}),
+...,
+\tanh(\theta_{i} p_{n} + \theta_{i0})]\)
+
+So \(\sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} P_{n} + \theta_{i0}) + \tilde{\theta_{0}} =
+[\sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} p_{1} + \theta_{i0}) + \tilde{\theta_{0}},
+\sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} p_{2} + \theta_{i0}) + \tilde{\theta_{0}},
+...,
+\sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} p_{n} + \theta_{i0}) + \tilde{\theta_{0}}] =
+[y_{1}, y_{2}, ..., y_{n}]\).
+
+Take \(y_{j}\), where \(j \in [1, ..., n]\) for example
+
+\begin{eqnarray}
+y_{j}  = \sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} p_{j} + \theta_{i0}) + \theta_{i0}
+\end{eqnarray}
+
+Calculate derivation for \(y_{j}\)
+\begin{eqnarray}
+\frac{\partial y_{j}}{\partial p_{j}} &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \frac{\partial \tanh(\theta_{i} p_{j} + \theta_{i0})}{\partial p_{j}}  \\
+                                      &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} (1 - \tanh^{2}(\theta_{i} p_{j} + \theta_{i0}))
+\end{eqnarray}
+
+Now let's consider the mapping between \(p_{j}\) and \(x_{j}\).
+\begin{eqnarray}
+p_{j} = \Phi(w_{1} x_{j} - p_{j-1}) + p_{j-1}
+\end{eqnarray}
+
+and
+
+\begin{eqnarray}
+\Phi(x) =
+        \begin{cases}
+        x, x > 0 \\
+        0, -1 < x < 0 \\
+        x-1, x < -1 \\
+        \end{cases}
+
+\end{eqnarray}
+
+Using Chain Rule, we obtain
+\begin{eqnarray}
+\frac{\partial y_{j}}{\partial x_{j}} &=& \frac{\partial y_{j}}{\partial p_{j}} \frac{\partial p_{j}}{\partial x_{j}} \\
+                                      &=& \begin{cases}
+                                      0, -1 < w_{1} x_{j} - p_{j-1} < 0 \\
+                                      \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} (1 - \tanh^{2}(\theta_{i} p_{j} + \theta_{i0})) w^{1}, \text{otherwise}
+                                      \end{cases}
+\end{eqnarray}
+
+
+To consider *multiple plays* case, we reformulate the derivation as following:
+
+\begin{eqnarray}
+\frac{\partial {y_{j}^{1}}}{\partial x_{j}} &=& \frac{\partial{y_{j}^{1}}}{\partial{p_{j}^{1}}} \frac{\partial{ p_{j}}^{1}}{\partial x_{j}} \\
+                                      &=& \begin{cases}
+                                      0, -1 < w_{1} x_{j} - p_{j-1} < 0 \\
+                                      \sum_{i=1}^{S} \tilde{\theta_{i}^{1}} \theta_{i}^{1} (1 - \tanh^{2}(\theta_{i}^{1} p_{j}^{1} + \theta_{i0}^{1})) w^{1}, \text{otherwise}
+                                      \end{cases}
+\end{eqnarray}
+
+
+Now from the architecture, we know that if we have \(P\) plays,
+\begin{eqnarray}
+F = \frac{1}{P} \sum_{i=1}^{P} G^{i}
+\end{eqnarray}
+Where \(F=[f_1, f_2, ..., f_n]\),
+and
+\begin{eqnarray}
+f_{j} = \frac{1}{P} \sum_{i=1}^{P} y_{j}^{i}
+\end{eqnarray}
+
+our derivation is:
+
+\begin{eqnarray}
+\frac{\partial f_{j}}{\partial x_{j}} &=& \frac{1}{P} \sum_{k=1}^{P} \frac{\partial {{y_{j}^{k}}}}{\partial {{x_{j}}}} \\
+               &=& \frac{1}{P} \sum_{k=1}^{P} \frac{\partial {y_{j}^{k}}}{\partial {p_{j}^{k}}} \frac{\partial {p_{j}^{k}}}{\partial {x_{j}}} \\
+               &=&                        \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \theta_{i}^{k} (1 - \tanh^{2}(\theta_{i}^{k} p_{j}^{k} + \theta_{i0}^{k})) w^{k}
+\end{eqnarray}
