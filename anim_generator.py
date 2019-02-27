@@ -233,12 +233,13 @@ def F_generator():
     activation = "tanh"
     loss_name = 'mse'
     mu = 0
-    sigma = 0.1
+    sigma = 0.01
     nb_plays = 20
     units = 20
     points = 1000
     state = 0
     activation = 'tanh'
+    nb_plays_ = 40
 
     for method in methods:
         for weight in weights:
@@ -265,7 +266,7 @@ def F_generator():
                                                                weight=weight,
                                                                width=width,
                                                                nb_plays=nb_plays,
-                                                               nb_plays_=nb_plays,
+                                                               nb_plays_=nb_plays_,
                                                                units=units,
                                                                loss=loss_name,
                                                                mu=mu,
@@ -286,7 +287,7 @@ def F_generator():
                                                                    mu=mu,
                                                                    sigma=sigma,
                                                                    points=points,
-                                                                   nb_plays_=nb_plays,
+                                                                   nb_plays_=nb_plays_,
                                                                    batch_size=1,
                                                                    state=state,
                                                                    loss=loss_name)
@@ -295,7 +296,7 @@ def F_generator():
                                                                          weight=weight,
                                                                          width=width,
                                                                          nb_plays=nb_plays,
-                                                                         nb_plays_=nb_plays,
+                                                                         nb_plays_=nb_plays_,
                                                                          units=units,
                                                                          mu=mu,
                                                                          sigma=sigma,
@@ -310,9 +311,9 @@ def G_generator():
     activation = "tanh"
     loss_name = 'mse'
     # _units = 10
-    units = 10
+    units = 20
     mu = 0
-    sigma = 0.01
+    sigma = 0.001
     nb_plays_ = 4
     batch_size = 10
     points = 500
@@ -559,13 +560,16 @@ def model_noise_test_generator():
 
 def model_nb_plays_generator_with_noise():
     mu = 0
-    # sigma = 0.1
-    sigma = 1.5
+    sigma = 0.01
+    # sigma = 0.001
+    # sigma = 2
+    sigma = 2
     points = 1000
-    nb_plays = [4]
-    step = 1
+    nb_plays = [20]
+    step = 60
     units = 20
-
+    period = 1
+    interp = 10
     loss_name = 'mse'
 
     for method in methods:
@@ -582,7 +586,6 @@ def model_nb_plays_generator_with_noise():
                                                                                    mu=mu,
                                                                                    sigma=sigma)
                     _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
-                    # _inputs, ground_truth = _inputs[:700], ground_truth[:700]
                     __nb_plays = _nb_plays
                     bz = 1
                     if True:
@@ -600,28 +603,96 @@ def model_nb_plays_generator_with_noise():
                             #                                                                            loss=loss_name)
                             try:
                                 _, predictions = tdata.DatasetLoader.load_data(fname)
-                                # predictions = predictions[:700]
                             except:
                                 continue
+
+                            if interp != 1:
+                                # import scipy as sp
+                                from scipy.interpolate import interp1d
+
+                                t_ = np.linspace(1, points, points)
+
+                                f1 = interp1d(t_, _inputs)
+                                f2 = interp1d(t_, _inputs, kind='cubic')
+                                import matplotlib.pyplot as plt
+                                t_interp = np.linspace(1, points, (int)(interp*points-interp+1))
+                                # plt.plot(t_[:20], _inputs[:20], 'o', t_interp[:99], f1(t_interp[:99]), '-', t_interp[:99], f2(t_interp[:99]), '--')
+
+                                # plt.show()
+                                _inputs_interp = np.interp(t_interp, t_, _inputs)
+                                _inputs_interp = f2(t_interp)
+
+                                ground_truth_interp = np.interp(_inputs_interp, _inputs, ground_truth, period=1)
+                                predictions_interp = np.interp(_inputs_interp, _inputs, predictions, period=1)
+
+                                # indx = np.argsort(_inputs_interp)
+                                # idnx = np.argsort(_inputs)
+                                # _inputs_tmp = np.sort(_inputs)
+                                # ground_truth_tmp = ground_truth[idnx]
+                                # predictions_tmp = predictions[idnx]
+                                # f3 = interp1d(t_, ground_truth, kind='cubic')
+                                # f4 = interp1d(t_, predictions, kind='cubic')
+                                # ground_truth_interp = f3(t_interp)
+                                # predictions_interp = f4(t_interp)
+
+                                # fname = constants.FNAME_FORMAT["models_nb_plays_noise"].format(method=method,
+                                #                                                                weight=weight,
+                                #                                                                width=width,
+                                #                                                                nb_plays=_nb_plays,
+                                #                                                                units=units,
+                                #                                                                points=points,
+                                #                                                                mu=mu,
+                                #                                                                sigma=sigma)
+
+                                # import matplotlib.pyplot as plt
+                                # length = 10
+                                # plt.plot(t_[:length], _inputs[:length], 'o')
+                                # plt.plot(t_interp[:interp*length-1], _inputs_interp[:(interp*length-1)], '-x')
+                                # plt.show()
+                                # plt.plot(t_[:length], ground_truth[:length], 'o')
+                                # plt.plot(t_interp[:interp*length-1], ground_truth_interp[:(interp*length-1)], '-x')
+                                # plt.show()
+                                # utils.save_animation(t_, _inputs, "./1.gif", step=points, colors=['black'])
+                                # utils.save_animation(t_interp, _inputs_interp, "./1_interp.gif", step=points, colors=['black'])
+
+                                # utils.save_animation(t_, ground_truth, "./2.gif", step=points, colors=['black'])
+                                # utils.save_animation(t_interp, ground_truth_interp, "./2_interp.gif", step=points, colors=['black'])
+
+                                # tdata.DatasetSaver.save_data(t_, _inputs, "./1.csv")
+                                # tdata.DatasetSaver.save_data(t_interp, _inputs_interp, "./1_interp.csv")
+                                # tdata.DatasetSaver.save_data(t_, ground_truth, "./2.csv")
+                                # tdata.DatasetSaver.save_data(t_interp, ground_truth_interp, "./2_interp.csv")
+
+                                # import ipdb; ipdb.set_trace()
+
+                                _inputs = _inputs_interp
+                                ground_truth = ground_truth_interp
+                                predictions = predictions_interp
+
 
                             _inputs = np.hstack([_inputs, _inputs])
                             ground_truth = np.hstack([ground_truth, ground_truth])
                             predictions = np.hstack([predictions, predictions])
+
                             outputs = np.vstack([ground_truth, predictions]).T
                             colors = utils.generate_colors(outputs.shape[-1])
                             inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
-                            # fname = constants.FNAME_FORMAT["models_nb_plays_noise_gif"].format(method=method,
-                            #                                                                    weight=weight,
-                            #                                                                    width=width,
-                            #                                                                    nb_plays=_nb_plays,
-                            #                                                                    nb_plays_=__nb_plays,
-                            #                                                                    batch_size=bz,
-                            #                                                                    units=units,
-                            #                                                                    points=points,
-                            #                                                                    mu=mu,
-                            #                                                                    sigma=sigma,
-                            #                                                                    loss=loss_name)
-                            # utils.save_animation(inputs, outputs, fname, step=40, colors=colors)
+                            fname = constants.FNAME_FORMAT["models_nb_plays_noise_gif"].format(method=method,
+                                                                                               weight=weight,
+                                                                                               width=width,
+                                                                                               nb_plays=_nb_plays,
+                                                                                               nb_plays_=__nb_plays,
+                                                                                               batch_size=bz,
+                                                                                               units=units,
+                                                                                               points=points,
+                                                                                               mu=mu,
+                                                                                               sigma=sigma,
+                                                                                               loss=loss_name)
+
+                            # step = inputs.shape[-1]
+                            # step = inputs.shape[0] // 2
+
+                            # utils.save_animation(inputs, outputs, fname, step=step, colors=colors)
                             fname = constants.FNAME_FORMAT["models_nb_plays_noise_gif_snake"].format(method=method,
                                                                                                      weight=weight,
                                                                                                      width=width,
@@ -636,17 +707,18 @@ def model_nb_plays_generator_with_noise():
 
                             utils.save_animation(inputs, outputs, fname, step=step, colors=colors, mode="snake")
 
-                            # fname = constants.FNAME_FORMAT["models_nb_plays_noise_ts_outputs_gif"].format(method=method,
-                            #                                                                               weight=weight,
-                            #                                                                               width=width,
-                            #                                                                               nb_plays=_nb_plays,
-                            #                                                                               nb_plays_=__nb_plays,
-                            #                                                                               batch_size=bz,
-                            #                                                                               units=units,
-                            #                                                                               points=points,
-                            #                                                                               mu=mu,
-                            #                                                                               sigma=sigma,
-                            #                                                                               loss=loss_name)
+                            fname = constants.FNAME_FORMAT["models_nb_plays_noise_ts_outputs_gif"].format(method=method,
+                                                                                                          weight=weight,
+                                                                                                          width=width,
+                                                                                                          nb_plays=_nb_plays,
+                                                                                                          nb_plays_=__nb_plays,
+                                                                                                          batch_size=bz,
+                                                                                                          units=units,
+                                                                                                          points=points,
+                                                                                                          mu=mu,
+                                                                                                          sigma=sigma,
+                                                                                                          loss=loss_name)
+
                             # _inputs = np.arange(points)
                             # inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
                             # utils.save_animation(inputs, outputs, fname, step=points, colors=colors)

@@ -575,7 +575,7 @@ class MyModel(object):
         _weight = 1.0
         for nb_play in range(nb_plays):
             # weight = np.random.uniform(0., 3.)
-            weight =  _weight / i
+            weight =  _weight / (i)
             LOG.debug("MyModel geneartes Play {} with Weight: {}".format(i, weight))
 
             play = Play(units=units,

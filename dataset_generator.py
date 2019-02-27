@@ -262,16 +262,19 @@ def model_noise_test_generator():
 def model_nb_plays_generator_with_noise():
     mu = 0
     # sigma = 0.1
+    # sigma = 0.001
+    # sigma = 0.01
+    # sigma = 0.001
     sigma = 2
     points = 1000
     units = 20
-    nb_plays = 4
+    nb_plays = 20
     method = ["sin"]
     for method in methods:
         for weight in weights:
             for width in widths:
-                LOG.debug("generate data for method {}, weight {}, width {}, units {}, nb_plays {}".format(
-                    method, weight, width, units, nb_plays
+                LOG.debug("generate data for method {}, weight {}, width {}, units {}, nb_plays {}, mu: {}, sigma: {}".format(
+                    method, weight, width, units, nb_plays, mu, sigma,
                 ))
 
                 inputs = None

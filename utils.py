@@ -9,6 +9,7 @@ import log as logging
 import colors
 
 LOG = logging.getLogger(__name__)
+np.random.seed(123)
 
 
 def update(i, *fargs):
@@ -28,6 +29,7 @@ def update(i, *fargs):
     if i % 100 == 0:
         LOG.info("Update animation frame: {}, step: {}".format(i, step))
 
+    s = [n*8 for n in range(step)]
     if mode == "sequence":
         for x in range(len(colors)):
             ax.scatter(inputs[i:i+step, x], outputs[i:i+step, x], color=colors[x])
@@ -36,7 +38,7 @@ def update(i, *fargs):
         for x in range(len(colors)):
             ax.scatter(inputs[0:inputs_len, x], outputs[0:inputs_len, x], color='cyan')
         for x in range(len(colors)):
-            ax.scatter(inputs[i+inputs_len:i+step+inputs_len, x], outputs[i+inputs_len:i+step+inputs_len, x], color=colors[x])
+            ax.scatter(inputs[i+inputs_len:i+step+inputs_len, x], outputs[i+inputs_len:i+step+inputs_len, x], color=colors[x], s=s)
 
 
 def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
@@ -65,10 +67,19 @@ def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
     ax.set_ylim(ylim)
     fargs=(inputs, outputs, ax, colors, mode, step, xlim, ylim)
 
-    anim = FuncAnimation(fig, update, frames=np.arange(0, points//2, step),
-                         fargs=fargs, interval=400)
+    anim = None
+    if mode == "sequence":
+        anim = FuncAnimation(fig, update, frames=np.arange(0, points//2, step),
+                             fargs=fargs, interval=400)
+    elif mode == "snake":
+        frame_step = step // 4
+        if frame_step == 0:
+            frame_step = 2
+        # frame_step = 2
+        anim = FuncAnimation(fig, update, frames=np.arange(0, points//2, frame_step),
+                             fargs=fargs, interval=400)
 
-    anim.save(fname, dpi=40, writer='imagemagick')
+    anim.save(fname, dpi=10, writer='imagemagick')
 
 
 COLORS = ["blue", "black", "orange", "cyan", "red", "magenta", "yellow", "green"]

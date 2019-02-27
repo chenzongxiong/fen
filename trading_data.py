@@ -15,9 +15,10 @@ class DatasetGenerator(object):
     def systhesis_input_generator(cls, points):
         # NOTE: x = sin(t) + 3 sin(1.3 t)  + 1.2 sin (1.6 t)
         inputs1 = np.sin(np.linspace(-2*np.pi, 2*np.pi, points))
-        inputs2 = 3 * np.sin(1.3* np.linspace(-2*np.pi, 2*np.pi, points))
-        inputs3 = 1.2 * np.sin(1.6 * np.linspace(-2*np.pi, 2*np.pi, points))
-        inputs = (inputs1 + inputs2 + inputs3).astype(np.float32)
+        # inputs2 = 3 * np.sin(1.3* np.linspace(-2*np.pi, 2*np.pi, points))
+        # inputs3 = 1.2 * np.sin(1.6 * np.linspace(-2*np.pi, 2*np.pi, points))
+        # inputs = (inputs1 + inputs2 + inputs3).astype(np.float32)
+        inputs = (inputs1).astype(np.float32)
         LOG.debug("Generate the input sequence according to formula {}".format(colors.red("[x = sin(t) + 3 sin(1.3 t)  + 1.2 sin (1.6 t)]")))
         return inputs
 
@@ -31,24 +32,26 @@ class DatasetGenerator(object):
         LOG.debug("Generate the input sequence according to formula {}".format(colors.red("[x = sin(t) + 0.3 sin(1.3 t)  + 1.2 sin (1.6 t)]")))
 
         noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
-        inputs += noise
+        inputs = noise
         return inputs
 
     @classmethod
     def systhesis_mixed_input_generator(cls, points, mu, sigma):
         # NOTE: x = cos(t) + 0.7 cos(3.0 t) + 1.5 sin(2.3 t)
         # NOTE: x = cos(0.1 t) + 0.7 cos(0.2 t) + 1.5 sin(2.3 t)
-        inputs1 = np.cos(0.2 * np.linspace(-2*np.pi, 2*np.pi, points))
-        # inputs2 = 0.7 * np.cos(2 * np.linspace(-2*np.pi, 2*np.pi, points))
-        # inputs3 = 1.5 * np.sin(2.3 * np.linspace(-2*np.pi, 2*np.pi, points))
-
-        inputs2 = 0.7 * np.cos(0.4 * np.linspace(-2*np.pi, 2*np.pi, points))
-        inputs3 = 1.5 * np.sin(0.8 * np.linspace(-2*np.pi, 2*np.pi, points))
+        inputs1 = np.cos(0.2 * np.linspace(-10*np.pi, 10*np.pi, points))
+        inputs2 = 0.7 * np.cos(2 * np.linspace(-10*np.pi, 10*np.pi, points))
+        inputs3 = 1.5 * np.sin(2.3 * np.linspace(-10*np.pi, 10*np.pi, points))
+        # inputs2 = 0.7 * np.cos(0.4 * np.linspace(-2*np.pi, 2*np.pi, points))
+        # inputs3 = 1.5 * np.sin(0.8 * np.linspace(-2*np.pi, 2*np.pi, points))
         inputs = (inputs1 + inputs2 + inputs3).astype(np.float32)
+        # inputs = (inputs1).astype(np.float32)
         LOG.debug("Generate the input sequence according to formula {}".format(colors.red("[x = cos(t) + 0.7 cos(3.0 t)  + 1.5 sin (2.3 t)]")))
 
         noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
-        inputs += noise
+        # inputs = 20 * inputs
+        # inputs += noise
+        inputs = noise
         return inputs
 
     @classmethod
