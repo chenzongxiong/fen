@@ -103,21 +103,44 @@ class PhiCell(Layer):
         """
         self._inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
         self._state = ops.convert_to_tensor(states[-1], dtype=tf.float32)
+        LOG.debug("inputs.shape: {}".format(inputs.shape))
+        LOG.debug("self._inputs.shape: {}".format(self._inputs))
 
         outputs_ = tf.multiply(self._inputs, self.kernel)
 
         # NOTE: unroll method, can we use RNN method ?
-        outputs = [self._state]
-        for i in range(outputs_.shape[-1].value):
-            output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1])), outputs[-1])
-            outputs.append(output)
-        outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
-        state = outputs[-1]
-        outputs = tf.reshape(outputs, shape=self._inputs.shape)
-        state = tf.reshape(state, shape=(1, 1))
+        # import ipdb; ipdb.set_trace()
+        # outputs = [self._state]
+        # for i in range(outputs_.shape[-1].value):
+        #     output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1])), outputs[-1])
+        #     outputs.append(output)
 
-        return outputs, [state]
+        # outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
 
+        # init = tf.global_variables_initializer()
+        # sess.run(init)
+        # LOG.debug("outputs: {}".format(sess.run(outputs)))
+        # LOG.debug("outputs.shape: {}".format(outputs.shape))
+
+        def steps(inputs, states):
+            outputs = Phi(tf.multiply(inputs, self.kernel) - states[-1]) + states[-1]
+            return outputs, [outputs]
+
+        # import ipdb; ipdb.set_trace()
+        inputs_ = tf.reshape(self._inputs, shape=(1, self._inputs.shape[0].value, 1))
+        self._states = ops.convert_to_tensor(states, dtype=tf.float32)
+        states_ = [tf.reshape(self._states, shape=(1, 1))]
+
+        last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_)
+        # import ipdb; ipdb.set_trace()
+        # state = outputs[-1]
+        # outputs = tf.reshape(outputs, shape=self._inputs.shape)
+
+        # LOG.debug("before reshaping state.shape: {}".format(state.shape))
+        # state = tf.reshape(state, shape=(-1, 1))
+        # LOG.debug("after reshaping state.shape: {}".format(state.shape))
+        # return outputs, [state]
+        return outputs_, states_x
 
 class Operator(RNN):
     def __init__(self, weight=1.0, width=1.0, debug=False):
@@ -303,16 +326,20 @@ class Play(object):
                 raise Exception("dimension of inputs must be equal to 1")
 
 
+
+        # length = self._batch_input_shape[0].value * self._batch_input_shape[1].value * self._batch_input_shape[2].value
         length = self._batch_input_shape[1].value * self._batch_input_shape[2].value
+
         timesteps = self._batch_input_shape[1].value
 
         self.model = tf.keras.models.Sequential()
 
-        self.model.add(tf.keras.layers.InputLayer(batch_size=1,
+        self.model.add(tf.keras.layers.InputLayer(batch_size=self.batch_size,
                                                   input_shape=self._batch_input_shape[1:]))
         self.model.add(Operator(weight=getattr(self, "_weight", None),
                                 width=getattr(self, "_width", None),
                                 debug=getattr(self, "_debug", False)))
+        # import ipdb; ipdb.set_trace()
         self.model.add(tf.keras.layers.Reshape(target_shape=(length, 1)))
 
         if self._network_type == constants.NetworkType.PLAY:
@@ -354,11 +381,11 @@ class Play(object):
         x = tf.reshape(inputs, shape=self._batch_input_shape)
         if outputs is not None:
             if self._network_type == constants.NetworkType.OPERATOR:
-                y = tf.reshape(outputs, shape=(1, -1, 1))
+                y = tf.reshape(outputs, shape=(self._batch_input_shape[0].value, -1, 1))
 
             elif self._network_type == constants.NetworkType.PLAY:
-                y = tf.reshape(outputs, shape=(1, -1, 1))
-
+                # y = tf.reshape(outputs, shape=(1, -1, 1))
+                y = tf.reshape(outputs, shape=(self._batch_input_shape[0].value, -1, 1))
                 # y = tf.manip.tile(outputs, [self.units])
                 # y = tf.reshape(y, shape=(1, -1, self.units))
                 # y = tf.reshape(outputs, shape=(1, -1))
@@ -682,8 +709,10 @@ class MyModel(object):
         writer.add_graph(tf.get_default_graph())
         loss_summary = tf.summary.scalar("loss", loss)
 
-        while i < epochs:
-            i += 1
+        # while i < epochs:
+        #     i += 1
+        for i in range(epochs):
+            # import ipdb; ipdb.set_trace()
             for j in range(steps_per_epoch):
                 cost = train_function(ins)[0]
             self.cost_history.append([i, cost])
@@ -692,6 +721,7 @@ class MyModel(object):
                 self.save_weights(fname)
             LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
 
+        import ipdb; ipdb.set_trace()
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
@@ -935,17 +965,16 @@ if __name__ == "__main__":
     # print("i: ", sess.run(i))
     # print("j: ", sess.run(tf.reduce_sum(g, axis=2)))
     # print("k: ", sess.run(tf.reduce_sum(g, axis=2)+k))
-    # import ipdb; ipdb.set_trace()
+    import ipdb; ipdb.set_trace()
 
+    phi_cell = PhiCell(weight=1.0, width=1.0, debug=True)
+    _x = np.array([-2.5, -1.5, -0.5, -0.7, 0.5, 1.5])
+    outputs = phi_cell(_x, [0])
 
-    # phi_cell = PhiCell(weight=1.0, width=1.0, debug=True)
-    # _x = np.array([-2.5, -1.5, -0.5, -0.7, 0.5, 1.5])
-    # outputs = phi_cell(_x, [0])
+    init = tf.global_variables_initializer()
+    sess.run(init)
 
-    # init = tf.global_variables_initializer()
-    # sess.run(init)
-
-    # LOG.debug("outputs: {}".format(sess.run(outputs)))
+    LOG.debug("outputs: {}".format(sess.run(outputs)))
 
     # _x = np.array([-2.5, -1.5, -0.5, -0.7, 0.5, 1.5])
     # import trading_data as tdata
@@ -1002,29 +1031,31 @@ if __name__ == "__main__":
     # steps_per_epoch = batch_size
     # units = 4
 
-    LOG.debug(colors.red("Test Operator"))
-    fname = constants.FNAME_FORMAT["operators"].format(method="sin", weight=1, width=1)
+    # LOG.debug(colors.red("Test Operator"))
+    # fname = constants.FNAME_FORMAT["operators"].format(method="sin", weight=1, width=1)
 
-    inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    LOG.debug("timestap is: {}".format(inputs.shape[0]))
+    # inputs, outputs = tdata.DatasetLoader.load_data(fname)
+    # LOG.debug("timestap is: {}".format(inputs.shape[0]))
 
-    batch_size = 20
-    epochs = 5000 // batch_size
-    steps_per_epoch = batch_size
-    units = 10
+    # batch_size = 20
+    # epochs = 5000 // batch_size
+    # steps_per_epoch = batch_size
+    # units = 10
 
-    play = Play(batch_size=batch_size,
-                units=units,
-                activation=None,
-                network_type=constants.NetworkType.OPERATOR)
+    # play = Play(batch_size=batch_size,
+    #             units=units,
+    #             activation=None,
+    #             network_type=constants.NetworkType.OPERATOR)
 
-    play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    # play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
 
     # LOG.debug("number of layer is: {}".format(play.number_of_layers))
     # LOG.debug("weight: {}".format(play.weight))
 
     LOG.debug(colors.red("Test Play"))
-    batch_size = 10
+    batch_size = 1
+    timestep = 500
+    input_dim = 1
     units = 20
     epochs = 1500 // batch_size
     steps_per_epoch = batch_size
@@ -1032,21 +1063,23 @@ if __name__ == "__main__":
     fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1, points=500)
 
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    length = 20
+    length = 500
     inputs, outputs = inputs[:length], outputs[:length]
 
     # LOG.debug("timestap is: {}".format(inputs.shape[0]))
 
     # import time
     # start = time.time()
-    # play = Play(batch_size=batch_size,
-    #             units=units,
-    #             activation="tanh",
-    #             network_type=constants.NetworkType.PLAY,
-    #             loss='mse',
-    #             debug=True)
+    play = Play(batch_size=batch_size,
+                units=units,
+                activation="tanh",
+                network_type=constants.NetworkType.PLAY,
+                loss='mse',
+                debug=True,
+                timestep=timestep,
+                input_dim=input_dim)
 
-    # play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
     # end = time.time()
     # LOG.debug("time cost: {}s".format(end-start))
 

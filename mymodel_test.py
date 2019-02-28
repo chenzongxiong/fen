@@ -24,9 +24,11 @@ def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method
     steps_per_epoch = batch_size
 
     start = time.time()
-
-    agent = MyModel(input_dim=500,
-                    timestep=2,
+    input_dim = 1
+    # timestep = 100 // input_dim
+    timestep = 1000
+    agent = MyModel(input_dim=input_dim,
+                    timestep=timestep,
                     units=units,
                     activation="tanh",
                     nb_plays=nb_plays)
@@ -88,8 +90,8 @@ if __name__ == "__main__":
 
     points = 1000
     nb_plays = 20
-    nb_plays_ = nb_plays
-    # nb_plays_ = 1
+    # nb_plays_ = nb_plays
+    nb_plays_ = 20
     # train dataset
     mu = 0
     # sigma = 0.1
