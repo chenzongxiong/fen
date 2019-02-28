@@ -96,8 +96,8 @@ if __name__ == "__main__":
     mu = 0
     # sigma = 0.1
     # state = 2
-    # sigma = 2
-    sigma = 0.1
+    sigma = 2
+    # sigma = 0.1
     state = 0
 
     activation = 'tanh'
@@ -112,53 +112,30 @@ if __name__ == "__main__":
         for weight in weights:
             for width in widths:
                 LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = constants.FNAME_FORMAT["models_noise"].format(method=method,
-                                                                      weight=weight,
-                                                                      width=width,
-                                                                      nb_plays=nb_plays,
-                                                                      units=units,
-                                                                      mu=mu,
-                                                                      sigma=sigma,
-                                                                      points=points)
-                # fname = constants.FNAME_FORMAT["models_nb_plays_noise"].format(method=method,
-                #                                                                weight=weight,
-                #                                                                width=width,
-                #                                                                nb_plays=nb_plays,
-                #                                                                units=units,
-                #                                                                points=points,
-                #                                                                mu=mu,
-                #                                                                sigma=sigma)
+                # fname = constants.FNAME_FORMAT["models_noise"].format(method=method,
+                #                                                       weight=weight,
+                #                                                       width=width,
+                #                                                       nb_plays=nb_plays,
+                #                                                       units=units,
+                #                                                       mu=mu,
+                #                                                       sigma=sigma,
+                #                                                       points=points)
+                fname = constants.FNAME_FORMAT["models_nb_plays_noise"].format(method=method,
+                                                                               weight=weight,
+                                                                               width=width,
+                                                                               nb_plays=nb_plays,
+                                                                               units=units,
+                                                                               points=points,
+                                                                               mu=mu,
+                                                                               sigma=sigma)
 
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
+                import ipdb; ipdb.set_trace()
 
-                # inputs, outputs_ = inputs[:40], outputs_[:40]
                 # increase *units* in order to increase the capacity of the model
                 # for units in _units:
                 if True:
-                    loss_history_file = constants.FNAME_FORMAT["models_noise_loss_history"].format(method=method,
-                                                                                                   weight=weight,
-                                                                                                   width=width,
-                                                                                                   nb_plays=nb_plays,
-                                                                                                   units=units,
-                                                                                                   mu=mu,
-                                                                                                   sigma=sigma,
-                                                                                                   nb_plays_=nb_plays_,
-                                                                                                   batch_size=batch_size,
-                                                                                                   loss=loss_name,
-                                                                                                   points=points)
-                    weights_fname = constants.FNAME_FORMAT["models_noise_saved_weights"].format(method=method,
-                                                                                                weight=weight,
-                                                                                                width=width,
-                                                                                                nb_plays=nb_plays,
-                                                                                                units=units,
-                                                                                                mu=mu,
-                                                                                                sigma=sigma,
-                                                                                                nb_plays_=nb_plays_,
-                                                                                                batch_size=batch_size,
-                                                                                                loss=loss_name,
-                                                                                                points=points)
-
-                    # loss_history_file = constants.FNAME_FORMAT["models_nb_plays_noise_loss_history"].format(method=method,
+                    # loss_history_file = constants.FNAME_FORMAT["models_noise_loss_history"].format(method=method,
                     #                                                                                weight=weight,
                     #                                                                                width=width,
                     #                                                                                nb_plays=nb_plays,
@@ -169,7 +146,7 @@ if __name__ == "__main__":
                     #                                                                                batch_size=batch_size,
                     #                                                                                loss=loss_name,
                     #                                                                                points=points)
-                    # weights_fname = constants.FNAME_FORMAT["models_nb_plays_noise_saved_weights"].format(method=method,
+                    # weights_fname = constants.FNAME_FORMAT["models_noise_saved_weights"].format(method=method,
                     #                                                                             weight=weight,
                     #                                                                             width=width,
                     #                                                                             nb_plays=nb_plays,
@@ -181,20 +158,31 @@ if __name__ == "__main__":
                     #                                                                             loss=loss_name,
                     #                                                                             points=points)
 
-                    predictions, loss = fit(inputs, outputs_, units, activation, width, weight, method, nb_plays_, batch_size, loss_name, loss_history_file, learning_rate, weights_fname)
-                    fname = constants.FNAME_FORMAT["models_noise_loss"].format(method=method,
-                                                                               weight=weight,
-                                                                               width=width,
-                                                                               nb_plays=nb_plays,
-                                                                               units=units,
-                                                                               mu=mu,
-                                                                               sigma=sigma,
-                                                                               nb_plays_=nb_plays_,
-                                                                               batch_size=batch_size,
-                                                                               loss=loss_name,
-                                                                               points=points)
+                    loss_history_file = constants.FNAME_FORMAT["models_nb_plays_noise_loss_history"].format(method=method,
+                                                                                                   weight=weight,
+                                                                                                   width=width,
+                                                                                                   nb_plays=nb_plays,
+                                                                                                   units=units,
+                                                                                                   mu=mu,
+                                                                                                   sigma=sigma,
+                                                                                                   nb_plays_=nb_plays_,
+                                                                                                   batch_size=batch_size,
+                                                                                                   loss=loss_name,
+                                                                                                   points=points)
+                    weights_fname = constants.FNAME_FORMAT["models_nb_plays_noise_saved_weights"].format(method=method,
+                                                                                                weight=weight,
+                                                                                                width=width,
+                                                                                                nb_plays=nb_plays,
+                                                                                                units=units,
+                                                                                                mu=mu,
+                                                                                                sigma=sigma,
+                                                                                                nb_plays_=nb_plays_,
+                                                                                                batch_size=batch_size,
+                                                                                                loss=loss_name,
+                                                                                                points=points)
 
-                    # fname = constants.FNAME_FORMAT["models_nb_plays_noise_loss"].format(method=method,
+                    predictions, loss = fit(inputs, outputs_, units, activation, width, weight, method, nb_plays_, batch_size, loss_name, loss_history_file, learning_rate, weights_fname)
+                    # fname = constants.FNAME_FORMAT["models_noise_loss"].format(method=method,
                     #                                                            weight=weight,
                     #                                                            width=width,
                     #                                                            nb_plays=nb_plays,
@@ -205,20 +193,20 @@ if __name__ == "__main__":
                     #                                                            batch_size=batch_size,
                     #                                                            loss=loss_name,
                     #                                                            points=points)
-                    tdata.DatasetSaver.save_loss({"loss": loss}, fname)
-                    fname = constants.FNAME_FORMAT["models_noise_predictions"].format(method=method,
-                                                                                      weight=weight,
-                                                                                      width=width,
-                                                                                      nb_plays=nb_plays,
-                                                                                      units=units,
-                                                                                      mu=mu,
-                                                                                      sigma=sigma,
-                                                                                      nb_plays_=nb_plays_,
-                                                                                      batch_size=batch_size,
-                                                                                      loss=loss_name,
-                                                                                      points=points)
 
-                    # fname = constants.FNAME_FORMAT["models_nb_plays_noise_predictions"].format(method=method,
+                    fname = constants.FNAME_FORMAT["models_nb_plays_noise_loss"].format(method=method,
+                                                                               weight=weight,
+                                                                               width=width,
+                                                                               nb_plays=nb_plays,
+                                                                               units=units,
+                                                                               mu=mu,
+                                                                               sigma=sigma,
+                                                                               nb_plays_=nb_plays_,
+                                                                               batch_size=batch_size,
+                                                                               loss=loss_name,
+                                                                               points=points)
+                    tdata.DatasetSaver.save_loss({"loss": loss}, fname)
+                    # fname = constants.FNAME_FORMAT["models_noise_predictions"].format(method=method,
                     #                                                                   weight=weight,
                     #                                                                   width=width,
                     #                                                                   nb_plays=nb_plays,
@@ -229,6 +217,18 @@ if __name__ == "__main__":
                     #                                                                   batch_size=batch_size,
                     #                                                                   loss=loss_name,
                     #                                                                   points=points)
+
+                    fname = constants.FNAME_FORMAT["models_nb_plays_noise_predictions"].format(method=method,
+                                                                                      weight=weight,
+                                                                                      width=width,
+                                                                                      nb_plays=nb_plays,
+                                                                                      units=units,
+                                                                                      mu=mu,
+                                                                                      sigma=sigma,
+                                                                                      nb_plays_=nb_plays_,
+                                                                                      batch_size=batch_size,
+                                                                                      loss=loss_name,
+                                                                                      points=points)
                     tdata.DatasetSaver.save_data(inputs, predictions, fname)
 
 

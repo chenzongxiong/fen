@@ -72,6 +72,7 @@ class PhiCell(Layer):
         self.input_dim = input_dim
 
     def build(self, input_shape):
+        LOG.debug("In build, input_shape: {}".format(input_shape))
         if self.debug:
             LOG.debug("Initialize *weight* as pre-defined: {} ....".format(self._weight))
             self.kernel = tf.Variable([[self._weight]], name="weight", dtype=tf.float32)
@@ -148,6 +149,7 @@ class PhiCell(Layer):
         last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=False)
 
         return outputs_, states_x
+
 
 class Operator(RNN):
     def __init__(self, weight=1.0, width=1.0, debug=False):
@@ -1061,8 +1063,8 @@ if __name__ == "__main__":
 
     LOG.debug(colors.red("Test Play"))
     batch_size = 1
-    timestep = 500
-    input_dim = 1
+    timestep = 50
+    input_dim = 10
     units = 20
     epochs = 1500 // batch_size
     steps_per_epoch = batch_size
