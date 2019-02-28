@@ -252,7 +252,9 @@ class Play(object):
                  optimizer="adam",
                  network_type=constants.NetworkType.OPERATOR,
                  use_bias=True,
-                 name="play"):
+                 name="play",
+                 timestep=1,
+                 input_dim=1):
 
         if debug:
             self._weight = weight
@@ -263,7 +265,12 @@ class Play(object):
         self.loss = loss
         self.optimizer = optimizer
 
-        self.batch_size = batch_size
+        # self.batch_size = batch_size
+
+        self._play_timestep = timestep
+        self._play_batch_size = batch_size
+        self._play_input_dim = input_dim
+
         self.units = units
 
         self._network_type = network_type
@@ -280,10 +287,18 @@ class Play(object):
 
             if _inputs.shape.ndims == 1:
                 length = _inputs.shape[-1].value
-                timesteps = length // self.batch_size
-                if timesteps * self.batch_size != length:
+                # timesteps = length // self.batch_size
+                # if timesteps * self.batch_size != length:
+                #     raise Exception("The batch size cannot be divided by the length of input sequence.")
+                # self._batch_input_shape = tf.TensorShape([1, timesteps, self.batch_size])
+
+                if length % (self._play_input_dim * self._play_timestep) != 0:
                     raise Exception("The batch size cannot be divided by the length of input sequence.")
-                self._batch_input_shape = tf.TensorShape([1, timesteps, self.batch_size])
+
+                self.batch_size = length // (self._play_timestep * self._play_input_dim)
+                self._play_batch_size = length // (self._play_timestep * self._play_input_dim)
+                self._batch_input_shape = tf.TensorShape([self.batch_size, self._play_timestep, self._play_input_dim])
+
             else:
                 raise Exception("dimension of inputs must be equal to 1")
 
@@ -566,7 +581,10 @@ class MyModel(object):
                  debug=False,
                  activation='tanh',
                  # loss='mse',
-                 optimizer='adam'):
+                 optimizer='adam',
+                 timestep=1,
+                 input_dim=1
+                 ):
 
         self.plays = []
         self._nb_plays = nb_plays
@@ -587,7 +605,9 @@ class MyModel(object):
                         loss=None,
                         optimizer=None,
                         network_type=constants.NetworkType.PLAY,
-                        name="play-{}".format(i))
+                        name="play-{}".format(i),
+                        timestep=timestep,
+                        input_dim=input_dim)
             self.plays.append(play)
             i += 1
 
