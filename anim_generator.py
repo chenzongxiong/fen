@@ -567,10 +567,11 @@ def model_nb_plays_generator_with_noise():
     points = 1000
     # nb_plays = [20]
     nb_plays = 20
-    step = 60
+    nb_plays_ = 20
+    step = 40
     units = 20
     period = 1
-    interp = 10
+    interp = 1
     loss_name = 'mse'
     state = 0
 
@@ -590,21 +591,21 @@ def model_nb_plays_generator_with_noise():
                                                                                    sigma=sigma)
                     _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
                     # __nb_plays = _nb_plays
-                    nb_plays = nb_plays_
+                    # nb_plays = nb_plays_
                     bz = 1
                     if True:
                         if True:
-                            # fname = constants.FNAME_FORMAT["models_nb_plays_noise_predictions"].format(method=method,
-                            #                                                                            weight=weight,
-                            #                                                                            width=width,
-                            #                                                                            nb_plays=_nb_plays,
-                            #                                                                            nb_plays_=__nb_plays,
-                            #                                                                            batch_size=bz,
-                            #                                                                            units=units,
-                            #                                                                            points=points,
-                            #                                                                            mu=mu,
-                            #                                                                            sigma=sigma,
-                            #                                                                            loss=loss_name)
+                            fname = constants.FNAME_FORMAT["models_nb_plays_noise_predictions"].format(method=method,
+                                                                                                       weight=weight,
+                                                                                                       width=width,
+                                                                                                       nb_plays=nb_plays,
+                                                                                                       nb_plays_=nb_plays_,
+                                                                                                       batch_size=bz,
+                                                                                                       units=units,
+                                                                                                       points=points,
+                                                                                                       mu=mu,
+                                                                                                       sigma=sigma,
+                                                                                                       loss=loss_name)
                             try:
                                 _, predictions = tdata.DatasetLoader.load_data(fname)
                             except:
@@ -688,9 +689,9 @@ def model_nb_plays_generator_with_noise():
 
                                 tdata.DatasetSaver.save_data(ground_truth, _inputs, fname)
 
-                            _inputs = np.hstack([_inputs, _inputs])
-                            ground_truth = np.hstack([ground_truth, ground_truth])
-                            predictions = np.hstack([predictions, predictions])
+                            # _inputs = np.hstack([_inputs, _inputs])
+                            # ground_truth = np.hstack([ground_truth, ground_truth])
+                            # predictions = np.hstack([predictions, predictions])
 
                             outputs = np.vstack([ground_truth, predictions]).T
                             colors = utils.generate_colors(outputs.shape[-1])
@@ -737,9 +738,9 @@ def model_nb_plays_generator_with_noise():
                                                                                                           sigma=sigma,
                                                                                                           loss=loss_name)
 
-                            # _inputs = np.arange(points)
-                            # inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
-                            # utils.save_animation(inputs, outputs, fname, step=points, colors=colors)
+                            _inputs = np.arange(points)
+                            inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
+                            utils.save_animation(inputs, outputs, fname, step=points, colors=colors)
 
 
 
