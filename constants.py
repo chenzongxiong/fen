@@ -142,6 +142,16 @@ FNAME_FORMAT = dict(
     F_saved_weights="./training-data/F/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/weights-{loss}.h5",
     F_gif="./pics/F/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/base-{loss}.gif",
     F_gif_snake="./pics/F/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/snake-{loss}.gif",
+
+
+    F_interp="./training-data/F/interp/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/base.csv",
+    F_interp_predictions="./training-data/F/interp/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/predictions-{loss}.csv",
+    F_interp_loss_history="./training-data/F/interp/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/loss_history-{loss}.csv",
+    F_interp_saved_weights="./training-data/F/interp/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/weights-{loss}.h5",
+    F_interp_gif="./pics/F/interp/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/base-{loss}.gif",
+    F_interp_gif_snake="./pics/F/interp/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/snake-{loss}.gif",
+
+
     )
 
 CPU_COUNTS = min(os.cpu_count(), 32)

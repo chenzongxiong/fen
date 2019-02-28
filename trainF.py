@@ -79,14 +79,15 @@ if __name__ == "__main__":
 
     argv = parser.parse_args(sys.argv[1:])
 
-    learning_rate = 0.005
+    learning_rate = 0.1
     # loss_name = argv.loss
     loss_name = 'mse'
 
     mu = 0
-    sigma = 0.01
+    # sigma = 0.01
+    sigma = 2
     nb_plays = 20
-    nb_plays_ = 80
+    nb_plays_ = 20
     units = 20
 
     points = 1000
@@ -97,20 +98,36 @@ if __name__ == "__main__":
         for weight in weights:
             for width in widths:
                 LOG.debug("Processing method: {}, weight: {}, width: {}, units: {}, nb_plays: {}, mu: {}, sigma: {}, points: {}, state: {}".format(method, weight, width, units, nb_plays, mu, sigma, points, state))
-                fname = constants.FNAME_FORMAT["models_noise"].format(method=method,
-                                                                      weight=weight,
-                                                                      width=width,
-                                                                      nb_plays=nb_plays,
-                                                                      units=units,
-                                                                      mu=mu,
-                                                                      sigma=sigma,
-                                                                      points=points)
+                # fname = constants.FNAME_FORMAT["models_noise"].format(method=method,
+                #                                                       weight=weight,
+                #                                                       width=width,
+                #                                                       nb_plays=nb_plays,
+                #                                                       units=units,
+                #                                                       mu=mu,
+                #                                                       sigma=sigma,
+                #                                                       points=points)
+
+
+                fname = constants.FNAME_FORMAT['F_interp'].format(method=method,
+                                                                  weight=weight,
+                                                                  width=width,
+                                                                  nb_plays=nb_plays,
+                                                                  units=units,
+                                                                  points=points,
+                                                                  mu=mu,
+                                                                  sigma=sigma,
+                                                                  nb_plays_=nb_plays_,
+                                                                  batch_size=1,
+                                                                  state=state,
+                                                                  loss=loss_name)
+
+
 
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
-                inputs, outputs_ = outputs_, inputs  # F neural network
+                # inputs, outputs_ = outputs_, inputs  # F neural network
                 # inputs, outputs_ = inputs[:1000], outputs_[:1000]
                 if True:
-                    loss_file_name = constants.FNAME_FORMAT['F_loss_history'].format(method=method,
+                    loss_file_name = constants.FNAME_FORMAT['F_interp_loss_history'].format(method=method,
                                                                                      weight=weight,
                                                                                      width=width,
                                                                                      nb_plays=nb_plays,
@@ -122,7 +139,7 @@ if __name__ == "__main__":
                                                                                      nb_plays_=nb_plays_,
                                                                                      batch_size=1,
                                                                                      state=state)
-                    weights_fname = constants.FNAME_FORMAT['F_saved_weights'].format(method=method,
+                    weights_fname = constants.FNAME_FORMAT['F_interp_saved_weights'].format(method=method,
                                                                                      weight=weight,
                                                                                      width=width,
                                                                                      nb_plays=nb_plays,
@@ -150,32 +167,32 @@ if __name__ == "__main__":
                                                  learning_rate=learning_rate,
                                                  weights_fname=weights_fname)
 
-                    fname = constants.FNAME_FORMAT['F'].format(method=method,
-                                                               weight=weight,
-                                                               width=width,
-                                                               nb_plays=nb_plays,
-                                                               units=units,
-                                                               mu=mu,
-                                                               sigma=sigma,
-                                                               points=points,
-                                                               loss=loss_name,
-                                                               nb_plays_=nb_plays_,
-                                                               batch_size=1,
-                                                               state=state)
+                    fname = constants.FNAME_FORMAT['F_interp_predictions'].format(method=method,
+                                                                                  weight=weight,
+                                                                                  width=width,
+                                                                                  nb_plays=nb_plays,
+                                                                                  units=units,
+                                                                                  mu=mu,
+                                                                                  sigma=sigma,
+                                                                                  points=points,
+                                                                                  loss=loss_name,
+                                                                                  nb_plays_=nb_plays_,
+                                                                                  batch_size=1,
+                                                                                  state=state)
 
                     tdata.DatasetSaver.save_data(inputs, predictions, fname)
 
-                    fname = constants.FNAME_FORMAT['F_predictions'].format(method=method,
-                                                                           weight=weight,
-                                                                           width=width,
-                                                                           nb_plays=nb_plays,
-                                                                           units=units,
-                                                                           mu=mu,
-                                                                           sigma=sigma,
-                                                                           points=points,
-                                                                           loss=loss_name,
-                                                                           nb_plays_=nb_plays_,
-                                                                           batch_size=1,
-                                                                           state=state)
+                    # fname = constants.FNAME_FORMAT['F_predictions'].format(method=method,
+                    #                                                        weight=weight,
+                    #                                                        width=width,
+                    #                                                        nb_plays=nb_plays,
+                    #                                                        units=units,
+                    #                                                        mu=mu,
+                    #                                                        sigma=sigma,
+                    #                                                        points=points,
+                    #                                                        loss=loss_name,
+                    #                                                        nb_plays_=nb_plays_,
+                    #                                                        batch_size=1,
+                    #                                                        state=state)
 
-                    tdata.DatasetSaver.save_data(B, prices, fname)
+                    # tdata.DatasetSaver.save_data(B, prices, fname)

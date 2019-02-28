@@ -565,28 +565,32 @@ def model_nb_plays_generator_with_noise():
     # sigma = 2
     sigma = 2
     points = 1000
-    nb_plays = [20]
+    # nb_plays = [20]
+    nb_plays = 20
     step = 60
     units = 20
     period = 1
     interp = 10
     loss_name = 'mse'
+    state = 0
 
     for method in methods:
         for weight in weights:
             for width in widths:
-                for _nb_plays in nb_plays:
+                # for _nb_plays in nb_plays:
+                if True:
                     LOG.debug("Processing method: {}, weight: {}, width: {}, points: {}, units: {}, np_plays: {}, sigma: {}, mu: {}, loss: {}".format(method, weight, width, points, units, nb_plays, sigma, mu, loss_name))
                     fname = constants.FNAME_FORMAT["models_nb_plays_noise"].format(method=method,
                                                                                    weight=weight,
                                                                                    width=width,
-                                                                                   nb_plays=_nb_plays,
+                                                                                   nb_plays=nb_plays,
                                                                                    units=units,
                                                                                    points=points,
                                                                                    mu=mu,
                                                                                    sigma=sigma)
                     _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
-                    __nb_plays = _nb_plays
+                    # __nb_plays = _nb_plays
+                    nb_plays = nb_plays_
                     bz = 1
                     if True:
                         if True:
@@ -669,6 +673,20 @@ def model_nb_plays_generator_with_noise():
                                 ground_truth = ground_truth_interp
                                 predictions = predictions_interp
 
+                                fname = constants.FNAME_FORMAT['F_interp'].format(method=method,
+                                                                                  weight=weight,
+                                                                                  width=width,
+                                                                                  nb_plays=nb_plays,
+                                                                                  units=units,
+                                                                                  points=points,
+                                                                                  mu=mu,
+                                                                                  sigma=sigma,
+                                                                                  nb_plays_=nb_plays_,
+                                                                                  batch_size=1,
+                                                                                  state=state,
+                                                                                  loss=loss_name)
+
+                                tdata.DatasetSaver.save_data(ground_truth, _inputs, fname)
 
                             _inputs = np.hstack([_inputs, _inputs])
                             ground_truth = np.hstack([ground_truth, ground_truth])
@@ -680,8 +698,8 @@ def model_nb_plays_generator_with_noise():
                             fname = constants.FNAME_FORMAT["models_nb_plays_noise_gif"].format(method=method,
                                                                                                weight=weight,
                                                                                                width=width,
-                                                                                               nb_plays=_nb_plays,
-                                                                                               nb_plays_=__nb_plays,
+                                                                                               nb_plays=nb_plays,
+                                                                                               nb_plays_=nb_plays_,
                                                                                                batch_size=bz,
                                                                                                units=units,
                                                                                                points=points,
@@ -696,8 +714,8 @@ def model_nb_plays_generator_with_noise():
                             fname = constants.FNAME_FORMAT["models_nb_plays_noise_gif_snake"].format(method=method,
                                                                                                      weight=weight,
                                                                                                      width=width,
-                                                                                                     nb_plays=_nb_plays,
-                                                                                                     nb_plays_=__nb_plays,
+                                                                                                     nb_plays=nb_plays,
+                                                                                                     nb_plays_=nb_plays_,
                                                                                                      batch_size=bz,
                                                                                                      units=units,
                                                                                                      points=points,
@@ -705,13 +723,13 @@ def model_nb_plays_generator_with_noise():
                                                                                                      sigma=sigma,
                                                                                                      loss=loss_name)
 
-                            utils.save_animation(inputs, outputs, fname, step=step, colors=colors, mode="snake")
+                            # utils.save_animation(inputs, outputs, fname, step=step, colors=colors, mode="snake")
 
                             fname = constants.FNAME_FORMAT["models_nb_plays_noise_ts_outputs_gif"].format(method=method,
                                                                                                           weight=weight,
                                                                                                           width=width,
-                                                                                                          nb_plays=_nb_plays,
-                                                                                                          nb_plays_=__nb_plays,
+                                                                                                          nb_plays=nb_plays,
+                                                                                                          nb_plays_=nb_plays_,
                                                                                                           batch_size=bz,
                                                                                                           units=units,
                                                                                                           points=points,
