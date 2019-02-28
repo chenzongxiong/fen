@@ -106,7 +106,7 @@ class PhiCell(Layer):
         LOG.debug("inputs.shape: {}".format(inputs.shape))
         LOG.debug("self._inputs.shape: {}".format(self._inputs))
 
-        outputs_ = tf.multiply(self._inputs, self.kernel)
+        # outputs_ = tf.multiply(self._inputs, self.kernel)
 
         # NOTE: unroll method, can we use RNN method ?
         # import ipdb; ipdb.set_trace()
@@ -117,22 +117,6 @@ class PhiCell(Layer):
 
         # outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
 
-        # init = tf.global_variables_initializer()
-        # sess.run(init)
-        # LOG.debug("outputs: {}".format(sess.run(outputs)))
-        # LOG.debug("outputs.shape: {}".format(outputs.shape))
-
-        def steps(inputs, states):
-            outputs = Phi(tf.multiply(inputs, self.kernel) - states[-1]) + states[-1]
-            return outputs, [outputs]
-
-        # import ipdb; ipdb.set_trace()
-        inputs_ = tf.reshape(self._inputs, shape=(1, self._inputs.shape[0].value, 1))
-        self._states = ops.convert_to_tensor(states, dtype=tf.float32)
-        states_ = [tf.reshape(self._states, shape=(1, 1))]
-
-        last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_)
-        # import ipdb; ipdb.set_trace()
         # state = outputs[-1]
         # outputs = tf.reshape(outputs, shape=self._inputs.shape)
 
@@ -140,6 +124,29 @@ class PhiCell(Layer):
         # state = tf.reshape(state, shape=(-1, 1))
         # LOG.debug("after reshaping state.shape: {}".format(state.shape))
         # return outputs, [state]
+
+
+        def steps(inputs, states):
+            outputs = Phi(inputs - states[-1]) + states[-1]
+            return outputs, [outputs]
+
+        # import ipdb; ipdb.set_trace()
+        # LOG.debug("inputs_.shape: {}".format(inputs_.shape))
+        # LOG.debug("states_.shape: {}".format(states_.shape))
+
+        self._inputs = tf.multiply(self._inputs, self.kernel)
+
+        inputs_ = tf.reshape(self._inputs, shape=(1, self._inputs.shape[0].value*self._inputs.shape[1].value, 1))
+        if isinstance(states, list) or isinstance(states, tuple):
+            self._states = ops.convert_to_tensor(states[-1], dtype=tf.float32)
+        else:
+            self._states = ops.convert_to_tensor(states, dtype=tf.float32)
+        states_ = [tf.reshape(self._states, shape=(1, 1))]
+        # LOG.debug("inputs_.shape: {}".format(inputs_.shape))
+        # LOG.debug("states_.shape: {}".format(states_.shape))
+
+        last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=False)
+
         return outputs_, states_x
 
 class Operator(RNN):
@@ -716,7 +723,7 @@ class MyModel(object):
             for j in range(steps_per_epoch):
                 cost = train_function(ins)[0]
             self.cost_history.append([i, cost])
-            if i % 50 == 0:     # save weights every 50 epochs
+            if i != 0  and i % 50 == 0:     # save weights every 50 epochs
                 fname = "{}/epochs-{}/weights-mse.h5".format(path, i)
                 self.save_weights(fname)
             LOG.debug("Epoch: {}, Loss: {}".format(i, cost))

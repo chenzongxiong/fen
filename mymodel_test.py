@@ -24,9 +24,9 @@ def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method
     steps_per_epoch = batch_size
 
     start = time.time()
-    input_dim = 1
+    input_dim = 1000
     # timestep = 100 // input_dim
-    timestep = 1000
+    timestep = 1
     agent = MyModel(input_dim=input_dim,
                     timestep=timestep,
                     units=units,
