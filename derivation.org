@@ -32,8 +32,10 @@ y_{j}  = \sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} p_{j} + \theta_{i0})
 Calculate derivation for \(y_{j}\)
 \begin{eqnarray}
 \frac{\partial y_{j}}{\partial p_{j}} &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \frac{\partial \tanh(\theta_{i} p_{j} + \theta_{i0})}{\partial p_{j}}  \\
-                                      &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} (1 - \tanh^{2}(\theta_{i} p_{j} + \theta_{i0}))
 \end{eqnarray}
+
+                                      # &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} \frac{\partial{}}{\partial{}} \\
+                                      # &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} (1 - \tanh^{2}(\theta_{i} p_{j} + \theta_{i0})) \\
 
 Now let's consider the mapping between \(p_{j}\) and \(x_{j}\).
 \begin{eqnarray}
@@ -55,22 +57,25 @@ and
 Using Chain Rule, we obtain
 \begin{eqnarray}
 \frac{\partial y_{j}}{\partial x_{j}} &=& \frac{\partial y_{j}}{\partial p_{j}} \frac{\partial p_{j}}{\partial x_{j}} \\
-                                      &=& \begin{cases}
-                                      0, -1 < w_{1} x_{j} - p_{j-1} < 0 \\
-                                      \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} (1 - \tanh^{2}(\theta_{i} p_{j} + \theta_{i0})) w^{1}, \text{otherwise}
-                                      \end{cases}
+                                      &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \frac{\partial \tanh(\theta_{i} p_{j} + \theta_{i0})}{\partial p_{j}} \frac{\partial{\Phi(w^{1} x_{j} - p_{j-1})}}{\partial{x_{j}}}
 \end{eqnarray}
+
+                                      # &=& \begin{cases}
+                                      # 0, -1 < w_{1} x_{j} - p_{j-1} < 0 \\
+                                      # \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} (1 - \tanh^{2}(\theta_{i} p_{j} + \theta_{i0})) w^{1}, \text{otherwise}
+                                      # \end{cases}
 
 
 To consider *multiple plays* case, we reformulate the derivation as following:
 
 \begin{eqnarray}
 \frac{\partial {y_{j}^{1}}}{\partial x_{j}} &=& \frac{\partial{y_{j}^{1}}}{\partial{p_{j}^{1}}} \frac{\partial{ p_{j}}^{1}}{\partial x_{j}} \\
-                                      &=& \begin{cases}
-                                      0, -1 < w_{1} x_{j} - p_{j-1} < 0 \\
-                                      \sum_{i=1}^{S} \tilde{\theta_{i}^{1}} \theta_{i}^{1} (1 - \tanh^{2}(\theta_{i}^{1} p_{j}^{1} + \theta_{i0}^{1})) w^{1}, \text{otherwise}
-                                      \end{cases}
+                                      &=& \sum_{i=1}^{S} \tilde{\theta_{i}^{1}} \frac{\partial \tanh(\theta_{i}^{1} p_{j}^{1} + \theta_{i0})}{\partial p_{j}^{1}} \frac{\partial{\Phi(w^{1} x_{j} - p_{j-1}^{1})}}{\partial{x_{j}}} \\
 \end{eqnarray}
+#                                       &=& \begin{cases}
+#                                       0, -1 < w_{1} x_{j} - p_{j-1} < 0 \\
+#                                       \sum_{i=1}^{S} \tilde{\theta_{i}^{1}} \theta_{i}^{1} (1 - \tanh^{2}(\theta_{i}^{1} p_{j}^{1} + \theta_{i0}^{1})) w^{1}, \text{otherwise}
+#                                       \end{cases}
 
 
 Now from the architecture, we know that if we have \(P\) plays,
@@ -88,5 +93,6 @@ our derivation is:
 \begin{eqnarray}
 \frac{\partial f_{j}}{\partial x_{j}} &=& \frac{1}{P} \sum_{k=1}^{P} \frac{\partial {{y_{j}^{k}}}}{\partial {{x_{j}}}} \\
                &=& \frac{1}{P} \sum_{k=1}^{P} \frac{\partial {y_{j}^{k}}}{\partial {p_{j}^{k}}} \frac{\partial {p_{j}^{k}}}{\partial {x_{j}}} \\
-               &=&                        \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \theta_{i}^{k} (1 - \tanh^{2}(\theta_{i}^{k} p_{j}^{k} + \theta_{i0}^{k})) w^{k}
+               &=& \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \frac{\partial \tanh(\theta_{i}^{k} p_{j}^{k} + \theta_{i0})}{\partial p_{j}^{k}} \frac{\partial{\Phi(w^{k} x_{j} - p_{j-1}^{k})}}{\partial{x_{j}}} \\
 \end{eqnarray}
+               # &=&                        \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \theta_{i}^{k} (1 - \tanh^{2}(\theta_{i}^{k} p_{j}^{k} + \theta_{i0}^{k})) w^{k}
