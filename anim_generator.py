@@ -568,7 +568,10 @@ def model_nb_plays_generator_with_noise():
     # nb_plays = [20]
     nb_plays = 20
     nb_plays_ = 20
+
     step = 40
+
+
     units = 20
     period = 1
     interp = 1
@@ -711,7 +714,7 @@ def model_nb_plays_generator_with_noise():
                             # step = inputs.shape[-1]
                             # step = inputs.shape[0] // 2
 
-                            # utils.save_animation(inputs, outputs, fname, step=step, colors=colors)
+                            utils.save_animation(inputs, outputs, fname, step=step, colors=colors)
                             fname = constants.FNAME_FORMAT["models_nb_plays_noise_gif_snake"].format(method=method,
                                                                                                      weight=weight,
                                                                                                      width=width,
@@ -724,7 +727,7 @@ def model_nb_plays_generator_with_noise():
                                                                                                      sigma=sigma,
                                                                                                      loss=loss_name)
 
-                            # utils.save_animation(inputs, outputs, fname, step=step, colors=colors, mode="snake")
+                            utils.save_animation(inputs, outputs, fname, step=step, colors=colors, mode="snake")
 
                             fname = constants.FNAME_FORMAT["models_nb_plays_noise_ts_outputs_gif"].format(method=method,
                                                                                                           weight=weight,

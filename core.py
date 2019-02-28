@@ -315,6 +315,7 @@ class Play(object):
         if inputs is None and self._batch_input_shape is None:
             raise Exception("Unknown input shape")
         if inputs is not None:
+
             _inputs = ops.convert_to_tensor(inputs, tf.float32)
 
             if _inputs.shape.ndims == 1:
@@ -338,7 +339,8 @@ class Play(object):
 
         # length = self._batch_input_shape[0].value * self._batch_input_shape[1].value * self._batch_input_shape[2].value
         length = self._batch_input_shape[1].value * self._batch_input_shape[2].value
-
+        self.batch_size = self._batch_input_shape[0].value
+        # import ipdb; ipdb.set_trace()
         timesteps = self._batch_input_shape[1].value
 
         self.model = tf.keras.models.Sequential()
@@ -730,7 +732,7 @@ class MyModel(object):
                 self.save_weights(fname)
             LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
 
-        import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
