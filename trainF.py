@@ -31,20 +31,24 @@ def fit(inputs, outputs, units, activation, width, true_weight, loss='mse', mu=0
     # tdata.DatasetSaver.save_data(B, B, fname)
 
     units = units
-    batch_size = 1
-    epochs = 500
+    # batch_size = 1
+    input_dim = 100
+    timestep = 90
+    epochs = 250
     # epochs = EPOCHS // batch_size
-    steps_per_epoch = batch_size
-
+    # steps_per_epoch = batch_size
+    steps_per_epoch = 1
     train_inputs, train_outputs = inputs, outputs
 
     import time
     start = time.time()
-    agent = MyModel(batch_size=batch_size,
+    agent = MyModel(# batch_size=batch_size,
+                    timestep=timestep,
+                    input_dim=input_dim,
                    units=units,
                    activation="tanh",
                    nb_plays=nb_plays)
-    agent.load_weights(weights_fname)
+    # agent.load_weights(weights_fname)
     agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch, loss_file_name=loss_file_name,
               learning_rate=learning_rate)
     end = time.time()
@@ -79,7 +83,7 @@ if __name__ == "__main__":
 
     argv = parser.parse_args(sys.argv[1:])
 
-    learning_rate = 0.1
+    learning_rate = 0.01
     # loss_name = argv.loss
     loss_name = 'mse'
 
@@ -125,7 +129,7 @@ if __name__ == "__main__":
 
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
                 # inputs, outputs_ = outputs_, inputs  # F neural network
-                # inputs, outputs_ = inputs[:1000], outputs_[:1000]
+                inputs, outputs_ = outputs_[:9000], inputs[:9000]
                 if True:
                     loss_file_name = constants.FNAME_FORMAT['F_interp_loss_history'].format(method=method,
                                                                                      weight=weight,

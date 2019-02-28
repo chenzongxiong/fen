@@ -567,10 +567,11 @@ def model_nb_plays_generator_with_noise():
     points = 1000
     # nb_plays = [20]
     nb_plays = 20
-    step = 60
+    nb_plays_ = 20
+    step = 20
     units = 20
     period = 1
-    interp = 10
+    interp = 1
     loss_name = 'mse'
     state = 0
 
@@ -594,17 +595,17 @@ def model_nb_plays_generator_with_noise():
                     bz = 1
                     if True:
                         if True:
-                            # fname = constants.FNAME_FORMAT["models_nb_plays_noise_predictions"].format(method=method,
-                            #                                                                            weight=weight,
-                            #                                                                            width=width,
-                            #                                                                            nb_plays=_nb_plays,
-                            #                                                                            nb_plays_=__nb_plays,
-                            #                                                                            batch_size=bz,
-                            #                                                                            units=units,
-                            #                                                                            points=points,
-                            #                                                                            mu=mu,
-                            #                                                                            sigma=sigma,
-                            #                                                                            loss=loss_name)
+                            fname = constants.FNAME_FORMAT["models_nb_plays_noise_predictions"].format(method=method,
+                                                                                                       weight=weight,
+                                                                                                       width=width,
+                                                                                                       nb_plays=nb_plays,
+                                                                                                       nb_plays_=nb_plays_,
+                                                                                                       batch_size=bz,
+                                                                                                       units=units,
+                                                                                                       points=points,
+                                                                                                       mu=mu,
+                                                                                                       sigma=sigma,
+                                                                                                       loss=loss_name)
                             try:
                                 _, predictions = tdata.DatasetLoader.load_data(fname)
                             except:
@@ -710,7 +711,7 @@ def model_nb_plays_generator_with_noise():
                             # step = inputs.shape[-1]
                             # step = inputs.shape[0] // 2
 
-                            # utils.save_animation(inputs, outputs, fname, step=step, colors=colors)
+                            utils.save_animation(inputs, outputs, fname, step=step, colors=colors)
                             fname = constants.FNAME_FORMAT["models_nb_plays_noise_gif_snake"].format(method=method,
                                                                                                      weight=weight,
                                                                                                      width=width,
@@ -723,7 +724,7 @@ def model_nb_plays_generator_with_noise():
                                                                                                      sigma=sigma,
                                                                                                      loss=loss_name)
 
-                            # utils.save_animation(inputs, outputs, fname, step=step, colors=colors, mode="snake")
+                            utils.save_animation(inputs, outputs, fname, step=step, colors=colors, mode="snake")
 
                             fname = constants.FNAME_FORMAT["models_nb_plays_noise_ts_outputs_gif"].format(method=method,
                                                                                                           weight=weight,
@@ -737,9 +738,9 @@ def model_nb_plays_generator_with_noise():
                                                                                                           sigma=sigma,
                                                                                                           loss=loss_name)
 
-                            # _inputs = np.arange(points)
-                            # inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
-                            # utils.save_animation(inputs, outputs, fname, step=points, colors=colors)
+                            _inputs = np.arange(points)
+                            inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
+                            utils.save_animation(inputs, outputs, fname, step=points, colors=colors)
 
 
 
