@@ -98,7 +98,7 @@ class DatasetGenerator(object):
 
     @classmethod
     def systhesis_model_generator(cls, nb_plays=1, points=1000, units=1, debug_plays=False, inputs=None, batch_size=50, mu=0, sigma=0.01):
-        model = core.MyModel(nb_plays=nb_plays, units=units, debug=True, batch_size=batch_size, activation=None)
+        model = core.MyModel(nb_plays=nb_plays, units=units, debug=True, batch_size=batch_size, activation=None, timestep=points, input_dim=1)
         if inputs is None:
             _inputs = cls.systhesis_mixed_input_generator(points, mu, sigma)
         else:

@@ -246,7 +246,6 @@ def F_generator():
         for weight in weights:
             for width in widths:
                 LOG.debug("Processing method: {}, weight: {}, width: {}, mu: {}, sigma: {}, nb_plays: {}, points: {}, units: {}".format(method, weight, width, mu, sigma, nb_plays, points, units))
-                # fname = constants.FNAME_FORMAT["plays"].format(method=method, weight=weight, width=width, points=points)
                 # fname = constants.FNAME_FORMAT["models_noise"].format(method=method,
                 #                                                       weight=weight,
                 #                                                       width=width,
@@ -255,45 +254,83 @@ def F_generator():
                 #                                                       mu=mu,
                 #                                                       sigma=sigma,
                 #                                                       points=points)
-                fname = constants.FNAME_FORMAT["F_interp"].format(method=method,
-                                                                  weight=weight,
-                                                                  width=width,
-                                                                  nb_plays=nb_plays,
-                                                                  nb_plays_=nb_plays_,
-                                                                  batch_size=1,
-                                                                  units=units,
-                                                                  mu=mu,
-                                                                  sigma=sigma,
-                                                                  points=points,
-                                                                  state=state)
+                # fname = constants.FNAME_FORMAT["F_interp"].format(method=method,
+                #                                                   weight=weight,
+                #                                                   width=width,
+                #                                                   nb_plays=nb_plays,
+                #                                                   nb_plays_=nb_plays_,
+                #                                                   batch_size=1,
+                #                                                   units=units,
+                #                                                   mu=mu,
+                #                                                   sigma=sigma,
+                #                                                   points=points,
+                #                                                   state=state)
 
-                # _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
+                interp = 10
+                fname = constants.FNAME_FORMAT["models_nb_plays_noise_interp"].format(method=method,
+                                                                                      weight=weight,
+                                                                                      width=width,
+                                                                                      nb_plays=nb_plays,
+                                                                                      units=units,
+                                                                                      points=points,
+                                                                                      mu=mu,
+                                                                                      sigma=sigma,
+                                                                                      interp=interp)
+
                 _inputs1, ground_truth = tdata.DatasetLoader.load_data(fname)
-                _inputs1, ground_truth = ground_truth[:9000], _inputs1[:9000]
-
+                # _inputs1, ground_truth = ground_truth[:9000], _inputs1[:9000]
+                _inputs1, ground_truth = _inputs1[:9000], ground_truth[:9000]
                 # import ipdb; ipdb.set_trace()
                 # inputs = np.vstack([_inputs, _inputs]).T
                 # for _units in units:
                 # _inputs1, ground_truth = _inputs1[:40], ground_truth[:40]
                 if True:
-                    fname = constants.FNAME_FORMAT["F_interp_predictions"].format(method=method,
-                                                               weight=weight,
-                                                               width=width,
-                                                               nb_plays=nb_plays,
-                                                               nb_plays_=nb_plays_,
-                                                               units=units,
-                                                               loss=loss_name,
-                                                               mu=mu,
-                                                               sigma=sigma,
-                                                               batch_size=1,
-                                                               state=state,
-                                                               points=points)
+
+                    fname = constants.FNAME_FORMAT["models_nb_plays_noise_interp_predictions"].format(method=method,
+                                                                                                      interp=interp,
+                                                                                                      weight=weight,
+                                                                                                      width=width,
+                                                                                                      nb_plays=nb_plays,
+                                                                                                      units=units,
+                                                                                                      mu=mu,
+                                                                                                      sigma=sigma,
+                                                                                                      nb_plays_=nb_plays_,
+                                                                                                      batch_size=1,
+                                                                                                      loss=loss_name,
+                                                                                                      points=points)
+
+
+                    # fname = constants.FNAME_FORMAT["F_interp_predictions"].format(method=method,
+                    #                                            weight=weight,
+                    #                                            width=width,
+                    #                                            nb_plays=nb_plays,
+                    #                                            nb_plays_=nb_plays_,
+                    #                                            units=units,
+                    #                                            loss=loss_name,
+                    #                                            mu=mu,
+                    #                                            sigma=sigma,
+                    #                                            batch_size=1,
+                    #                                            state=state,
+                    #                                            points=points)
 
                     _inputs2, predictions = tdata.DatasetLoader.load_data(fname)
                     inputs = np.vstack([_inputs1, _inputs2]).T
                     outputs = np.vstack([ground_truth, predictions]).T
                     colors = utils.generate_colors(outputs.shape[-1])
-                    fname = constants.FNAME_FORMAT["F_interp_gif"].format(method=method,
+                    # fname = constants.FNAME_FORMAT["F_interp_gif"].format(method=method,
+                    #                                                weight=weight,
+                    #                                                width=width,
+                    #                                                nb_plays=nb_plays,
+                    #                                                units=units,
+                    #                                                mu=mu,
+                    #                                                sigma=sigma,
+                    #                                                points=points,
+                    #                                                nb_plays_=nb_plays_,
+                    #                                                batch_size=1,
+                    #                                                state=state,
+                    #                                                loss=loss_name)
+                    fname = constants.FNAME_FORMAT["models_nb_plays_noise_interp_gif"].format(method=method,
+                                                                                              interp=interp,
                                                                    weight=weight,
                                                                    width=width,
                                                                    nb_plays=nb_plays,
@@ -305,8 +342,11 @@ def F_generator():
                                                                    batch_size=1,
                                                                    state=state,
                                                                    loss=loss_name)
-                    # utils.save_animation(inputs, outputs, fname, step=step, colors=colors)
-                    fname = constants.FNAME_FORMAT["F_interp_gif_snake"].format(method=method,
+
+                    step = 9000
+                    utils.save_animation(inputs, outputs, fname, step=step, colors=colors)
+                    fname = constants.FNAME_FORMAT["models_nb_plays_noise_interp_gif_snake"].format(method=method,
+                                                                                                    interp=interp,
                                                                          weight=weight,
                                                                          width=width,
                                                                          nb_plays=nb_plays,
