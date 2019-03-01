@@ -112,20 +112,29 @@ if __name__ == "__main__":
                 #                                                       points=points)
 
 
-                fname = constants.FNAME_FORMAT['F_interp'].format(method=method,
-                                                                  weight=weight,
-                                                                  width=width,
-                                                                  nb_plays=nb_plays,
-                                                                  units=units,
-                                                                  points=points,
-                                                                  mu=mu,
-                                                                  sigma=sigma,
-                                                                  nb_plays_=nb_plays_,
-                                                                  batch_size=1,
-                                                                  state=state,
-                                                                  loss=loss_name)
+                # fname = constants.FNAME_FORMAT['F_interp'].format(method=method,
+                #                                                   weight=weight,
+                #                                                   width=width,
+                #                                                   nb_plays=nb_plays,
+                #                                                   units=units,
+                #                                                   points=points,
+                #                                                   mu=mu,
+                #                                                   sigma=sigma,
+                #                                                   nb_plays_=nb_plays_,
+                #                                                   batch_size=1,
+                #                                                   state=state,
+                #                                                   loss=loss_name)
 
-
+                interp = 10
+                fname = constants.FNAME_FORMAT["models_nb_plays_noise_interp"].format(method=method,
+                                                                                      weight=weight,
+                                                                                      width=width,
+                                                                                      nb_plays=nb_plays,
+                                                                                      units=units,
+                                                                                      points=points,
+                                                                                      mu=mu,
+                                                                                      sigma=sigma,
+                                                                                      interp=interp)
 
                 inputs, outputs_ = tdata.DatasetLoader.load_data(fname)
                 # inputs, outputs_ = outputs_, inputs  # F neural network
@@ -156,7 +165,6 @@ if __name__ == "__main__":
                                                                                      batch_size=1,
                                                                                      state=state)
 
-
                     B, prices, predictions = fit(inputs=inputs,
                                                  outputs=outputs_,
                                                  units=units,
@@ -170,6 +178,21 @@ if __name__ == "__main__":
                                                  nb_plays=nb_plays_,
                                                  learning_rate=learning_rate,
                                                  weights_fname=weights_fname)
+
+                    fname = constants.FNAME_FORMAT['F_interp'].format(method=method,
+                                                                      weight=weight,
+                                                                      width=width,
+                                                                      nb_plays=nb_plays,
+                                                                      units=units,
+                                                                      points=points,
+                                                                      mu=mu,
+                                                                      sigma=sigma,
+                                                                      nb_plays_=nb_plays_,
+                                                                      batch_size=1,
+                                                                      state=state,
+                                                                      loss=loss_name)
+
+                    tdata.DatasetSaver.save_data(inputs, outputs_, fname)
 
                     fname = constants.FNAME_FORMAT['F_interp_predictions'].format(method=method,
                                                                                   weight=weight,

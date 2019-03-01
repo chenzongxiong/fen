@@ -297,7 +297,7 @@ class Play(object):
         self.loss = loss
         self.optimizer = optimizer
 
-        # self.batch_size = batch_size
+        self.batch_size = batch_size
 
         self._play_timestep = timestep
         self._play_batch_size = batch_size
@@ -389,17 +389,22 @@ class Play(object):
 
     def reshape(self, inputs, outputs=None):
         LOG.debug("reshape inputs to: {}".format(self._batch_input_shape))
+        # import ipdb; ipdb.set_trace()
+        # if inputs.shape[0].value  % (self._batch_input_shape[1].value * self._batch_input_shape[2].value) != 0:
+        #     raise Exception("ERROR: number of sample must be interger")
+
+        # num_samples = inputs.shape[0].value  // (self._batch_input_shape[1].value * self._batch_input_shape[2].value)
+        # _batch_input_shape = tf.TensorShape([num_samples, self._batch_input_shape[1].value, self._batch_input_shape[2].value])
+        # x = tf.reshape(inputs, shape=self._batch_input_shape)
         x = tf.reshape(inputs, shape=self._batch_input_shape)
         if outputs is not None:
             if self._network_type == constants.NetworkType.OPERATOR:
+                # y = tf.reshape(outputs, shape=(_batch_input_shape[0].value, -1, 1))
+                y = tf.reshape(outputs, shape=(self._batch_input_shape[0].value, -1, 1))
+            elif self._network_type == constants.NetworkType.PLAY:
+                # y = tf.reshape(outputs, shape=(_batch_input_shape[0].value, -1, 1))
                 y = tf.reshape(outputs, shape=(self._batch_input_shape[0].value, -1, 1))
 
-            elif self._network_type == constants.NetworkType.PLAY:
-                # y = tf.reshape(outputs, shape=(1, -1, 1))
-                y = tf.reshape(outputs, shape=(self._batch_input_shape[0].value, -1, 1))
-                # y = tf.manip.tile(outputs, [self.units])
-                # y = tf.reshape(y, shape=(1, -1, self.units))
-                # y = tf.reshape(outputs, shape=(1, -1))
             return x, y
         else:
             return x
@@ -737,15 +742,13 @@ class MyModel(object):
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
     def predict(self, inputs):
+        # import ipdb; ipdb.set_trace()
         import time
         inputs = ops.convert_to_tensor(inputs, tf.float32)
 
         for play in self.plays:
             if not play.built:
                 play.build(inputs)
-        # args_list = [(play, inputs) for play in self.plays]
-        # self._pool.starmap(self._build, args_list)
-        # self._pool.join()
 
         x = self.plays[0].reshape(inputs)
         outputs = []

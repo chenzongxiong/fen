@@ -623,11 +623,11 @@ def model_nb_plays_generator_with_noise():
     nb_plays = 20
     nb_plays_ = 20
 
-    step = 60
+    step = 20
 
     units = 20
     period = 1
-    interp = 10
+    interp = 1
     loss_name = 'mse'
     state = 0
     bz = 1
@@ -654,17 +654,17 @@ def model_nb_plays_generator_with_noise():
                     # import ipdb; ipdb.set_trace()
                     if True:
                         if True:
-                            # fname = constants.FNAME_FORMAT["models_nb_plays_noise_predictions"].format(method=method,
-                            #                                                                            weight=weight,
-                            #                                                                            width=width,
-                            #                                                                            nb_plays=nb_plays,
-                            #                                                                            nb_plays_=nb_plays_,
-                            #                                                                            batch_size=bz,
-                            #                                                                            units=units,
-                            #                                                                            points=points,
-                            #                                                                            mu=mu,
-                            #                                                                            sigma=sigma,
-                            #                                                                            loss=loss_name)
+                            fname = constants.FNAME_FORMAT["models_nb_plays_noise_predictions"].format(method=method,
+                                                                                                       weight=weight,
+                                                                                                       width=width,
+                                                                                                       nb_plays=nb_plays,
+                                                                                                       nb_plays_=nb_plays_,
+                                                                                                       batch_size=bz,
+                                                                                                       units=units,
+                                                                                                       points=points,
+                                                                                                       mu=mu,
+                                                                                                       sigma=sigma,
+                                                                                                       loss=loss_name)
                             try:
                                 _, predictions = tdata.DatasetLoader.load_data(fname)
                             except:
