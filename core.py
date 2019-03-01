@@ -29,6 +29,9 @@ import pickle
 LOG = logging.getLogger(__name__)
 
 sess = utils.get_session()
+session = utils.get_session()
+SESS = utils.get_session()
+SESSION = utils.get_session()
 
 
 def Phi(x, width=1.0):
@@ -65,7 +68,6 @@ class PhiCell(Layer):
         self.kernel_initializer = initializers.get(kernel_initializer)
         self.kernel_regularizer = regularizers.get(kernel_regularizer)
 
-        # TODO: try non negative constraint
         self.kernel_constraint = constraints.get(kernel_constraint)
 
         self.hysteretic_func = hysteretic_func
@@ -76,16 +78,15 @@ class PhiCell(Layer):
         if self.debug:
             LOG.debug("Initialize *weight* as pre-defined: {} ....".format(self._weight))
             self.kernel = tf.Variable([[self._weight]], name="weight", dtype=tf.float32)
-            # if constants.DEBUG_INIT_TF_VALUE:
-            #     self.kernel = self.kernel.initialized_value()
-
             self._trainable_weights.append(self.kernel)
+
         else:
             LOG.debug("Initialize *weight* randomly...")
             assert self.units == 1, "Phi Cell unit must be equal to 1"
+
             self.kernel = self.add_weight(
                 "weight",
-                shape=(self.units, self.units),
+                shape=(1, 1),
                 initializer=self.kernel_initializer,
                 regularizer=self.kernel_regularizer,
                 constraint=self.kernel_constraint,
@@ -152,7 +153,11 @@ class PhiCell(Layer):
 
 
 class Operator(RNN):
-    def __init__(self, weight=1.0, width=1.0, debug=False):
+    def __init__(self,
+                 weight=1.0,
+                 width=1.0,
+                 debug=False):
+
         cell = PhiCell(
             weight=weight,
             width=width,
@@ -161,7 +166,6 @@ class Operator(RNN):
         super(Operator, self).__init__(
             cell=cell,
             return_sequences=True,
-            # return_state=True
             return_state=False,
             stateful=True,
             unroll=False
@@ -273,7 +277,8 @@ class MySimpleDense(Dense):
 
 
 class Play(object):
-    def __init__(self, inputs=None,
+    def __init__(self,
+                 inputs=None,
                  units=1,
                  batch_size=1,
                  weight=1.0,
@@ -294,10 +299,11 @@ class Play(object):
             self._debug = debug
 
         self.activation = activation
+
         self.loss = loss
         self.optimizer = optimizer
 
-        self.batch_size = batch_size
+        # self.batch_size = batch_size
 
         self._play_timestep = timestep
         self._play_batch_size = batch_size
@@ -623,7 +629,6 @@ class MyModel(object):
                  width=1.0,
                  debug=False,
                  activation='tanh',
-                 # loss='mse',
                  optimizer='adam',
                  timestep=1,
                  input_dim=1

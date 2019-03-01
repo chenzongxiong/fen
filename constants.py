@@ -161,6 +161,10 @@ FNAME_FORMAT = dict(
     F_interp_gif="./pics/F/interp/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/base-{loss}.gif",
     F_interp_gif_snake="./pics/F/interp/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/snake-{loss}.gif",
 
+    # models_nb_plays_noise_test_ts_outputs_gif="./pics/models/diff_weights/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/state-{state}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/ts-outputs-{loss}.gif",
+
+    F_interp_ts_outputs_gif="./pics/F/interp/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/state-{state}/ts-outputs-{loss}.gif",
+
 
     )
 
@@ -173,3 +177,9 @@ class NetworkType:
 
 
 LOG_DIR = "./log"
+
+_prefix = './new-dataset'
+
+DATASET_PATH = dict(
+    models=_prefix+'/models/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/base.csv',
+)

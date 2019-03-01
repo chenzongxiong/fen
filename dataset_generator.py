@@ -1,11 +1,12 @@
 import sys
+import time
 import argparse
 
 import numpy as np
 import trading_data as tdata
 import log as logging
 import constants
-
+import colors
 
 LOG = logging.getLogger(__name__)
 
@@ -92,23 +93,6 @@ def markov_chain(points, mu=0, sigma=0.001):
     tdata.DatasetSaver.save_data(B, B, fname)
 
 
-def GF_generator():
-    for method in methods:
-        for weight in weights:
-            for width in widths:
-                for nb_plays in NB_PLAYS:
-                    fname = constants.FNAME_FORMAT["models"].format(method=method, weight=weight, width=width, nb_plays=nb_plays)
-
-                    try:
-                        inputs, outputs = tdata.DatasetLoader.load_data(fname)
-                        fname_G = constants.FNAME_FORMAT["models_G"].format(method=method, weight=weight, width=width, nb_plays=nb_plays)
-                        fname_F = constants.FNAME_FORMAT["models_F"].format(method=method, weight=weight, width=width, nb_plays=nb_plays)
-                        tdata.DatasetSaver.save_data(inputs, outputs, fname_G)
-                        tdata.DatasetSaver.save_data(outputs, inputs, fname_F)
-                    except FileNotFoundError:
-                        LOG.warn("fname {} not found.".format(fname))
-
-
 def operator_generator_with_noise():
     states = [0]
     mu = 0
@@ -189,7 +173,6 @@ def model_generator_with_noise():
                 tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
 
-
 def operator_noise_test_generator():
     states = [2]
     mu = 0
@@ -220,7 +203,6 @@ def operator_noise_test_generator():
                 outputs = np.hstack(outputs)
                 outputs = outputs.T
                 tdata.DatasetSaver.save_data(inputs, outputs, fname)
-
 
 
 def model_noise_test_generator():
@@ -269,31 +251,46 @@ def model_nb_plays_generator_with_noise():
     points = 1000
     units = 20
     nb_plays = 20
-    method = ["sin"]
-    for method in methods:
-        for weight in weights:
-            for width in widths:
-                LOG.debug("generate data for method {}, weight {}, width {}, units {}, nb_plays {}, mu: {}, sigma: {}".format(
-                    method, weight, width, units, nb_plays, mu, sigma,
-                ))
 
-                inputs = None
+    # method = 'noise'
+    method = 'sin'
+    with_noise = False
 
-                import time
-                start = time.time()
-                inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(nb_plays=nb_plays,
-                                                                                   points=points,
-                                                                                   units=units,
-                                                                                   inputs=inputs,
-                                                                                   batch_size=1,
-                                                                                   mu=mu,
-                                                                                   sigma=sigma)
-                end = time.time()
-                LOG.debug("time cost: {} s".format(end-start))
+    activation = 'tanh'
+    # activation = None
+    # activation = 'relu'
 
-                fname = constants.FNAME_FORMAT['models_nb_plays_noise'].format(method=method, weight=weight, width=width, nb_plays=nb_plays, units=units, points=points, mu=mu, sigma=sigma)
-                tdata.DatasetSaver.save_data(inputs, outputs, fname)
+    input_dim = 1
+    state = 0
 
+    if method == 'noise':
+        with_noise = True
+    if with_noise is False:
+        mu = 0
+        sigma = 0
+
+    LOG.debug("generate model data for method {}, units {}, nb_plays {}, mu: {}, sigma: {}, points: {}, activation: {}, input_dim: {}".format(method, units, nb_plays, mu, sigma, points, activation, input_dim))
+
+
+    inputs = None
+
+    start = time.time()
+    inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(nb_plays=nb_plays,
+                                                                       points=points,
+                                                                       units=units,
+                                                                       inputs=inputs,
+                                                                       mu=mu,
+                                                                       sigma=sigma,
+                                                                       activation=activation,
+                                                                       input_dim=input_dim,
+                                                                       with_noise=with_noise,
+                                                                       method=method)
+    end = time.time()
+    LOG.debug("time cost: {} s".format(end-start))
+
+    fname = constants.DATASET_PATH['models'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
+    LOG.debug(colors.cyan("Write  data to file {}".format(fname)))
+    tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
 
 if __name__ == "__main__":

@@ -23,36 +23,36 @@ class DatasetGenerator(object):
         return inputs
 
     @classmethod
-    def systhesis_sin_input_generator(cls, points, mu, sigma):
+    def systhesis_sin_input_generator(cls, points, mu=0, sigma=0.01, with_noise=False):
         # NOTE: x = sin(t) + 0.3 sin(1.3 t)  + 1.2 sin (1.6 t)
         inputs1 = np.sin(np.linspace(-2*np.pi, 2*np.pi, points))
         inputs2 = 0.3 * np.sin(1.3* np.linspace(-2*np.pi, 2*np.pi, points))
         inputs3 = 1.2 * np.sin(1.6 * np.linspace(-2*np.pi, 2*np.pi, points))
         inputs = (inputs1 + inputs2 + inputs3).astype(np.float32)
         LOG.debug("Generate the input sequence according to formula {}".format(colors.red("[x = sin(t) + 0.3 sin(1.3 t)  + 1.2 sin (1.6 t)]")))
-
-        noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
-        inputs = noise
+        if with_noise is True:
+            noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
+            inputs += noise
         return inputs
 
     @classmethod
-    def systhesis_mixed_input_generator(cls, points, mu, sigma):
+    def systhesis_mixed_input_generator(cls, points, mu=0, sigma=0.01, with_noise=False):
         # NOTE: x = cos(t) + 0.7 cos(3.0 t) + 1.5 sin(2.3 t)
         # NOTE: x = cos(0.1 t) + 0.7 cos(0.2 t) + 1.5 sin(2.3 t)
         inputs1 = np.cos(0.2 * np.linspace(-10*np.pi, 10*np.pi, points))
         inputs2 = 0.7 * np.cos(2 * np.linspace(-10*np.pi, 10*np.pi, points))
         inputs3 = 1.5 * np.sin(2.3 * np.linspace(-10*np.pi, 10*np.pi, points))
-        # inputs2 = 0.7 * np.cos(0.4 * np.linspace(-2*np.pi, 2*np.pi, points))
-        # inputs3 = 1.5 * np.sin(0.8 * np.linspace(-2*np.pi, 2*np.pi, points))
         inputs = (inputs1 + inputs2 + inputs3).astype(np.float32)
-        # inputs = (inputs1).astype(np.float32)
         LOG.debug("Generate the input sequence according to formula {}".format(colors.red("[x = cos(t) + 0.7 cos(3.0 t)  + 1.5 sin (2.3 t)]")))
-
-        noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
-        # inputs = 20 * inputs
-        # inputs += noise
-        inputs = noise
+        if with_noise is True:
+            noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
+            inputs += noise
         return inputs
+
+    @classmethod
+    def systhesis_noise_input_generator(cls, points, mu, sigma):
+        noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
+        return noise
 
     @classmethod
     def systhesis_operator_generator(cls, points=1000, weight=1, width=1, state=0, with_noise=False, mu=0, sigma=0.01, method="sin"):
@@ -97,11 +97,40 @@ class DatasetGenerator(object):
         return _inputs, _outputs
 
     @classmethod
-    def systhesis_model_generator(cls, nb_plays=1, points=1000, units=1, debug_plays=False, inputs=None, batch_size=50, mu=0, sigma=0.01):
-        model = core.MyModel(nb_plays=nb_plays, units=units, debug=True, batch_size=batch_size, activation=None, timestep=points, input_dim=1)
+    def systhesis_model_generator(cls,
+                                  inputs=None,
+                                  nb_plays=1,
+                                  points=1000,
+                                  units=1,
+                                  batch_size=1,
+                                  mu=0,
+                                  sigma=0.01,
+                                  input_dim=1,
+                                  activation=None,
+                                  with_noise=True,
+                                  method=None):
+
+        if points % input_dim != 0:
+            raise Exception("ERROR: timestep must be integer")
+
+        timestep = points // input_dim
+        model = core.MyModel(nb_plays=nb_plays,
+                             units=units,
+                             debug=True,
+                             activation=activation,
+                             timestep=timestep,
+                             input_dim=input_dim)
         if inputs is None:
-            _inputs = cls.systhesis_mixed_input_generator(points, mu, sigma)
+            LOG.debug("systhesis model outputs by *online-generated* inputs with settings: method: {} and noise: {}".format(colors.red(method), with_noise))
+
+            if method == 'noise':
+                _inputs = cls.systhesis_noise_input_generator(points, mu, sigma)
+            elif method == 'sin':
+                _inputs = cls.systhesis_sin_input_generator(points, mu, sigma, with_noise=with_noise)
+            elif method == 'mixed':
+                _inputs = cls.systhesis_mixed_input_generator(points, mu, sigma, with_noise=with_noise)
         else:
+            LOG.debug("systhesis model outputs by *pre-defined* inputs")
             _inputs = inputs
 
         outputs = model.predict(_inputs)
