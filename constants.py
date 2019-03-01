@@ -94,6 +94,16 @@ FNAME_FORMAT = dict(
     models_nb_plays_noise_ts_outputs_gif="./pics/models/diff_weights/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/ts-outputs-{loss}.gif",
     models_nb_plays_noise_saved_weights="./training-data/models/diff_weights/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/weights-{loss}.h5",
 
+    models_nb_plays_noise_interp="./training-data/models/diff_weights/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/interp-{interp}/base.csv",
+    models_nb_plays_noise_interp_predictions="./training-data/models/diff_weights/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/interp-{interp}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/predictions-{loss}.csv",
+    models_nb_plays_noise_interp_loss_history="./training-data/models/diff_weights/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/interp-{interp}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/loss-history-{loss}.csv",
+    models_nb_plays_noise_interp_loss="./training-data/models/diff_weights/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/interp-{interp}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/loss-{loss}.csv",
+    models_nb_plays_noise_interp_gif="./pics/models/diff_weights/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/interp-{interp}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/base-{loss}.gif",
+    models_nb_plays_noise_interp_gif_snake="./pics/models/diff_weights/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/interp-{interp}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/snake-{loss}.gif",
+    models_nb_plays_noise_interp_ts_outputs_gif="./pics/models/diff_weights/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/interp-{interp}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/ts-outputs-{loss}.gif",
+    models_nb_plays_noise_interp_saved_weights="./training-data/models/diff_weights/method-{method}/weight-{weight}/width-{width}/nb_plays-{nb_plays}/units-{units}/mu-{mu}/sigma-{sigma}/points-{points}/interp-{interp}/nb_plays_-{nb_plays_}/batch_size-{batch_size}/weights-{loss}.h5",
+
+
     # operator test
     operators_noise_test="./training-data/operators/method-{method}/weight-{weight}/width-{width}/mu-{mu}/sigma-{sigma}/points-{points}/state-{state}/base.csv",
     operators_noise_test_predictions="./training-data/operators/method-{method}/weight-{weight}/width-{width}/mu-{mu}/sigma-{sigma}/points-{points}/state-{state}/predictions-{loss}.csv",
