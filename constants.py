@@ -182,4 +182,7 @@ _prefix = './new-dataset'
 
 DATASET_PATH = dict(
     models=_prefix+'/models/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/base.csv',
+    models_predictions=_prefix+'/models/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/predictions.csv',
+    models_loss_history=_prefix+'/models/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/history.csv',
+    models_saved_weights=_prefix+'/models/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/weights.h5',
 )
