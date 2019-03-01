@@ -145,8 +145,8 @@ class PhiCell(Layer):
         states_ = [tf.reshape(self._states, shape=(1, 1))]
         # LOG.debug("inputs_.shape: {}".format(inputs_.shape))
         # LOG.debug("states_.shape: {}".format(states_.shape))
-
-        last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=False)
+        unroll = True
+        last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=unroll)
 
         return outputs_, states_x
 

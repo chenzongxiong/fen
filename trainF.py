@@ -32,9 +32,9 @@ def fit(inputs, outputs, units, activation, width, true_weight, loss='mse', mu=0
 
     units = units
     # batch_size = 1
-    input_dim = 100
-    timestep = 90
-    epochs = 250
+    input_dim = 10
+    timestep = 900
+    epochs = 2500
     # epochs = EPOCHS // batch_size
     # steps_per_epoch = batch_size
     steps_per_epoch = 1
