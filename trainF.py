@@ -48,7 +48,7 @@ def fit(inputs, outputs, units, activation, width, true_weight, loss='mse', mu=0
                    units=units,
                    activation="tanh",
                    nb_plays=nb_plays)
-    # agent.load_weights(weights_fname)
+    agent.load_weights(weights_fname)
     agent.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch, loss_file_name=loss_file_name,
               learning_rate=learning_rate)
     end = time.time()
