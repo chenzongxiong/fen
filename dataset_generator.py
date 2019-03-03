@@ -248,7 +248,7 @@ def model_nb_plays_generator_with_noise():
     # sigma = 0.01
     # sigma = 0.001
     # sigma = 2
-    sigma = 2
+    sigma = 3
     points = 1000
     units = 20
     nb_plays = 20
@@ -260,17 +260,27 @@ def model_nb_plays_generator_with_noise():
     # diff_weights = False
     diff_weights = True
 
+    run_test = True
+
     activation = 'tanh'
     # activation = None
 
     input_dim = 1
     state = 0
 
+
     if method == 'noise':
         with_noise = True
     if with_noise is False:
         mu = 0
         sigma = 0
+
+    if diff_weights is True and run_test is True:
+        file_key = 'models_diff_weights_test'
+    elif diff_weights is True:
+        file_key  = 'models_diff_weights'
+    else:
+        file_key = 'models'
 
     LOG.debug("generate model data for method {}, units {}, nb_plays {}, mu: {}, sigma: {}, points: {}, activation: {}, input_dim: {}".format(method, units, nb_plays, mu, sigma, points, activation, input_dim))
 
@@ -290,10 +300,10 @@ def model_nb_plays_generator_with_noise():
                                                                        diff_weights=diff_weights)
     end = time.time()
     LOG.debug("time cost: {} s".format(end-start))
-    if diff_weights is True:
-        fname = constants.DATASET_PATH['models_diff_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
-    else:
-        fname = constants.DATASET_PATH['models'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
+    # if diff_weights is True:
+    fname = constants.DATASET_PATH[file_key].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
+    # else:
+    #     fname = constants.DATASET_PATH['models'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
 
     LOG.debug(colors.cyan("Write  data to file {}".format(fname)))
     tdata.DatasetSaver.save_data(inputs, outputs, fname)

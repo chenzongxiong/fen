@@ -637,7 +637,7 @@ class MyModel(object):
             # weight = 1.0
             if diff_weights is True:
                 # weight =  _weight / (i)
-                weight = (i + 1) * _weight / 10
+                weight = i * _weight / 50
             else:
                 weight = 1.0
 

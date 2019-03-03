@@ -489,17 +489,17 @@ def model_noise_test_generator():
 
 
 def model_nb_plays_generator_with_noise():
-    step = 80
+    step = 40
     # method = 'sin'
     method = 'noise'
 
     with_noise = False
     diff_weights = True
-    run_test = True
+    run_test = False
     interp = 10
 
     mu = 0
-    sigma = 2
+    sigma = 3
     points = 1000
     input_dim = 1
     # ground truth
@@ -525,39 +525,63 @@ def model_nb_plays_generator_with_noise():
         sigma = 0
 
 
-    if diff_weights is True:
-        base_file_key = 'models_diff_weights'
-        predictions_file_key = 'models_diff_weights_predictions'
+    if interp == 1:
+        if run_test is False:
+            if diff_weights is True:
+                base_file_key = 'models_diff_weights'
+                predictions_file_key = 'models_diff_weights_predictions'
 
-        models_gif_key = 'models_diff_weights_gif'
-        models_snake_gif_key = 'models_diff_weights_snake_gif'
-        models_ts_outputs_gif_key = 'models_diff_weights_ts_outputs_gif'
-    else:
-        base_file_key = 'models'
-        predictions_file_key = 'models_predictions'
+                models_gif_key = 'models_diff_weights_gif'
+                models_snake_gif_key = 'models_diff_weights_snake_gif'
+                models_ts_outputs_gif_key = 'models_diff_weights_ts_outputs_gif'
+            else:
+                base_file_key = 'models'
+                predictions_file_key = 'models_predictions'
 
-        models_gif_key = 'models_gif'
-        models_snake_gif_key = 'models_snake_gif'
-        models_ts_outputs_gif_key = 'models_ts_outputs_gif'
+                models_gif_key = 'models_gif'
+                models_snake_gif_key = 'models_snake_gif'
+                models_ts_outputs_gif_key = 'models_ts_outputs_gif'
+        elif run_test is True:
+            if diff_weights is True:
+                base_file_key = 'models_diff_weights_test'
+                predictions_file_key = 'models_diff_weights_test_predictions'
+                models_gif_key = 'models_diff_weights_test_gif'
+                models_snake_gif_key = 'models_diff_weights_test_snake_gif'
+                models_ts_outputs_gif_key = 'models_diff_weights_test_ts_outputs_gif'
+            else:
+                raise
+    elif interp != 1:
+        if run_test is False:
+            if diff_weights is True:
+                base_file_key = 'models_diff_weights'
+                models_interp_key = 'models_diff_weights_interp'
+                predictions_file_key = 'models_diff_weights_predictions_interp'
 
-    if interp != 1:
-        if diff_weights is True:
-            models_gif_key = 'models_diff_weights_interp_gif'
-            models_snake_gif_key = 'models_diff_weights_snake_interp_gif'
-            models_ts_outputs_gif_key = 'models_diff_weights_ts_outputs_interp_gif'
-            models_interp_key = 'models_diff_weights_interp'
-            predictions_file_key = 'models_diff_weights_predictions_interp'
-        else:
-            models_gif_key = 'models_interp_gif'
-            models_snake_gif_key = 'models_snake_interp_gif'
-            models_ts_outputs_gif_key = 'models_ts_outputs_interp_gif'
-            models_interp_key = 'models_interp'
-            predictions_file_key = 'models_predictions_interp'
+                models_gif_key = 'models_diff_weights_interp_gif'
+                models_snake_gif_key = 'models_diff_weights_snake_interp_gif'
+                models_ts_outputs_gif_key = 'models_diff_weights_ts_outputs_interp_gif'
+            else:
+                # base_interp_key = 'models_interp'
+                # predictions_file_key = 'models_predictions_interp'
+
+                # models_gif_key = 'models_interp_gif'
+                # models_snake_gif_key = 'models_snake_interp_gif'
+                # models_ts_outputs_gif_key = 'models_ts_outputs_interp_gif'
+                raise
+        elif run_test is True:
+            if diff_weights is True:
+                base_file_key = 'models_diff_weights_test'
+                models_interp_key = 'models_diff_weights_test_interp'
+                predictions_file_key = 'models_diff_weights_test_predictions_interp'
+                models_gif_key = 'models_diff_weights_test_interp_gif'
+                models_snake_gif_key = 'models_diff_weights_test_snake_interp_gif'
+                models_ts_outputs_gif_key = 'models_diff_weights_test_ts_outputs_interp_gif'
+            else:
+                raise
 
     if run_test is True and method == 'sin':
         method = 'mixed'
-    if run_test is True and method == 'noise':
-        pass
+    # import ipdb; ipdb.set_trace()
 
     fname = constants.DATASET_PATH[base_file_key].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
 
@@ -661,6 +685,7 @@ def model_nb_plays_generator_with_noise():
 
             LOG.debug("Save interploted dataset to file: {}".format(coloring.cyan(models_interp_fname)))
             tdata.DatasetSaver.save_data(_inputs_interp, ground_truth_interp, models_interp_fname)
+            sys.exit(0)
 
         _inputs = _inputs_interp
         ground_truth = ground_truth_interp
@@ -720,7 +745,7 @@ def model_nb_plays_generator_with_noise():
     colors = utils.generate_colors(outputs.shape[-1])
     inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
 
-    # utils.save_animation(inputs, outputs, models_gif_fname, step=step, colors=colors)
+    utils.save_animation(inputs, outputs, models_gif_fname, step=step, colors=colors)
 
     ##### SNAKE
     _inputs = np.hstack([_inputs, _inputs])

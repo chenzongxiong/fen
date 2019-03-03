@@ -10,8 +10,12 @@ import log as logging
 import colors
 
 LOG = logging.getLogger(__name__)
+# base seed
 np.random.seed(123)
-
+LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is 123"))
+# test seed
+# np.random.seed(345)
+# LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is 345"))
 
 def update(i, *fargs):
     inputs = fargs[0]

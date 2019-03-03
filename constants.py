@@ -192,13 +192,21 @@ DATASET_PATH = dict(
 
     models_diff_weights=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/base.csv',
 
+    models_diff_weights_test=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/test.csv',
+
     models_diff_weights_predictions=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/predictions.csv',
+
+    models_diff_weights_test_predictions=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/test_predictions.csv',
+
     models_diff_weights_loss_history=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/history.csv',
     models_diff_weights_saved_weights=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/weights.h5',
 
     models_diff_weights_gif=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/base.gif',
-    models_diff_weights_snake_gif=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/snake.gif',
-    models_diff_weights_ts_outputs_gif=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/ts_outputs.gif',
+
+    models_diff_weights_test_gif=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/test.gif',
+
+    models_diff_weights_test_snake_gif=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/test_snake.gif',
+    models_diff_weights_test_ts_outputs_gif=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/test_ts_outputs.gif',
 
     models_interp=_prefix+'/models/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/base.csv',
 
@@ -207,13 +215,25 @@ DATASET_PATH = dict(
     models_ts_outputs_interp_gif=_prefix+'/models/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/ts_outputs.gif',
 
     models_diff_weights_interp=_prefix+'/models/diff_weights/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/base.csv',
+
+    models_diff_weights_test_interp=_prefix+'/models/diff_weights/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/test.csv',
+
+
     models_diff_weights_predictions_interp=_prefix+'/models/diff_weights/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/predictions.csv',
+
+    models_diff_weights_test_predictions_interp=_prefix+'/models/diff_weights/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/test_predictions.csv',
+
     models_diff_weights_loss_history_interp=_prefix+'/models/diff_weights/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/history.csv',
 
     models_diff_weights_interp_gif=_prefix+'/models/diff_weights/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/base.gif',
+
+    models_diff_weights_test_interp_gif=_prefix+'/models/diff_weights/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/test.gif',
+
     models_diff_weights_snake_interp_gif=_prefix+'/models/diff_weights/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/snake.gif',
+    models_diff_weights_test_snake_interp_gif=_prefix+'/models/diff_weights/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/test_snake.gif',
+
     models_diff_weights_ts_outputs_interp_gif=_prefix+'/models/diff_weights/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/ts_outputs.gif',
 
-
+    models_diff_weights_test_ts_outputs_interp_gif=_prefix+'/models/diff_weights/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/test_ts_outputs.gif',
 
 )
