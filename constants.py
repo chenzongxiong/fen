@@ -202,6 +202,8 @@ DATASET_PATH = dict(
     models_diff_weights_saved_weights=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/weights.h5',
 
     models_diff_weights_gif=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/base.gif',
+    models_diff_weights_snake_gif=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/snake.gif',
+    models_diff_weights_ts_outputs_gif=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/ts_outputs.gif',
 
     models_diff_weights_test_gif=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/test.gif',
 
