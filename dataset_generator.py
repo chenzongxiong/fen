@@ -247,18 +247,21 @@ def model_nb_plays_generator_with_noise():
     # sigma = 0.001
     # sigma = 0.01
     # sigma = 0.001
+    # sigma = 2
     sigma = 2
     points = 1000
     units = 20
     nb_plays = 20
 
-    # method = 'noise'
-    method = 'sin'
+    # method = 'sin'
+    # method = 'mixed'
+    method = 'noise'
     with_noise = False
+    # diff_weights = False
+    diff_weights = True
 
     activation = 'tanh'
     # activation = None
-    # activation = 'relu'
 
     input_dim = 1
     state = 0
@@ -271,24 +274,27 @@ def model_nb_plays_generator_with_noise():
 
     LOG.debug("generate model data for method {}, units {}, nb_plays {}, mu: {}, sigma: {}, points: {}, activation: {}, input_dim: {}".format(method, units, nb_plays, mu, sigma, points, activation, input_dim))
 
-
     inputs = None
 
     start = time.time()
-    inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(nb_plays=nb_plays,
+    inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(inputs=inputs,
+                                                                       nb_plays=nb_plays,
                                                                        points=points,
                                                                        units=units,
-                                                                       inputs=inputs,
                                                                        mu=mu,
                                                                        sigma=sigma,
-                                                                       activation=activation,
                                                                        input_dim=input_dim,
+                                                                       activation=activation,
                                                                        with_noise=with_noise,
-                                                                       method=method)
+                                                                       method=method,
+                                                                       diff_weights=diff_weights)
     end = time.time()
     LOG.debug("time cost: {} s".format(end-start))
+    if diff_weights is True:
+        fname = constants.DATASET_PATH['models_diff_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
+    else:
+        fname = constants.DATASET_PATH['models'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
 
-    fname = constants.DATASET_PATH['models'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
     LOG.debug(colors.cyan("Write  data to file {}".format(fname)))
     tdata.DatasetSaver.save_data(inputs, outputs, fname)
 

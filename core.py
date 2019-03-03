@@ -35,11 +35,11 @@ SESSION = utils.get_session()
 
 
 def Phi(x, width=1.0):
-    """
+    '''
     Phi(x) = x         , if x > 0
            = x + width , if x < - width
            = 0         , otherwise
-    """
+    '''
     return tf.maximum(x, 0) + tf.minimum(x+width, 0)
 
 
@@ -72,9 +72,12 @@ class PhiCell(Layer):
 
         self.hysteretic_func = hysteretic_func
         self.input_dim = input_dim
+        self.unroll = False
 
     def build(self, input_shape):
-        LOG.debug("In build, input_shape: {}".format(input_shape))
+        if input_shape[-1] <= 50:
+            self.unroll = True
+
         if self.debug:
             LOG.debug("Initialize *weight* as pre-defined: {} ....".format(self._weight))
             self.kernel = tf.Variable([[self._weight]], name="weight", dtype=tf.float32)
@@ -110,8 +113,7 @@ class PhiCell(Layer):
 
         # outputs_ = tf.multiply(self._inputs, self.kernel)
 
-        # NOTE: unroll method, can we use RNN method ?
-        # import ipdb; ipdb.set_trace()
+        # # NOTE: unroll method, can we use RNN method ?
         # outputs = [self._state]
         # for i in range(outputs_.shape[-1].value):
         #     output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1])), outputs[-1])
@@ -132,10 +134,6 @@ class PhiCell(Layer):
             outputs = Phi(inputs - states[-1]) + states[-1]
             return outputs, [outputs]
 
-        # import ipdb; ipdb.set_trace()
-        # LOG.debug("inputs_.shape: {}".format(inputs_.shape))
-        # LOG.debug("states_.shape: {}".format(states_.shape))
-
         self._inputs = tf.multiply(self._inputs, self.kernel)
 
         inputs_ = tf.reshape(self._inputs, shape=(1, self._inputs.shape[0].value*self._inputs.shape[1].value, 1))
@@ -143,11 +141,9 @@ class PhiCell(Layer):
             self._states = ops.convert_to_tensor(states[-1], dtype=tf.float32)
         else:
             self._states = ops.convert_to_tensor(states, dtype=tf.float32)
+
         states_ = [tf.reshape(self._states, shape=(1, 1))]
-        # LOG.debug("inputs_.shape: {}".format(inputs_.shape))
-        # LOG.debug("states_.shape: {}".format(states_.shape))
-        unroll = True
-        last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=unroll)
+        last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
 
         return outputs_, states_x
 
@@ -303,8 +299,6 @@ class Play(object):
         self.loss = loss
         self.optimizer = optimizer
 
-        # self.batch_size = batch_size
-
         self._play_timestep = timestep
         self._play_batch_size = batch_size
         self._play_input_dim = input_dim
@@ -322,7 +316,7 @@ class Play(object):
             raise Exception("Unknown input shape")
         if inputs is not None:
 
-            _inputs = ops.convert_to_tensor(inputs, tf.float32)
+            _inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
 
             if _inputs.shape.ndims == 1:
                 length = _inputs.shape[-1].value
@@ -340,8 +334,6 @@ class Play(object):
 
             else:
                 raise Exception("dimension of inputs must be equal to 1")
-
-
 
         # length = self._batch_input_shape[0].value * self._batch_input_shape[1].value * self._batch_input_shape[2].value
         length = self._batch_input_shape[1].value * self._batch_input_shape[2].value
@@ -631,17 +623,24 @@ class MyModel(object):
                  activation='tanh',
                  optimizer='adam',
                  timestep=1,
-                 input_dim=1
+                 input_dim=1,
+                 diff_weights=False,
                  ):
 
         self.plays = []
         self._nb_plays = nb_plays
-        self._pool = pool.ProcessPool()
+
         i = 1
         _weight = 1.0
         for nb_play in range(nb_plays):
-            # weight = np.random.uniform(0., 3.)
-            weight =  _weight / (i)
+            # weight =  _weight / (i)
+            # weight = 1.0
+            if diff_weights is True:
+                # weight =  _weight / (i)
+                weight = (i + 1) * _weight / 10
+            else:
+                weight = 1.0
+
             LOG.debug("MyModel geneartes Play {} with Weight: {}".format(i, weight))
 
             play = Play(units=units,
@@ -730,19 +729,15 @@ class MyModel(object):
         writer.add_graph(tf.get_default_graph())
         loss_summary = tf.summary.scalar("loss", loss)
 
-        # while i < epochs:
-        #     i += 1
         for i in range(epochs):
-            # import ipdb; ipdb.set_trace()
             for j in range(steps_per_epoch):
                 cost = train_function(ins)[0]
             self.cost_history.append([i, cost])
-            if i != 0  and i % 50 == 0:     # save weights every 50 epochs
-                fname = "{}/epochs-{}/weights-mse.h5".format(path, i)
-                self.save_weights(fname)
+            # if i != 0  and i % 50 == 0:     # save weights every 50 epochs
+            #     fname = "{}/epochs-{}/weights-mse.h5".format(path, i)
+            #     self.save_weights(fname)
             LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
 
-        # import ipdb; ipdb.set_trace()
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
@@ -763,10 +758,6 @@ class MyModel(object):
             outputs.append(play.predict(x))
             end = time.time()
             LOG.debug("play {} cost time {} s".format(play._name, end-start))
-
-        # args_list = [(play, x) for play in self.plays]
-        # self._pool.startmap(self._predict, args_list)
-        # self._pool.join()
 
         outputs_ = np.array(outputs)
         prediction = outputs_.mean(axis=0)

@@ -1,3 +1,4 @@
+import os
 import sys
 import argparse
 import numpy as np
@@ -6,7 +7,7 @@ import log as logging
 import constants
 import utils
 import trading_data as tdata
-
+import colors as coloring
 
 LOG = logging.getLogger(__name__)
 
@@ -488,194 +489,260 @@ def model_noise_test_generator():
 
 
 def model_nb_plays_generator_with_noise():
+    step = 80
+    # method = 'sin'
+    method = 'noise'
+
+    with_noise = False
+    diff_weights = True
+    run_test = True
+    interp = 10
+
     mu = 0
-    # sigma = 0.01
-    # sigma = 0.001
-    # sigma = 2
     sigma = 2
     points = 1000
-    # nb_plays = [20]
+    input_dim = 1
+    # ground truth
     nb_plays = 20
-    nb_plays_ = 20
-
-    step = 20
-
     units = 20
-    period = 1
-    interp = 1
-    loss_name = 'mse'
     state = 0
-    bz = 1
+    # activation = None
+    activation = 'tanh'
+    # predicitons
+    __nb_plays__ = 20
+    __units__ = 20
+    __state__ = 0
+    # __activation__ = None
+    __activation__ = 'tanh'
 
-    for method in methods:
-        for weight in weights:
-            for width in widths:
-                if True:
-                    LOG.debug("Processing method: {}, weight: {}, width: {}, points: {}, units: {}, np_plays: {}, sigma: {}, mu: {}, loss: {}".format(method, weight, width, points, units, nb_plays, sigma, mu, loss_name))
-                    fname = constants.FNAME_FORMAT["models_nb_plays_noise"].format(method=method,
-                                                                                   weight=weight,
-                                                                                   width=width,
-                                                                                   nb_plays=nb_plays,
-                                                                                   units=units,
-                                                                                   points=points,
-                                                                                   mu=mu,
-                                                                                   sigma=sigma)
-                    _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
-                    diff = _inputs[1:] - _inputs[:-1]
-                    _max = np.max(np.abs(diff))
-                    # interp = (int)(_max / 0.2)
-                    # if interp < 1:
-                    #     interp = 1
-                    # import ipdb; ipdb.set_trace()
-                    if True:
-                        if True:
-                            fname = constants.FNAME_FORMAT["models_nb_plays_noise_predictions"].format(method=method,
-                                                                                                       weight=weight,
-                                                                                                       width=width,
-                                                                                                       nb_plays=nb_plays,
-                                                                                                       nb_plays_=nb_plays_,
-                                                                                                       batch_size=bz,
-                                                                                                       units=units,
-                                                                                                       points=points,
-                                                                                                       mu=mu,
-                                                                                                       sigma=sigma,
-                                                                                                       loss=loss_name)
-                            try:
-                                _, predictions = tdata.DatasetLoader.load_data(fname)
-                            except:
-                                continue
+    loss_name = 'mse'
 
-                            if interp != 1:
-                                from scipy.interpolate import interp1d
+    if method == 'noise':
+        with_noise = True
 
-                                t_ = np.linspace(1, points, points)
-
-                                f1 = interp1d(t_, _inputs)
-                                f2 = interp1d(t_, _inputs, kind='cubic')
-                                t_interp = np.linspace(1, points, (int)(interp*points-interp+1))
-                                # t_interp = np.linspace(1, points, (int)(interp*points))
-
-                                _inputs_interp = np.interp(t_interp, t_, _inputs)
-                                # _inputs_interp = f2(t_interp)
-
-                                # ground_truth_interp = np.interp(_inputs_interp, _inputs, ground_truth, period=1)
-                                # predictions_interp = np.interp(_inputs_interp, _inputs, predictions, period=1)
-                                # ground_truth_interp =
-                                # model = core.MyModel(nb_plays=nb_plays, units=units, debug=True, batch_size=batch_size, activation=None, timestep=points, input_dim=1)
-                                _, ground_truth_interp = tdata.DatasetGenerator.systhesis_model_generator(nb_plays=nb_plays,
-                                                                                                          units=units,
-                                                                                                          inputs=_inputs_interp,
-                                                                                                          points=t_interp.shape[0],
-                                                                                                          mu=None,
-                                                                                                          sigma=None)
-                                predictions_interp = ground_truth_interp
-                                # import matplotlib.pyplot as plt
-                                # length = 50
-                                # plt.plot(t_[:length], _inputs[:length], 'o')
-                                # plt.plot(t_interp[:interp*length-1], _inputs_interp[:(interp*length-1)], '-x')
-                                # plt.show()
+    if with_noise is False:
+        mu = 0
+        sigma = 0
 
 
-                                # plt.plot(t_[:length], ground_truth[:length], 'o')
-                                # plt.plot(t_interp[:interp*length-1], ground_truth_interp[:(interp*length-1)], '-x')
-                                # plt.show()
-                                # utils.save_animation(t_, _inputs, "./1.gif", step=points, colors=['black'])
-                                # utils.save_animation(t_interp, _inputs_interp, "./1_interp.gif", step=points, colors=['black'])
+    if diff_weights is True:
+        base_file_key = 'models_diff_weights'
+        predictions_file_key = 'models_diff_weights_predictions'
+
+        models_gif_key = 'models_diff_weights_gif'
+        models_snake_gif_key = 'models_diff_weights_snake_gif'
+        models_ts_outputs_gif_key = 'models_diff_weights_ts_outputs_gif'
+    else:
+        base_file_key = 'models'
+        predictions_file_key = 'models_predictions'
+
+        models_gif_key = 'models_gif'
+        models_snake_gif_key = 'models_snake_gif'
+        models_ts_outputs_gif_key = 'models_ts_outputs_gif'
+
+    if interp != 1:
+        if diff_weights is True:
+            models_gif_key = 'models_diff_weights_interp_gif'
+            models_snake_gif_key = 'models_diff_weights_snake_interp_gif'
+            models_ts_outputs_gif_key = 'models_diff_weights_ts_outputs_interp_gif'
+            models_interp_key = 'models_diff_weights_interp'
+            predictions_file_key = 'models_diff_weights_predictions_interp'
+        else:
+            models_gif_key = 'models_interp_gif'
+            models_snake_gif_key = 'models_snake_interp_gif'
+            models_ts_outputs_gif_key = 'models_ts_outputs_interp_gif'
+            models_interp_key = 'models_interp'
+            predictions_file_key = 'models_predictions_interp'
+
+    if run_test is True and method == 'sin':
+        method = 'mixed'
+    if run_test is True and method == 'noise':
+        pass
+
+    fname = constants.DATASET_PATH[base_file_key].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
+
+    _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
+    LOG.debug("Load **ground-truth** dataset from file: {}".format(coloring.cyan(fname)))
+
+    predicted_fname = constants.DATASET_PATH[predictions_file_key].format(interp=interp,
+                                                                          method=method,
+                                                                          activation=activation,
+                                                                          state=state,
+                                                                          mu=mu,
+                                                                          sigma=sigma,
+                                                                          units=units,
+                                                                          nb_plays=nb_plays,
+                                                                          points=points,
+                                                                          input_dim=input_dim,
+                                                                          __activation__=__activation__,
+                                                                          __state__=__state__,
+                                                                          __units__=__units__,
+                                                                          __nb_plays__=__nb_plays__,
+                                                                          loss=loss_name)
+    if interp == 1:
+        try:
+            _, predictions = tdata.DatasetLoader.load_data(predicted_fname)
+            LOG.debug("Load **predicted** dataset from file: {}".format(coloring.cyan(predicted_fname)))
+        except FileNotFoundError:
+            LOG.warn("GROUND TRUTH and PREDICTIONS are the SAME dataset")
+            predictions = ground_truth
+
+    elif interp != 1:
+        models_interp_fname = constants.DATASET_PATH[models_interp_key].format(interp=interp,
+                                                                               method=method,
+                                                                               activation=activation,
+                                                                               state=state,
+                                                                               mu=mu,
+                                                                               sigma=sigma,
+                                                                               units=units,
+                                                                               nb_plays=nb_plays,
+                                                                               points=points,
+                                                                               input_dim=input_dim,
+                                                                               __activation__=__activation__,
+                                                                               __state__=__state__,
+                                                                               __units__=__units__,
+                                                                               __nb_plays__=__nb_plays__,
+                                                                               loss=loss_name)
+        if os.path.isfile(models_interp_fname):
+            LOG.debug("Already interploted...")
+            t_interp = np.linspace(1, points, (int)(interp*points-interp+1))
+            _inputs_interp, ground_truth_interp = tdata.DatasetLoader.load_data(models_interp_fname)
+            try:
+                _, predictions_interp = tdata.DatasetLoader.load_data(predicted_fname)
+                LOG.debug("Load **predicted** dataset from file: {}".format(coloring.cyan(predicted_fname)))
+            except FileNotFoundError:
+                LOG.warn("GROUND TRUTH and PREDICTIONS are the SAME dataset")
+                predictions_interp = ground_truth_interp
+
+            clip_length = min(predictions_interp.shape[0], _inputs_interp.shape[0])
+            t_interp = t_interp[:clip_length]
+            _inputs_interp = _inputs_interp[:clip_length]
+            ground_truth_interp = ground_truth_interp[:clip_length]
+            predictions_interp = predictions_interp[:clip_length]
+        else:
+            from scipy.interpolate import interp1d
+            diff = _inputs[1:] - _inputs[:-1]
+            LOG.debug("Max jump between two successive x is {}".format(np.max(np.abs(diff))))
+
+            t_ = np.linspace(1, points, points)
+
+            # f1 = interp1d(t_, _inputs)
+            # f2 = interp1d(t_, _inputs, kind='cubic')
+            t_interp = np.linspace(1, points, (int)(interp*points-interp+1))
+
+            _inputs_interp = np.interp(t_interp, t_, _inputs)
+            # _inputs_interp = f2(t_interp)
+            clip_length = int((t_interp.shape[0] // input_dim) * input_dim)
+            _inputs_interp = _inputs_interp[:clip_length]
+            # ground_truth_interp = np.interp(_inputs_interp, _inputs, ground_truth, period=1)
+            # predictions_interp = np.interp(_inputs_interp, _inputs, predictions, period=1)
+            _, ground_truth_interp = tdata.DatasetGenerator.systhesis_model_generator(inputs=_inputs_interp,
+                                                                                      nb_plays=nb_plays,
+                                                                                      points=t_interp.shape[0],
+                                                                                      units=units,
+                                                                                      mu=None,
+                                                                                      sigma=None,
+                                                                                      input_dim=input_dim,
+                                                                                      activation=activation,
+                                                                                      with_noise=None,
+                                                                                      method=None,
+                                                                                      diff_weights=diff_weights)
+            predictions_interp = ground_truth_interp
+            # import matplotlib.pyplot as plt
+            # length = 50
+            # plt.plot(t_[:length], _inputs[:length], 'o')
+            # plt.plot(t_interp[:interp*length-1], _inputs_interp[:(interp*length-1)], '-x')
+            # plt.show()
 
 
-                                _inputs = _inputs_interp
-                                ground_truth = ground_truth_interp
-                                predictions = predictions_interp
+            # plt.plot(t_[:length], ground_truth[:length], 'o')
+            # plt.plot(t_interp[:interp*length-1], ground_truth_interp[:(interp*length-1)], '-x')
+            # plt.show()
+
+            LOG.debug("Save interploted dataset to file: {}".format(coloring.cyan(models_interp_fname)))
+            tdata.DatasetSaver.save_data(_inputs_interp, ground_truth_interp, models_interp_fname)
+
+        _inputs = _inputs_interp
+        ground_truth = ground_truth_interp
+        predictions = predictions_interp
 
 
-                                # utils.save_animation(t_, ground_truth, "./2.gif", step=points, colors=['black'])
-                                # utils.save_animation(t_interp, ground_truth_interp, "./2_interp.gif", step=points, colors=['black'])
+    models_gif_fname = constants.DATASET_PATH[models_gif_key].format(interp=interp,
+                                                                     method=method,
+                                                                     activation=activation,
+                                                                     state=state,
+                                                                     mu=mu,
+                                                                     sigma=sigma,
+                                                                     units=units,
+                                                                     nb_plays=nb_plays,
+                                                                     points=points,
+                                                                     input_dim=input_dim,
+                                                                     __activation__=__activation__,
+                                                                     __state__=__state__,
+                                                                     __units__=__units__,
+                                                                     __nb_plays__=__nb_plays__,
+                                                                     loss=loss_name)
+    models_snake_gif_fname = constants.DATASET_PATH[models_snake_gif_key].format(interp=interp,
+                                                                                 method=method,
+                                                                                 activation=activation,
+                                                                                 state=state,
+                                                                                 mu=mu,
+                                                                                 sigma=sigma,
+                                                                                 units=units,
+                                                                                 nb_plays=nb_plays,
+                                                                                 points=points,
+                                                                                 input_dim=input_dim,
+                                                                                 __activation__=__activation__,
+                                                                                 __state__=__state__,
+                                                                                 __units__=__units__,
+                                                                                 __nb_plays__=__nb_plays__,
+                                                                                 loss=loss_name)
+    models_ts_outputs_gif_fname = constants.DATASET_PATH[models_ts_outputs_gif_key].format(interp=interp,
+                                                                                           method=method,
+                                                                                           activation=activation,
+                                                                                           state=state,
+                                                                                           mu=mu,
+                                                                                           sigma=sigma,
+                                                                                           units=units,
+                                                                                           nb_plays=nb_plays,
+                                                                                           points=points,
+                                                                                           input_dim=input_dim,
+                                                                                           __activation__=__activation__,
+                                                                                           __state__=__state__,
+                                                                                           __units__=__units__,
+                                                                                           __nb_plays__=__nb_plays__,
+                                                                                           loss=loss_name)
 
-                                # _inputs = _inputs[:2000]
-                                # ground_truth = ground_truth[:2000]
-                                # predictions = predictions[:2000]
+    LOG.debug("Write outputs vs. inputs {} into file {}".format(coloring.red("(sequence mode)"), coloring.cyan(models_gif_fname)))
 
-                                # fname = constants.FNAME_FORMAT['F_interp'].format(method=method,
-                                #                                                   weight=weight,
-                                #                                                   width=width,
-                                #                                                   nb_plays=nb_plays,
-                                #                                                   units=units,
-                                #                                                   points=points,
-                                #                                                   mu=mu,
-                                #                                                   sigma=sigma,
-                                #                                                   nb_plays_=nb_plays_,
-                                #                                                   batch_size=1,
-                                #                                                   state=state,
-                                #                                                   loss=loss_name)
 
-                                # tdata.DatasetSaver.save_data(ground_truth, _inputs, fname)
-                                fname = constants.FNAME_FORMAT['models_nb_plays_noise_interp'].format(method=method,
-                                                                                                      weight=weight,
-                                                                                                      width=width,
-                                                                                                      nb_plays=nb_plays,
-                                                                                                      units=units,
-                                                                                                      points=points,
-                                                                                                      mu=mu,
-                                                                                                      sigma=sigma,
-                                                                                                      nb_plays_=nb_plays_,
-                                                                                                      batch_size=1,
-                                                                                                      state=state,
-                                                                                                      loss=loss_name,
-                                                                                                      interp=interp)
-                                tdata.DatasetSaver.save_data(_inputs, ground_truth, fname)
+    outputs = np.vstack([ground_truth, predictions]).T
+    colors = utils.generate_colors(outputs.shape[-1])
+    inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
 
-                                import ipdb; ipdb.set_trace()
+    # utils.save_animation(inputs, outputs, models_gif_fname, step=step, colors=colors)
 
-                            outputs = np.vstack([ground_truth, predictions]).T
-                            colors = utils.generate_colors(outputs.shape[-1])
-                            inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
-                            fname = constants.FNAME_FORMAT["models_nb_plays_noise_gif"].format(method=method,
-                                                                                               weight=weight,
-                                                                                               width=width,
-                                                                                               nb_plays=nb_plays,
-                                                                                               nb_plays_=nb_plays_,
-                                                                                               batch_size=bz,
-                                                                                               units=units,
-                                                                                               points=points,
-                                                                                               mu=mu,
-                                                                                               sigma=sigma,
-                                                                                               loss=loss_name)
-                            # step = inputs.shape[0]
-                            # utils.save_animation(inputs, outputs, fname, step=step, colors=colors)
+    ##### SNAKE
+    _inputs = np.hstack([_inputs, _inputs])
+    ground_truth = np.hstack([ground_truth, ground_truth])
+    predictions = np.hstack([predictions, predictions])
 
-                            _inputs = np.hstack([_inputs, _inputs])
-                            ground_truth = np.hstack([ground_truth, ground_truth])
-                            predictions = np.hstack([predictions, predictions])
+    inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
+    outputs_snake = np.vstack([ground_truth, predictions]).T
 
-                            fname = constants.FNAME_FORMAT["models_nb_plays_noise_gif_snake"].format(method=method,
-                                                                                                     weight=weight,
-                                                                                                     width=width,
-                                                                                                     nb_plays=nb_plays,
-                                                                                                     nb_plays_=nb_plays_,
-                                                                                                     batch_size=bz,
-                                                                                                     units=units,
-                                                                                                     points=points,
-                                                                                                     mu=mu,
-                                                                                                     sigma=sigma,
-                                                                                                     loss=loss_name)
-                            # step = 100
-                            utils.save_animation(inputs, outputs, fname, step=step, colors=colors, mode="snake")
+    LOG.debug("Write outputs vs. inputs {} into file {}".format(coloring.red("(snake mode)"), coloring.cyan(models_snake_gif_fname)))
+    utils.save_animation(inputs, outputs_snake, models_snake_gif_fname, step=step, colors=colors, mode="snake")
 
-                            fname = constants.FNAME_FORMAT["models_nb_plays_noise_ts_outputs_gif"].format(method=method,
-                                                                                                          weight=weight,
-                                                                                                          width=width,
-                                                                                                          nb_plays=nb_plays,
-                                                                                                          nb_plays_=nb_plays_,
-                                                                                                          batch_size=bz,
-                                                                                                          units=units,
-                                                                                                          points=points,
-                                                                                                          mu=mu,
-                                                                                                          sigma=sigma,
-                                                                                                          loss=loss_name)
 
-                            # _inputs = np.arange(points)
-                            # inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
-                            # utils.save_animation(inputs, outputs, fname, step=points, colors=colors)
+    if interp == 1:
+        _inputs = np.arange(points)
+    else:
+        _inputs = t_interp
+
+    inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
+    # outputs = np.vstack([ground_truth, predictions]).T
+    LOG.debug("Write outputs vs. ts into file {}".format(coloring.cyan(models_ts_outputs_gif_fname)))
+    utils.save_animation(inputs, outputs, models_ts_outputs_gif_fname, step=points, colors=colors)
 
 
 

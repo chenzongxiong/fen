@@ -25,9 +25,15 @@ class DatasetGenerator(object):
     @classmethod
     def systhesis_sin_input_generator(cls, points, mu=0, sigma=0.01, with_noise=False):
         # NOTE: x = sin(t) + 0.3 sin(1.3 t)  + 1.2 sin (1.6 t)
+
         inputs1 = np.sin(np.linspace(-2*np.pi, 2*np.pi, points))
-        inputs2 = 0.3 * np.sin(1.3* np.linspace(-2*np.pi, 2*np.pi, points))
-        inputs3 = 1.2 * np.sin(1.6 * np.linspace(-2*np.pi, 2*np.pi, points))
+        inputs2 = 0.3 * np.sin(1.3 * np.linspace(-2*np.pi, 2*np.pi, points))
+        inputs3 = 1.2 * np.sin(0.6 * np.linspace(-2*np.pi, 2*np.pi, points))
+
+        # inputs1 = np.sin(2 * np.linspace(-10*np.pi, 10*np.pi, points))
+        # inputs2 = 0.7 * np.sin(1.3 * np.linspace(-10*np.pi, 10*np.pi, points))
+        # inputs3 = 1.5 * np.sin(0.6 * np.linspace(-10*np.pi, 10*np.pi, points))
+
         inputs = (inputs1 + inputs2 + inputs3).astype(np.float32)
         LOG.debug("Generate the input sequence according to formula {}".format(colors.red("[x = sin(t) + 0.3 sin(1.3 t)  + 1.2 sin (1.6 t)]")))
         if with_noise is True:
@@ -102,13 +108,17 @@ class DatasetGenerator(object):
                                   nb_plays=1,
                                   points=1000,
                                   units=1,
-                                  batch_size=1,
+                                  # batch_size=1,
                                   mu=0,
                                   sigma=0.01,
                                   input_dim=1,
                                   activation=None,
                                   with_noise=True,
-                                  method=None):
+                                  method=None,
+                                  diff_weights=False):
+
+        if inputs is not None:
+            points = inputs.shape[-1]
 
         if points % input_dim != 0:
             raise Exception("ERROR: timestep must be integer")
@@ -119,7 +129,8 @@ class DatasetGenerator(object):
                              debug=True,
                              activation=activation,
                              timestep=timestep,
-                             input_dim=input_dim)
+                             input_dim=input_dim,
+                             diff_weights=diff_weights)
         if inputs is None:
             LOG.debug("systhesis model outputs by *online-generated* inputs with settings: method: {} and noise: {}".format(colors.red(method), with_noise))
 
@@ -129,6 +140,8 @@ class DatasetGenerator(object):
                 _inputs = cls.systhesis_sin_input_generator(points, mu, sigma, with_noise=with_noise)
             elif method == 'mixed':
                 _inputs = cls.systhesis_mixed_input_generator(points, mu, sigma, with_noise=with_noise)
+            else:
+                raise
         else:
             LOG.debug("systhesis model outputs by *pre-defined* inputs")
             _inputs = inputs
