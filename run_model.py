@@ -177,8 +177,9 @@ if __name__ == "__main__":
                                                                     __units__=__units__,
                                                                     __nb_plays__=__nb_plays__,
                                                                     loss=loss_name)
-    method = 'noise'
-    sigma = 0.5
+    # method = 'noise'
+    # sigma = 0.5
+
     if interp != 1:
         if run_test is True:
             if diff_weights is True:
@@ -228,6 +229,7 @@ if __name__ == "__main__":
                                                           input_dim=input_dim)
 
     LOG.debug("Load data from file: {}".format(colors.cyan(fname)))
+    import ipdb; ipdb.set_trace()
     inputs, grouth_truth = tdata.DatasetLoader.load_data(fname)
 
 

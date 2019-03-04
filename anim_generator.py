@@ -489,15 +489,16 @@ def model_noise_test_generator():
 def model_nb_plays_generator_with_noise():
     step = 40
     method = 'sin'
-    method = 'noise'
+    # method = 'noise'
 
     with_noise = True
     diff_weights = True
     run_test = False
     interp = 10
+    force_rerun = False
 
     mu = 0
-    sigma = 0.5
+    sigma = 2
     points = 1000
     input_dim = 1
     # ground truth
@@ -624,7 +625,8 @@ def model_nb_plays_generator_with_noise():
                                                                                __units__=__units__,
                                                                                __nb_plays__=__nb_plays__,
                                                                                loss=loss_name)
-        if os.path.isfile(models_interp_fname):
+
+        if force_rerun is False and os.path.isfile(models_interp_fname):
             LOG.debug("Already interploted...")
             t_interp = np.linspace(1, points, (int)(interp*points-interp+1))
             _inputs_interp, ground_truth_interp = tdata.DatasetLoader.load_data(models_interp_fname)
