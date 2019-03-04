@@ -494,9 +494,9 @@ def model_nb_plays_generator_with_noise():
     with_noise = True
     diff_weights = True
     run_test = False
-    train_invert = True
+    train_invert = False
     interp = 10
-    force_rerun = False
+    force_rerun = True
 
     mu = 0
     sigma = 2
