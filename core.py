@@ -33,7 +33,7 @@ session = utils.get_session()
 SESS = utils.get_session()
 SESSION = utils.get_session()
 
-np.random.seed(123)
+# np.random.seed(123)
 
 
 def Phi(x, width=1.0):
@@ -643,7 +643,10 @@ class MyModel(object):
                  diff_weights=False,
                  ):
         # fix random seed to 123
-        np.random.seed(123)
+        seed = 123
+        np.random.seed(seed)
+        LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is {}".format(seed)))
+
         self.plays = []
         self._nb_plays = nb_plays
 

@@ -248,15 +248,14 @@ def model_nb_plays_generator_with_noise():
     # sigma = 0.01
     # sigma = 0.001
     # sigma = 2
-    sigma = 1
+    sigma = 2
     points = 1000
     units = 20
     nb_plays = 20
 
-    method = 'sin'
+    # method = 'sin'
     # method = 'mixed'
-    # method = 'noise'
-    # method = 'mixed'
+    method = 'noise'
     with_noise = True
     # diff_weights = False
     diff_weights = True
@@ -269,7 +268,6 @@ def model_nb_plays_generator_with_noise():
     input_dim = 1
     state = 0
 
-
     if method == 'noise':
         with_noise = True
     if with_noise is False:
@@ -279,7 +277,7 @@ def model_nb_plays_generator_with_noise():
     if diff_weights is True and run_test is True:
         file_key = 'models_diff_weights_test'
     elif diff_weights is True:
-        file_key  = 'models_diff_weights'
+        file_key = 'models_diff_weights'
     else:
         file_key = 'models'
 

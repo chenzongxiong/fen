@@ -60,7 +60,7 @@ class DatasetGenerator(object):
     def systhesis_noise_input_generator(cls, points, mu, sigma):
         x = np.abs(sigma * np.cos(0.1 * np.linspace(-10 * np.pi, 10 * np.pi, points))) + 1e-3
         noise = np.random.normal(loc=mu, scale=x, size=points).astype(np.float32)
-        # noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
+        noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
         return noise
 
     @classmethod
@@ -126,13 +126,7 @@ class DatasetGenerator(object):
             raise Exception("ERROR: timestep must be integer")
 
         timestep = points // input_dim
-        model = core.MyModel(nb_plays=nb_plays,
-                             units=units,
-                             debug=True,
-                             activation=activation,
-                             timestep=timestep,
-                             input_dim=input_dim,
-                             diff_weights=diff_weights)
+
         if inputs is None:
             LOG.debug("systhesis model outputs by *online-generated* inputs with settings: method: {} and noise: {}".format(colors.red(method), with_noise))
 
@@ -147,6 +141,14 @@ class DatasetGenerator(object):
         else:
             LOG.debug("systhesis model outputs by *pre-defined* inputs")
             _inputs = inputs
+
+        model = core.MyModel(nb_plays=nb_plays,
+                             units=units,
+                             debug=True,
+                             activation=activation,
+                             timestep=timestep,
+                             input_dim=input_dim,
+                             diff_weights=diff_weights)
 
         outputs = model.predict(_inputs)
         _outputs = outputs.reshape(-1)

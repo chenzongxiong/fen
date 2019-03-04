@@ -235,7 +235,6 @@ def F_generator():
                     utils.save_animation(inputs, outputs, fname, step=9000, colors=colors)
 
 
-
 def G_generator():
     activation = "tanh"
     loss_name = 'mse'
@@ -291,7 +290,6 @@ def G_generator():
                                                                          mu=mu, sigma=sigma,
                                                                          loss=loss_name, points=points)
                     utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
-
 
 
 def model_generator_with_noise():
@@ -491,12 +489,12 @@ def model_noise_test_generator():
 def model_nb_plays_generator_with_noise():
     step = 40
     method = 'sin'
-    # method = 'noise'
+    method = 'noise'
 
     with_noise = True
     diff_weights = True
     run_test = False
-    interp = 1
+    interp = 10
 
     mu = 0
     sigma = 2
@@ -523,7 +521,6 @@ def model_nb_plays_generator_with_noise():
     if with_noise is False:
         mu = 0
         sigma = 0
-
 
     if interp == 1:
         if run_test is False:
