@@ -247,7 +247,7 @@ def model_nb_plays_generator_with_noise():
     # sigma = 0.001
     # sigma = 0.01
     # sigma = 0.001
-    sigma = 2
+    sigma = 1
     # sigma = 0.5
 
     points = 1000

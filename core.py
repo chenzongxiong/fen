@@ -664,7 +664,7 @@ class MyModel(object):
                 # xxxx: good weights
                 # weight = 2 * _weight / i
                 # weight = _weight * i / 10
-                weight = 1.0 / (_width * i) / 10.0 # width range from (0.1, ... 0.1 * nb_plays)
+                weight = 1.0 / (_width * i) # width range from (0.1, ... 0.1 * nb_plays)
             else:
                 weight = 1.0
 

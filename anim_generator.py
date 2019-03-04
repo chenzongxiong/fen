@@ -494,12 +494,12 @@ def model_nb_plays_generator_with_noise():
     with_noise = True
     diff_weights = True
     run_test = False
-    train_invert = True
+    train_invert = False
     interp = 10
-    force_rerun = False
+    force_rerun = True
 
     mu = 0
-    sigma = 2
+    sigma = 1
     points = 1000
     input_dim = 1
     # ground truth
@@ -672,11 +672,11 @@ def model_nb_plays_generator_with_noise():
                 t_ = np.linspace(1, points, points)
 
                 # f1 = interp1d(t_, _inputs)
-                # f2 = interp1d(t_, _inputs, kind='cubic')
+                f2 = interp1d(t_, _inputs, kind='cubic')
                 t_interp = np.linspace(1, points, (int)(interp*points-interp+1))
 
                 _inputs_interp = np.interp(t_interp, t_, _inputs)
-                # _inputs_interp = f2(t_interp)
+                _inputs_interp = f2(t_interp)
                 clip_length = int((t_interp.shape[0] // input_dim) * input_dim)
                 _inputs_interp = _inputs_interp[:clip_length]
                 # ground_truth_interp = np.interp(_inputs_interp, _inputs, ground_truth, period=1)
