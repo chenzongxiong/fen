@@ -119,12 +119,13 @@ if __name__ == "__main__":
     # method = 'mixed'
     # method = 'noise'
     interp = 10
+    do_prediction = True
 
     with_noise = True
     diff_weights = True
 
     run_test = False
-    do_prediction = True
+
     train_invert = True
 
     mu = 0
