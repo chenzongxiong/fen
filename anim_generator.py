@@ -490,27 +490,27 @@ def model_noise_test_generator():
 
 def model_nb_plays_generator_with_noise():
     step = 40
-    # method = 'sin'
-    method = 'noise'
+    method = 'sin'
+    # method = 'noise'
 
-    with_noise = False
+    with_noise = True
     diff_weights = True
     run_test = False
-    interp = 10
+    interp = 1
 
     mu = 0
-    sigma = 3
+    sigma = 2
     points = 1000
     input_dim = 1
     # ground truth
     nb_plays = 20
-    units = 30
+    units = 20
     state = 0
     # activation = None
     activation = 'tanh'
     # predicitons
     __nb_plays__ = 20
-    __units__ = 30
+    __units__ = 20
     __state__ = 0
     # __activation__ = None
     __activation__ = 'tanh'
