@@ -494,7 +494,7 @@ def model_nb_plays_generator_with_noise():
     with_noise = True
     diff_weights = True
     run_test = False
-    train_invert = False
+    train_invert = True
     interp = 10
     force_rerun = False
 
