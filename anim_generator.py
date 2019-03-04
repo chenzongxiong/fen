@@ -561,8 +561,7 @@ def model_nb_plays_generator_with_noise():
                     models_snake_gif_key = 'models_diff_weights_snake_interp_gif'
                     models_ts_outputs_gif_key = 'models_diff_weights_ts_outputs_interp_gif'
                 elif train_invert is True:
-                    import ipdb; ipdb.set_trace()
-                    base_file_key = 'models_diff_weights_invert'
+                    base_file_key = 'models_diff_weights_interp'
                     models_interp_key = 'models_diff_weights_invert_interp'
                     predictions_file_key = 'models_diff_weights_invert_interp_predictions'
 
@@ -592,7 +591,16 @@ def model_nb_plays_generator_with_noise():
         method = 'mixed'
     # import ipdb; ipdb.set_trace()
 
-    fname = constants.DATASET_PATH[base_file_key].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
+    fname = constants.DATASET_PATH[base_file_key].format(interp=interp,
+                                                         method=method,
+                                                         activation=activation,
+                                                         state=state,
+                                                         mu=mu,
+                                                         sigma=sigma,
+                                                         units=units,
+                                                         nb_plays=nb_plays,
+                                                         points=points,
+                                                         input_dim=input_dim)
 
     _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
     LOG.debug("Load **ground-truth** dataset from file: {}".format(coloring.cyan(fname)))
@@ -612,7 +620,6 @@ def model_nb_plays_generator_with_noise():
                                                                           __units__=__units__,
                                                                           __nb_plays__=__nb_plays__,
                                                                           loss=loss_name)
-    import ipdb; ipdb.set_trace()
     if interp == 1:
         try:
             _, predictions = tdata.DatasetLoader.load_data(predicted_fname)
@@ -655,48 +662,54 @@ def model_nb_plays_generator_with_noise():
             ground_truth_interp = ground_truth_interp[:clip_length]
             predictions_interp = predictions_interp[:clip_length]
         else:
-            from scipy.interpolate import interp1d
-            diff = _inputs[1:] - _inputs[:-1]
-            LOG.debug("Max jump between two successive x is {}".format(np.max(np.abs(diff))))
+            if train_invert is False:
+                from scipy.interpolate import interp1d
+                diff = _inputs[1:] - _inputs[:-1]
+                LOG.debug("Max jump between two successive x is {}".format(np.max(np.abs(diff))))
 
-            t_ = np.linspace(1, points, points)
+                t_ = np.linspace(1, points, points)
 
-            # f1 = interp1d(t_, _inputs)
-            # f2 = interp1d(t_, _inputs, kind='cubic')
-            t_interp = np.linspace(1, points, (int)(interp*points-interp+1))
+                # f1 = interp1d(t_, _inputs)
+                # f2 = interp1d(t_, _inputs, kind='cubic')
+                t_interp = np.linspace(1, points, (int)(interp*points-interp+1))
 
-            _inputs_interp = np.interp(t_interp, t_, _inputs)
-            # _inputs_interp = f2(t_interp)
-            clip_length = int((t_interp.shape[0] // input_dim) * input_dim)
-            _inputs_interp = _inputs_interp[:clip_length]
-            # ground_truth_interp = np.interp(_inputs_interp, _inputs, ground_truth, period=1)
-            # predictions_interp = np.interp(_inputs_interp, _inputs, predictions, period=1)
-            _, ground_truth_interp = tdata.DatasetGenerator.systhesis_model_generator(inputs=_inputs_interp,
-                                                                                      nb_plays=nb_plays,
-                                                                                      points=t_interp.shape[0],
-                                                                                      units=units,
-                                                                                      mu=None,
-                                                                                      sigma=None,
-                                                                                      input_dim=input_dim,
-                                                                                      activation=activation,
-                                                                                      with_noise=None,
-                                                                                      method=None,
-                                                                                      diff_weights=diff_weights)
-            predictions_interp = ground_truth_interp
-            # import matplotlib.pyplot as plt
-            # length = 50
-            # plt.plot(t_[:length], _inputs[:length], 'o')
-            # plt.plot(t_interp[:interp*length-1], _inputs_interp[:(interp*length-1)], '-x')
-            # plt.show()
+                _inputs_interp = np.interp(t_interp, t_, _inputs)
+                # _inputs_interp = f2(t_interp)
+                clip_length = int((t_interp.shape[0] // input_dim) * input_dim)
+                _inputs_interp = _inputs_interp[:clip_length]
+                # ground_truth_interp = np.interp(_inputs_interp, _inputs, ground_truth, period=1)
+                # predictions_interp = np.interp(_inputs_interp, _inputs, predictions, period=1)
+                _, ground_truth_interp = tdata.DatasetGenerator.systhesis_model_generator(inputs=_inputs_interp,
+                                                                                          nb_plays=nb_plays,
+                                                                                          points=t_interp.shape[0],
+                                                                                          units=units,
+                                                                                          mu=None,
+                                                                                          sigma=None,
+                                                                                          input_dim=input_dim,
+                                                                                          activation=activation,
+                                                                                          with_noise=None,
+                                                                                          method=None,
+                                                                                          diff_weights=diff_weights)
+                predictions_interp = ground_truth_interp
+                # import matplotlib.pyplot as plt
+                # length = 50
+                # plt.plot(t_[:length], _inputs[:length], 'o')
+                # plt.plot(t_interp[:interp*length-1], _inputs_interp[:(interp*length-1)], '-x')
+                # plt.show()
 
 
-            # plt.plot(t_[:length], ground_truth[:length], 'o')
-            # plt.plot(t_interp[:interp*length-1], ground_truth_interp[:(interp*length-1)], '-x')
-            # plt.show()
+                # plt.plot(t_[:length], ground_truth[:length], 'o')
+                # plt.plot(t_interp[:interp*length-1], ground_truth_interp[:(interp*length-1)], '-x')
+                # plt.show()
 
-            LOG.debug("Save interploted dataset to file: {}".format(coloring.cyan(models_interp_fname)))
-            tdata.DatasetSaver.save_data(_inputs_interp, ground_truth_interp, models_interp_fname)
-            sys.exit(0)
+                LOG.debug("Save interploted dataset to file: {}".format(coloring.cyan(models_interp_fname)))
+                tdata.DatasetSaver.save_data(_inputs_interp, ground_truth_interp, models_interp_fname)
+                sys.exit(0)
+            elif train_invert is True:
+                _inputs_interp, ground_truth_interp = ground_truth, _inputs
+                tdata.DatasetSaver.save_data(_inputs_interp, ground_truth_interp, models_interp_fname)
+                LOG.debug("Save interploted dataset to file: {}".format(coloring.cyan(models_interp_fname)))
+                sys.exit(0)
 
         _inputs = _inputs_interp
         ground_truth = ground_truth_interp

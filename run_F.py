@@ -176,6 +176,7 @@ if __name__ == "__main__":
         elif run_test is True:
             raise
 
+    import ipdb; ipdb.set_trace()
     # XXXX: place weights_fname before run_test
     weights_fname = constants.DATASET_PATH[weights_file_key].format(method=method,
                                                                     activation=activation,
@@ -200,6 +201,7 @@ if __name__ == "__main__":
             if run_test is False:
                 if diff_weights is True:
                     input_file_key = 'models_diff_weights_invert_interp'
+                    # input_file_key = 'models_diff_weights_interp'
                     predictions_file_key = 'models_diff_weights_invert_interp_predictions'
                 else:
                     raise
