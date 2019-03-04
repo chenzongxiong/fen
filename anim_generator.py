@@ -494,7 +494,7 @@ def model_nb_plays_generator_with_noise():
     with_noise = True
     diff_weights = True
     run_test = False
-    train_invert = True
+    train_invert = False
     interp = 10
     force_rerun = False
 
@@ -603,6 +603,7 @@ def model_nb_plays_generator_with_noise():
                                                          input_dim=input_dim)
 
     _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
+
     LOG.debug("Load **ground-truth** dataset from file: {}".format(coloring.cyan(fname)))
 
     predicted_fname = constants.DATASET_PATH[predictions_file_key].format(interp=interp,
@@ -649,6 +650,7 @@ def model_nb_plays_generator_with_noise():
             LOG.debug("Already interploted...")
             t_interp = np.linspace(1, points, (int)(interp*points-interp+1))
             _inputs_interp, ground_truth_interp = tdata.DatasetLoader.load_data(models_interp_fname)
+            LOG.debug("Load **ground-truth** dataset from file: {}".format(coloring.purple(models_interp_fname)))
             try:
                 _, predictions_interp = tdata.DatasetLoader.load_data(predicted_fname)
                 LOG.debug("Load **predicted** dataset from file: {}".format(coloring.cyan(predicted_fname)))

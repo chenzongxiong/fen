@@ -42,7 +42,8 @@ def Phi(x, width=1.0):
            = x + width , if x < - width
            = 0         , otherwise
     '''
-    return tf.maximum(x, 0) + tf.minimum(x+width, 0)
+    # return tf.maximum(x, 0) + tf.minimum(x+width, 0)
+    return tf.maximum(x-0.5, 0) + tf.minimum(x+0.5, 0)
 
 
 class PhiCell(Layer):
@@ -214,7 +215,7 @@ class MyDense(Layer):
 
             if self.use_bias is True:
                 _init_bias = 0
-                _init_bias = np.random.uniform(low=-3, high=3, size=1)
+                # _init_bias = np.random.uniform(low=-3, high=3, size=1)
                 LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
 
                 self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
@@ -274,8 +275,8 @@ class MySimpleDense(Dense):
             self._trainable_weights.append(self.kernel)
 
             if self.use_bias:
-                # _init_bias = (0,)
-                _init_bias = np.random.uniform(low=-3, high=3, size=1)
+                _init_bias = (0,)
+                # _init_bias = np.random.uniform(low=-3, high=3, size=1)
                 LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
                 self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
                 self._trainable_weights.append(self.bias)
@@ -652,13 +653,18 @@ class MyModel(object):
 
         i = 1
         _weight = 1.0
+        _width = 0.1
+
         for nb_play in range(nb_plays):
             # weight =  _weight / (i)
             # weight = 1.0
             if diff_weights is True:
                 # weight =  2 * _weight / (i)
                 # weight = i * _weight
-                weight = 2 * _weight / i
+                # xxxx: good weights
+                # weight = 2 * _weight / i
+                # weight = _weight * i / 10
+                weight = 1.0 / (_width * i)  # width range from (0.1, ... 0.1 * nb_plays)
             else:
                 weight = 1.0
 

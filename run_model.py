@@ -181,6 +181,8 @@ if __name__ == "__main__":
     # sigma = 0.5
 
     if interp != 1:
+        if do_prediction is False:
+            raise
         if run_test is True:
             if diff_weights is True:
                 # input_file_key = 'models_diff_weights_interp'

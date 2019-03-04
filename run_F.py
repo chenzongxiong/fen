@@ -112,19 +112,19 @@ if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
     # Hyper Parameters
-    learning_rate = 0.1
+    learning_rate = 0.05
     loss_name = 'mse'
 
     method = 'sin'
     # method = 'mixed'
     # method = 'noise'
-    interp = 10
+    interp = 1
 
     with_noise = True
     diff_weights = True
 
     run_test = False
-    do_prediction = True
+    do_prediction = False
     train_invert = True
 
     mu = 0
@@ -196,7 +196,9 @@ if __name__ == "__main__":
     # sigma = 0.5
 
     if interp != 1:
-        do_prediction = True
+        if do_prediction is False:
+            raise
+
         if train_invert is True:
             if run_test is False:
                 if diff_weights is True:
