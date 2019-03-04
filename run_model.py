@@ -116,18 +116,18 @@ if __name__ == "__main__":
     learning_rate = 0.1
     loss_name = 'mse'
 
-    # method = 'sin'
+    method = 'sin'
     # method = 'mixed'
-    method = 'noise'
-    interp = 10
+    # method = 'noise'
+    interp = 1
 
     with_noise = True
     diff_weights = True
 
-    run_test = True
+    run_test = False
 
     mu = 0
-    sigma = 3
+    sigma = 1
     points = 1000
     input_dim = 1
     ############################## ground truth #############################

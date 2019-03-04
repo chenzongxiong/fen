@@ -496,7 +496,7 @@ def model_nb_plays_generator_with_noise():
     with_noise = False
     diff_weights = True
     run_test = False
-    interp = 1
+    interp = 10
 
     mu = 0
     sigma = 3
@@ -504,13 +504,13 @@ def model_nb_plays_generator_with_noise():
     input_dim = 1
     # ground truth
     nb_plays = 20
-    units = 20
+    units = 30
     state = 0
     # activation = None
     activation = 'tanh'
     # predicitons
     __nb_plays__ = 20
-    __units__ = 20
+    __units__ = 30
     __state__ = 0
     # __activation__ = None
     __activation__ = 'tanh'

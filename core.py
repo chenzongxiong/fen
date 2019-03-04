@@ -33,6 +33,8 @@ session = utils.get_session()
 SESS = utils.get_session()
 SESSION = utils.get_session()
 
+np.random.seed(123)
+
 
 def Phi(x, width=1.0):
     '''
@@ -204,10 +206,18 @@ class MyDense(Layer):
         if self._debug:
             LOG.debug("init mydense kernel/bias as pre-defined")
             _init_kernel = np.array([[1 for i in range(self.units)]])
+            _init_kernel = np.random.uniform(low=0.0, high=2.0, size=self.units)
+            _init_kernel = _init_kernel.reshape([1, -1])
+            LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
             self.kernel = tf.Variable(_init_kernel, name="weight", dtype=tf.float32)
             self._trainable_weights.append(self.kernel)
+
             if self.use_bias is True:
-                self.bias = tf.Variable(0, name="bias", dtype=tf.float32)
+                _init_bias = 0
+                _init_bias = np.random.uniform(low=-3, high=3, size=1)
+                LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
+
+                self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
                 self._trainable_weights.append(self.bias)
 
         else:
@@ -255,13 +265,19 @@ class MySimpleDense(Dense):
         assert self.units == 1
         if self._debug is True:
             LOG.debug("init mysimpledense kernel/bias as pre-defined")
-            _init_kernel = np.array([1 for _ in range(input_shape[-1].value)])
+            # _init_kernel = np.array([1 for _ in range(input_shape[-1].value)])
+            _init_kernel = np.random.uniform(low=0.0, high=2.0, size=input_shape[-1].value)
             _init_kernel = _init_kernel.reshape(-1, 1)
+            LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
+
             self.kernel = tf.Variable(_init_kernel, name="kernel", dtype=tf.float32)
             self._trainable_weights.append(self.kernel)
 
             if self.use_bias:
-                self.bias = tf.Variable((0,), name="bias", dtype=tf.float32)
+                # _init_bias = (0,)
+                _init_bias = np.random.uniform(low=-3, high=3, size=1)
+                LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
+                self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
                 self._trainable_weights.append(self.bias)
         else:
             super(MySimpleDense, self).build(input_shape)
@@ -626,7 +642,8 @@ class MyModel(object):
                  input_dim=1,
                  diff_weights=False,
                  ):
-
+        # fix random seed to 123
+        np.random.seed(123)
         self.plays = []
         self._nb_plays = nb_plays
 
@@ -636,8 +653,9 @@ class MyModel(object):
             # weight =  _weight / (i)
             # weight = 1.0
             if diff_weights is True:
-                # weight =  _weight / (i)
-                weight = i * _weight / 50
+                # weight =  2 * _weight / (i)
+                # weight = i * _weight
+                weight = _weight / i
             else:
                 weight = 1.0
 

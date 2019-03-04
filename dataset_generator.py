@@ -248,19 +248,20 @@ def model_nb_plays_generator_with_noise():
     # sigma = 0.01
     # sigma = 0.001
     # sigma = 2
-    sigma = 3
+    sigma = 1
     points = 1000
     units = 20
     nb_plays = 20
 
-    # method = 'sin'
+    method = 'sin'
     # method = 'mixed'
-    method = 'noise'
-    with_noise = False
+    # method = 'noise'
+    # method = 'mixed'
+    with_noise = True
     # diff_weights = False
     diff_weights = True
 
-    run_test = True
+    run_test = False
 
     activation = 'tanh'
     # activation = None

@@ -25,8 +25,8 @@ class DatasetGenerator(object):
     @classmethod
     def systhesis_sin_input_generator(cls, points, mu=0, sigma=0.01, with_noise=False):
         # NOTE: x = sin(t) + 0.3 sin(1.3 t)  + 1.2 sin (1.6 t)
-
-        inputs1 = np.sin(np.linspace(-2*np.pi, 2*np.pi, points))
+        inputs1 = 5 * np.cos(0.1 * np.linspace(-40*np.pi, 40*np.pi, points))
+        # inputs1 = np.sin(np.linspace(-2*np.pi, 2*np.pi, points))
         inputs2 = 0.3 * np.sin(1.3 * np.linspace(-2*np.pi, 2*np.pi, points))
         inputs3 = 1.2 * np.sin(0.6 * np.linspace(-2*np.pi, 2*np.pi, points))
 
@@ -35,6 +35,7 @@ class DatasetGenerator(object):
         # inputs3 = 1.5 * np.sin(0.6 * np.linspace(-10*np.pi, 10*np.pi, points))
 
         inputs = (inputs1 + inputs2 + inputs3).astype(np.float32)
+        inputs = (inputs1).astype(np.float32)
         LOG.debug("Generate the input sequence according to formula {}".format(colors.red("[x = sin(t) + 0.3 sin(1.3 t)  + 1.2 sin (1.6 t)]")))
         if with_noise is True:
             noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
@@ -57,7 +58,9 @@ class DatasetGenerator(object):
 
     @classmethod
     def systhesis_noise_input_generator(cls, points, mu, sigma):
-        noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
+        x = np.abs(sigma * np.cos(0.1 * np.linspace(-10 * np.pi, 10 * np.pi, points))) + 1e-3
+        noise = np.random.normal(loc=mu, scale=x, size=points).astype(np.float32)
+        # noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
         return noise
 
     @classmethod
@@ -108,7 +111,6 @@ class DatasetGenerator(object):
                                   nb_plays=1,
                                   points=1000,
                                   units=1,
-                                  # batch_size=1,
                                   mu=0,
                                   sigma=0.01,
                                   input_dim=1,
