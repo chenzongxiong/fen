@@ -62,6 +62,52 @@ def fit(inputs,
     return predictions, loss
 
 
+
+def predict(inputs,
+            outputs,
+            units=1,
+            activation='tanh',
+            nb_plays=1,
+            weights_name='model.h5'):
+    with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
+        line = f.read()
+    shape = list(map(int, line.split(":")))
+
+    assert len(shape) == 3, "shape must be 3 dimensions"
+
+    start = time.time()
+    predictions_list = []
+
+    input_dim = shape[2]
+    timestep = shape[1]
+    num_samples = inputs.shape[0] // (input_dim * timestep)
+
+    start = time.time()
+    mymodel = MyModel(input_dim=input_dim,
+                      timestep=timestep,
+                      units=units,
+                      activation=activation,
+                      nb_plays=nb_plays)
+
+    mymodel.load_weights(weights_fname)
+    for i in range(num_samples):
+        LOG.debug("Predict on #{} sample".format(i+1))
+        pred = mymodel.predict(inputs[i*(input_dim*timestep): (i+1)*(input_dim*timestep)])
+
+        predictions_list.append(pred)
+
+    end = time.time()
+    LOG.debug("time cost: {}s".format(end-start))
+
+    predictions = np.hstack(predictions_list)
+    outputs = outputs[:predictions.shape[-1]]
+    loss = ((predictions - outputs) ** 2).mean()
+    loss = float(loss)
+    LOG.debug("loss: {}".format(loss))
+
+    return predictions, loss
+
+
 if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
@@ -72,7 +118,7 @@ if __name__ == "__main__":
     method = 'sin'
     # method = 'mixed'
     # method = 'noise'
-    interp = 1
+    interp = 10
 
     with_noise = True
     diff_weights = True
@@ -154,7 +200,6 @@ if __name__ == "__main__":
             if run_test is False:
                 if diff_weights is True:
                     input_file_key = 'models_diff_weights_invert_interp'
-                    # loss_file_key = 'models_diff_weights_loss_history_interp'
                     predictions_file_key = 'models_diff_weights_invert_interp_predictions'
                 else:
                     raise
@@ -213,27 +258,28 @@ if __name__ == "__main__":
                                                                         input_dim=input_dim)
 
     LOG.debug("Load data from file: {}".format(colors.cyan(fname)))
-    import ipdb; ipdb.set_trace()
     inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
-    if train_invert is True:
+    import ipdb; ipdb.set_trace()
+    if train_invert is True and do_prediction is False:
         inputs, ground_truth = ground_truth, inputs
         tdata.DatasetSaver.save_data(inputs, ground_truth, saved_invert_fname)
 
-    loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
-                                                                     method=method,
-                                                                     activation=activation,
-                                                                     state=state,
-                                                                     mu=mu,
-                                                                     sigma=sigma,
-                                                                     units=units,
-                                                                     nb_plays=nb_plays,
-                                                                     points=points,
-                                                                     input_dim=input_dim,
-                                                                     __activation__=__activation__,
-                                                                     __state__=__state__,
-                                                                     __units__=__units__,
-                                                                     __nb_plays__=__nb_plays__,
-                                                                     loss=loss_name)
+    if do_prediction is False:
+        loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
+                                                                         method=method,
+                                                                         activation=activation,
+                                                                         state=state,
+                                                                         mu=mu,
+                                                                         sigma=sigma,
+                                                                         units=units,
+                                                                         nb_plays=nb_plays,
+                                                                         points=points,
+                                                                         input_dim=input_dim,
+                                                                         __activation__=__activation__,
+                                                                         __state__=__state__,
+                                                                         __units__=__units__,
+                                                                         __nb_plays__=__nb_plays__,
+                                                                         loss=loss_name)
 
     predicted_fname = constants.DATASET_PATH[predictions_file_key].format(interp=interp,
                                                                           method=method,
@@ -251,18 +297,16 @@ if __name__ == "__main__":
                                                                           __nb_plays__=__nb_plays__,
                                                                           loss=loss_name)
 
-    # if do_prediction is True:
-    #     LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
-    #     predictions, loss = predict(inputs=inputs,
-    #                                 outputs=ground_truth,
-    #                                 units=__units__,
-    #                                 activation=__activation__,
-    #                                 nb_plays=__nb_plays__,
-    #                                 weights_name=weights_fname)
-    #     inputs = inputs[:predictions.shape[-1]]
-    # else:
-    import ipdb; ipdb.set_trace()
-    if True:
+    if do_prediction is True:
+        LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
+        predictions, loss = predict(inputs=inputs,
+                                    outputs=ground_truth,
+                                    units=__units__,
+                                    activation=__activation__,
+                                    nb_plays=__nb_plays__,
+                                    weights_name=weights_fname)
+        inputs = inputs[:predictions.shape[-1]]
+    else:
         predictions, loss = fit(inputs=inputs,
                                 outputs=ground_truth,
                                 units=__units__,

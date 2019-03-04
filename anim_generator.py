@@ -494,6 +494,7 @@ def model_nb_plays_generator_with_noise():
     with_noise = True
     diff_weights = True
     run_test = False
+    train_invert = True
     interp = 10
     force_rerun = False
 
@@ -551,13 +552,23 @@ def model_nb_plays_generator_with_noise():
     elif interp != 1:
         if run_test is False:
             if diff_weights is True:
-                base_file_key = 'models_diff_weights'
-                models_interp_key = 'models_diff_weights_interp'
-                predictions_file_key = 'models_diff_weights_predictions_interp'
+                if train_invert is False:
+                    base_file_key = 'models_diff_weights'
+                    models_interp_key = 'models_diff_weights_interp'
+                    predictions_file_key = 'models_diff_weights_predictions_interp'
 
-                models_gif_key = 'models_diff_weights_interp_gif'
-                models_snake_gif_key = 'models_diff_weights_snake_interp_gif'
-                models_ts_outputs_gif_key = 'models_diff_weights_ts_outputs_interp_gif'
+                    models_gif_key = 'models_diff_weights_interp_gif'
+                    models_snake_gif_key = 'models_diff_weights_snake_interp_gif'
+                    models_ts_outputs_gif_key = 'models_diff_weights_ts_outputs_interp_gif'
+                elif train_invert is True:
+                    import ipdb; ipdb.set_trace()
+                    base_file_key = 'models_diff_weights_invert'
+                    models_interp_key = 'models_diff_weights_invert_interp'
+                    predictions_file_key = 'models_diff_weights_invert_interp_predictions'
+
+                    models_gif_key = 'models_diff_weights_invert_interp_gif'
+                    models_snake_gif_key = 'models_diff_weights_invert_snake_interp_gif'
+                    models_ts_outputs_gif_key = 'models_diff_weights_invert_ts_outputs_interp_gif'
             else:
                 # base_interp_key = 'models_interp'
                 # predictions_file_key = 'models_predictions_interp'
@@ -601,6 +612,7 @@ def model_nb_plays_generator_with_noise():
                                                                           __units__=__units__,
                                                                           __nb_plays__=__nb_plays__,
                                                                           loss=loss_name)
+    import ipdb; ipdb.set_trace()
     if interp == 1:
         try:
             _, predictions = tdata.DatasetLoader.load_data(predicted_fname)
