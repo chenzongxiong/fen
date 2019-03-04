@@ -58,9 +58,11 @@ class DatasetGenerator(object):
 
     @classmethod
     def systhesis_noise_input_generator(cls, points, mu, sigma):
-        x = np.abs(sigma * np.cos(0.1 * np.linspace(-10 * np.pi, 10 * np.pi, points))) + 1e-3
-        noise = np.random.normal(loc=mu, scale=x, size=points).astype(np.float32)
+        # x = np.abs(sigma * np.cos(0.1 * np.linspace(-10 * np.pi, 10 * np.pi, points))) + 1e-3
+        # noise = np.random.normal(loc=mu, scale=x, size=points).astype(np.float32)
         noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
+        inputs1 = 3 * np.cos(0.1 * np.linspace(-40*np.pi, 40*np.pi, points))
+        noise += (inputs1 + np.random.normal(loc=mu, scale=sigma, size=points)).astype(np.float32)
         return noise
 
     @classmethod

@@ -497,7 +497,7 @@ def model_nb_plays_generator_with_noise():
     interp = 10
 
     mu = 0
-    sigma = 2
+    sigma = 0.5
     points = 1000
     input_dim = 1
     # ground truth
@@ -742,7 +742,7 @@ def model_nb_plays_generator_with_noise():
     colors = utils.generate_colors(outputs.shape[-1])
     inputs = np.vstack([_inputs for _ in range(outputs.shape[-1])]).T
 
-    utils.save_animation(inputs, outputs, models_gif_fname, step=step, colors=colors)
+    # utils.save_animation(inputs, outputs, models_gif_fname, step=step, colors=colors)
 
     ##### SNAKE
     _inputs = np.hstack([_inputs, _inputs])

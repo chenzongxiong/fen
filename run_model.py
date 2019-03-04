@@ -129,6 +129,7 @@ if __name__ == "__main__":
 
     mu = 0
     sigma = 2
+
     points = 1000
     input_dim = 1
     ############################## ground truth #############################
@@ -177,6 +178,7 @@ if __name__ == "__main__":
                                                                     __nb_plays__=__nb_plays__,
                                                                     loss=loss_name)
     method = 'noise'
+    sigma = 0.5
     if interp != 1:
         if run_test is True:
             if diff_weights is True:
