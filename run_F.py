@@ -129,7 +129,7 @@ if __name__ == "__main__":
     train_invert = True
 
     mu = 0
-    sigma = 1
+    sigma = 1.8
 
     points = 1000
     input_dim = 1
