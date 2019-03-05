@@ -257,4 +257,10 @@ DATASET_PATH = dict(
     models_diff_weights_invert_interp_gif=_prefix+'/models/diff_weights/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/invert.gif',
     models_diff_weights_invert_snake_interp_gif=_prefix+'/models/diff_weights/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/invert_snake.gif',
     models_diff_weights_invert_ts_outputs_interp_gif=_prefix+'/models/diff_weights/interp-{interp}/method-{method}/activation-{activation}/state-{state}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/invert_ts_outputs.gif',
+
+
+
+    #################### OPERATOR ####################
+    operators=_prefix+'/operators/method-{method}/state-{state}/mu-{mu}/sigma-{sigma}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/base.csv',
+    operators_multi=_prefix+'/operators/method-{method}/state-{state}/mu-{mu}/sigma-{sigma}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/base_multi.csv',
 )

@@ -17,110 +17,45 @@ NB_PLAYS = constants.NB_PLAYS
 points = constants.POINTS
 UNITS = constants.UNITS
 
-def operator_generator():
-    # states = [1, 4, 10 -1, -4, -10]
-    states = [0]
-    for method in methods:
-        for weight in weights:
-            for width in widths:
-                inputs = []
-                outputs = []
-                for state in states:
-                    LOG.debug("Processing method: {}, weight: {}, width: {}, state: {}".format(method, weight, width, state))
-                    inputs_, outputs_ = tdata.DatasetGenerator.systhesis_operator_generator(points=points,
-                                                                                            weight=weight,
-                                                                                            width=width,
-                                                                                            state=state,
-                                                                                            with_noise=True)
-                    inputs.append(inputs_)
-                    outputs.append(outputs_)
-                fname = constants.FNAME_FORMAT['operators'].format(method=method, weight=weight, width=width, points=points)
-                inputs = np.hstack(inputs)
-                outputs = np.hstack(outputs)
-                outputs = outputs.T
-                tdata.DatasetSaver.save_data(inputs, outputs, fname)
-
-
-def play_generator():
-    for method in methods:
-        for weight in weights:
-            for width in widths:
-                LOG.debug("Processing method: {}, weight: {}, width: {}".format(method, weight, width))
-                fname = constants.FNAME_FORMAT['operators'].format(method=method, weight=weight, width=width, points=points)
-                try:
-                    inputs, _ = tdata.DatasetLoader.load_data(fname)
-                except FileNotFoundError:
-                    inputs = None
-
-                inputs, outputs = tdata.DatasetGenerator.systhesis_play_generator(points=points, inputs=inputs)
-                fname = constants.FNAME_FORMAT['plays'].format(method=method, weight=weight, width=width, points=points)
-                tdata.DatasetSaver.save_data(inputs, outputs, fname)
-
-
-def model_generator(units=1, nb_plays=1):
-    units = int(units)
-    nb_plays = int(nb_plays)
-    for method in methods:
-        for weight in weights:
-            for width in widths:
-                LOG.debug("generate data for method {}, weight {}, width {}, units {}, nb_plays {}".format(
-                    method, weight, width, units, nb_plays
-                ))
-                fname = constants.FNAME_FORMAT['plays'].format(method=method, weight=weight, width=width, points=points)
-                try:
-                    inputs, _ = tdata.DatasetLoader.load_data(fname)
-                except FileNotFoundError:
-                    inputs = None
-                import time
-                start = time.time()
-                inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(nb_plays=nb_plays,
-                                                                                   points=points,
-                                                                                   units=units,
-                                                                                   inputs=inputs)
-                end = time.time()
-                LOG.debug("time cost: {} s".format(end-start))
-
-                fname = constants.FNAME_FORMAT['models'].format(method=method, weight=weight, width=width, nb_plays=nb_plays, units=units, points=points)
-                tdata.DatasetSaver.save_data(inputs, outputs, fname)
-
-
-def markov_chain(points, mu=0, sigma=0.001):
-    points = int(points)
-    mu = float(mu)
-    sigma = float(sigma)
-    B = tdata.DatasetGenerator.systhesis_markov_chain_generator(points, mu, sigma)
-    fname = constants.FNAME_FORMAT['mc'].format(points=points, mu=mu, sigma=sigma)
-    tdata.DatasetSaver.save_data(B, B, fname)
-
 
 def operator_generator_with_noise():
-    states = [0]
+
     mu = 0
-    sigma = 0.1
-    points = 5000
+    sigma = 1
+    method = 'sin'
+    points = 1000
+    with_noise = False
+    individual = True
+    input_dim = 1
+    state = 0
+    nb_plays = 2
 
-    for method in methods:
-        for weight in weights:
-            for width in widths:
-                inputs = []
-                outputs = []
-                for state in states:
-                    LOG.debug("Processing method: {}, weight: {}, width: {}, state: {}, mu: {}, sigma: {}, points: {}".format(method, weight, width, state, mu, sigma, points))
+    inputs, outputs, multi_outputs = tdata.DatasetGenerator.systhesis_operator_generator(points=points,
+                                                                                         nb_plays=nb_plays,
+                                                                                         method=method,
+                                                                                         mu=mu,
+                                                                                         sigma=sigma,
+                                                                                         with_noise=with_noise,
+                                                                                         individual=individual)
+    fname = constants.DATASET_PATH['operators'].format(method=method,
+                                                       state=state,
+                                                       mu=mu,
+                                                       sigma=sigma,
+                                                       nb_plays=nb_plays,
+                                                       points=points,
+                                                       input_dim=input_dim)
+    tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
-                    inputs_, outputs_ = tdata.DatasetGenerator.systhesis_operator_generator(points=points,
-                                                                                            weight=weight,
-                                                                                            width=width,
-                                                                                            state=state,
-                                                                                            with_noise=True,
-                                                                                            mu=mu,
-                                                                                            sigma=sigma)
-                    inputs.append(inputs_)
-                    outputs.append(outputs_)
-                fname = constants.FNAME_FORMAT['operators_noise'].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma, points=points)
-                inputs = np.hstack(inputs)
-                outputs = np.hstack(outputs)
-                outputs = outputs.T
-                tdata.DatasetSaver.save_data(inputs, outputs, fname)
+    if multi_outputs is not None:
+        fname_multi = constants.DATASET_PATH['operators_multi'].format(method=method,
+                                                                       state=state,
+                                                                       mu=mu,
+                                                                       sigma=sigma,
+                                                                       nb_plays=nb_plays,
+                                                                       points=points,
+                                                                       input_dim=input_dim)
+
+        tdata.DatasetSaver.save_data(inputs, multi_outputs, fname_multi)
 
 
 def play_generator_with_noise():
@@ -377,8 +312,8 @@ if __name__ == "__main__":
     if argv.GF:
         GF_generator()
     if argv.operator_noise:
-        # operator_generator_with_noise()
-        operator_noise_test_generator()
+        operator_generator_with_noise()
+        # operator_noise_test_generator()
     if argv.play_noise:
         play_generator_with_noise()
     if argv.mc:

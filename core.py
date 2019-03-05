@@ -643,6 +643,7 @@ class MyModel(object):
                  timestep=1,
                  input_dim=1,
                  diff_weights=False,
+                 network_type=constants.NetworkType.PLAY
                  ):
         # fix random seed to 123
         seed = 123
@@ -669,7 +670,7 @@ class MyModel(object):
             else:
                 weight = 1.0
 
-            LOG.debug("MyModel geneartes Play {} with Weight: {}".format(i, weight))
+            LOG.debug("MyModel geneartes {} with Weight: {}".format(colors.red("Play #{}".format(i)), weight))
 
             play = Play(units=units,
                         batch_size=batch_size,
@@ -679,14 +680,18 @@ class MyModel(object):
                         activation=activation,
                         loss=None,
                         optimizer=None,
-                        network_type=constants.NetworkType.PLAY,
+                        network_type=network_type,
                         name="play-{}".format(i),
                         timestep=timestep,
                         input_dim=input_dim)
+            assert play._need_compile == False, colors.red("Play inside MyModel mustn't need compiled")
             self.plays.append(play)
-            i += 1
 
-        self.optimzer = optimizers.get(optimizer)
+            i += 1
+        if optimizer is not None:
+            self.optimzer = optimizers.get(optimizer)
+        else:
+            self.optimizer = None
 
     def fit(self, inputs, outputs, epochs=100, verbose=0, steps_per_epoch=1, loss_file_name="./tmp/mymodel_loss_history.csv", learning_rate=0.001, decay=0.):
         writer = utils.get_tf_summary_writer("./log/mse")
@@ -769,8 +774,8 @@ class MyModel(object):
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
-    def predict(self, inputs):
-        # import ipdb; ipdb.set_trace()
+    def predict(self, inputs, individual=False):
+
         import time
         inputs = ops.convert_to_tensor(inputs, tf.float32)
 
@@ -790,7 +795,15 @@ class MyModel(object):
         outputs_ = np.array(outputs)
         prediction = outputs_.mean(axis=0)
         prediction = prediction.reshape(-1)
+        if individual is True:
+            outputs_ = outputs_.reshape(len(self.plays), -1).T
+            # sanity checking
+            for i in range(len(self.plays)):
+                if np.all(outputs_[i, :] == outputs[i]) is False:
+                    raise
+            return prediction, outputs_
         return prediction
+
 
     @property
     def weights(self):

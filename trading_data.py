@@ -70,32 +70,46 @@ class DatasetGenerator(object):
         return noise
 
     @classmethod
-    def systhesis_operator_generator(cls, points=1000, weight=1, width=1, state=0, with_noise=False, mu=0, sigma=0.01, method="sin"):
+    def systhesis_operator_generator(cls,
+                                     points=1000,
+                                     nb_plays=1,
+                                     method="sin",
+                                     mu=0,
+                                     sigma=0.01,
+                                     with_noise=False,
+                                     individual=False):
         if with_noise is True:
             if method == "sin":
                 LOG.debug("Generate data with noise via sin method")
-                _inputs = cls.systhesis_sin_input_generator(points, mu, sigma)
+                _inputs = cls.systhesis_sin_input_generator(points, mu, sigma, with_noise=with_noise)
             elif method == "mixed":
                 LOG.debug("Generate data with noise via mixed method")
-                _inputs = cls.systhesis_mixed_input_generator(points, mu, sigma)
+                _inputs = cls.systhesis_mixed_input_generator(points, mu, sigma, with_noise_with_noise)
             elif method == "cos":
                 LOG.debug("Generate data with noise via cos method")
                 # _inputs = cls.systhesis_mixed_input_generator(points, mu, sigma)
                 raise
         else:
-            _inputs = cls.systhesis_input_generator(points)
-        weight = float(weight)
-        width = float(width)
-        state = float(state)
+            _inputs = cls.systhesis_sin_input_generator(points)
 
-        operator = core.Play(weight=weight,
-                             width=width,
-                             debug=True,
-                             network_type=constants.NetworkType.OPERATOR)
-
-        _outputs = operator.predict(_inputs)
-        _outputs = _outputs.reshape(-1)
-        return _inputs, _outputs
+        timestep = points
+        input_dim = 1
+        # import ipdb; ipdb.set_trace()
+        operator = core.MyModel(nb_plays=nb_plays,
+                                debug=True,
+                                activation=None,
+                                optimizer=None,
+                                timestep=timestep,
+                                input_dim=input_dim,
+                                diff_weights=False,
+                                network_type=constants.NetworkType.OPERATOR
+                                )
+        if individual is True:
+            _outputs, multi_outputs = operator.predict(_inputs, individual=True)
+            return _inputs, _outputs, multi_outputs
+        else:
+            _outputs = operator.predict(_inputs, individual=False)
+            return _inputs, _outputs, None
 
     @classmethod
     def systhesis_play_generator(cls, points=1000, inputs=None):
