@@ -24,11 +24,11 @@ def fit(inputs,
         loss_file_name="./tmp/my_model_loss_history.csv",
         weights_name='model.h5'):
 
-    epochs = 1000
+    epochs = 500
     # steps_per_epoch = batch_size
 
     start = time.time()
-    input_dim = 1
+    input_dim = 10
     timestep = inputs.shape[0] // input_dim
 
     steps_per_epoch = 1
@@ -41,12 +41,12 @@ def fit(inputs,
     # mymodel.load_weights(weights_fname)
     LOG.debug("Learning rate is {}".format(learning_rate))
     mymodel.fit(inputs,
-              outputs,
-              verbose=1,
-              epochs=epochs,
-              steps_per_epoch=steps_per_epoch,
-              loss_file_name=loss_file_name,
-              learning_rate=learning_rate)
+                outputs,
+                verbose=1,
+                epochs=epochs,
+                steps_per_epoch=steps_per_epoch,
+                loss_file_name=loss_file_name,
+                learning_rate=learning_rate)
 
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     # method = 'mixed'
     # method = 'noise'
     interp = 10
-    do_prediction = True
+    do_prediction = False
 
     with_noise = True
     diff_weights = True
@@ -197,8 +197,8 @@ if __name__ == "__main__":
     # sigma = 0.5
 
     if interp != 1:
-        if do_prediction is False:
-            raise
+        # if do_prediction is False:
+        #     raise
 
         if train_invert is True:
             if run_test is False:
@@ -266,7 +266,12 @@ if __name__ == "__main__":
     inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
     import ipdb; ipdb.set_trace()
     if train_invert is True and do_prediction is False:
-        inputs, ground_truth = ground_truth, inputs
+        if interp == 1:
+            inputs, ground_truth = ground_truth, inputs
+        clip_seq = inputs.shape[0] // 100
+        inputs = inputs[:clip_seq*100]
+        ground_truth = ground_truth[:clip_seq*100]
+
         tdata.DatasetSaver.save_data(inputs, ground_truth, saved_invert_fname)
 
     if do_prediction is False:
