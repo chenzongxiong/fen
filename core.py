@@ -208,7 +208,7 @@ class MyDense(Layer):
         if self._debug:
             LOG.debug("init mydense kernel/bias as pre-defined")
             _init_kernel = np.array([[1 for i in range(self.units)]])
-            _init_kernel = np.random.uniform(low=0.0, high=2.0, size=self.units)
+            _init_kernel = np.random.uniform(low=0.0, high=1.5, size=self.units)
             _init_kernel = _init_kernel.reshape([1, -1])
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
             self.kernel = tf.Variable(_init_kernel, name="weight", dtype=tf.float32)
@@ -267,8 +267,8 @@ class MySimpleDense(Dense):
         assert self.units == 1
         if self._debug is True:
             LOG.debug("init mysimpledense kernel/bias as pre-defined")
-            # _init_kernel = np.array([1 for _ in range(input_shape[-1].value)])
-            _init_kernel = np.random.uniform(low=0.0, high=2.0, size=input_shape[-1].value)
+            _init_kernel = np.array([1 for _ in range(input_shape[-1].value)])
+            _init_kernel = np.random.uniform(low=0.0, high=1.5, size=input_shape[-1].value)
             _init_kernel = _init_kernel.reshape(-1, 1)
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
 
