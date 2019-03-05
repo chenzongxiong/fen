@@ -94,14 +94,13 @@ class DatasetGenerator(object):
 
         timestep = points
         input_dim = 1
-        # import ipdb; ipdb.set_trace()
         operator = core.MyModel(nb_plays=nb_plays,
                                 debug=True,
                                 activation=None,
                                 optimizer=None,
                                 timestep=timestep,
                                 input_dim=input_dim,
-                                diff_weights=False,
+                                diff_weights=True,
                                 network_type=constants.NetworkType.OPERATOR
                                 )
         if individual is True:

@@ -21,14 +21,19 @@ UNITS = constants.UNITS
 def operator_generator_with_noise():
 
     mu = 0
-    sigma = 1
+    sigma = 1.5
     method = 'sin'
     points = 1000
-    with_noise = False
+    with_noise = True
     individual = True
     input_dim = 1
     state = 0
-    nb_plays = 2
+    nb_plays = 20
+
+
+    if with_noise is False:
+        sigma = 0
+        mu = 0
 
     inputs, outputs, multi_outputs = tdata.DatasetGenerator.systhesis_operator_generator(points=points,
                                                                                          nb_plays=nb_plays,
