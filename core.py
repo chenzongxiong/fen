@@ -168,6 +168,7 @@ class Operator(RNN):
             return_state=False,
             stateful=True,
             unroll=False
+            # unroll=True,
             )
 
     def call(self, inputs, initial_state=None):
@@ -800,17 +801,27 @@ class MyModel(object):
             i += 1
 
     def fit2(self, inputs, mean, sigma, epochs=100, verbose=0,
-             steps_per_epoch=1, loss_file_name="./tmp/mymodel_loss_history.csv"):
+             steps_per_epoch=1, loss_file_name="./tmp/mymodel_loss_history.csv",
+             learning_rate=0.001, decay=0.):
+
         writer = utils.get_tf_summary_writer("./log/mle")
         inputs = ops.convert_to_tensor(inputs, tf.float32)
         import time
         for play in self.plays:
             if not play.built:
-                play._need_compile = False
-                start = time.time()
+                # play._need_compile = False
+                # start = time.time()
                 play.build(inputs)
-                end = time.time()
-                LOG.debug("play {} time cost: {} s".format(play._name, end-start))
+                # end = time.time()
+                # LOG.debug("play {} time cost: {} s".format(play._name, end-start))
+
+        import ipdb; ipdb.set_trace()
+        ###### DO GRADIENT BY HAND HERE
+        def derivate_activation():
+            pass
+        def derivate_phi():
+            pass
+
         # x, y = self.plays[0].reshape(inputs, outputs)
         x = self.plays[0].reshape(inputs)
 
@@ -856,7 +867,7 @@ class MyModel(object):
 
         feed_inputs = model_inputs
 
-        self.optimizer = tf.keras.optimizers.Adam()
+        self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, decay=decay)
 
         with tf.name_scope('training'):
 
@@ -1004,14 +1015,14 @@ if __name__ == "__main__":
     # print("k: ", sess.run(tf.reduce_sum(g, axis=2)+k))
     import ipdb; ipdb.set_trace()
 
-    phi_cell = PhiCell(weight=1.0, width=1.0, debug=True)
-    _x = np.array([-2.5, -1.5, -0.5, -0.7, 0.5, 1.5])
-    outputs = phi_cell(_x, [0])
+    # phi_cell = PhiCell(weight=1.0, width=1.0, debug=True)
+    # _x = np.array([-2.5, -1.5, -0.5, -0.7, 0.5, 1.5])
+    # outputs = phi_cell(_x, [0])
 
-    init = tf.global_variables_initializer()
-    sess.run(init)
+    # init = tf.global_variables_initializer()
+    # sess.run(init)
 
-    LOG.debug("outputs: {}".format(sess.run(outputs)))
+    # LOG.debug("outputs: {}".format(sess.run(outputs)))
 
     # _x = np.array([-2.5, -1.5, -0.5, -0.7, 0.5, 1.5])
     # import trading_data as tdata
@@ -1090,33 +1101,33 @@ if __name__ == "__main__":
     # LOG.debug("weight: {}".format(play.weight))
 
     LOG.debug(colors.red("Test Play"))
-    batch_size = 1
-    timestep = 50
-    input_dim = 10
-    units = 20
-    epochs = 1500 // batch_size
-    steps_per_epoch = batch_size
+    # batch_size = 1
+    # timestep = 50
+    # input_dim = 10
+    # units = 20
+    # epochs = 1500 // batch_size
+    # steps_per_epoch = batch_size
 
-    fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1, points=500)
+    # fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1, points=500)
 
-    inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    length = 500
-    inputs, outputs = inputs[:length], outputs[:length]
+    # inputs, outputs = tdata.DatasetLoader.load_data(fname)
+    # length = 500
+    # inputs, outputs = inputs[:length], outputs[:length]
 
     # LOG.debug("timestap is: {}".format(inputs.shape[0]))
 
     # import time
     # start = time.time()
-    play = Play(batch_size=batch_size,
-                units=units,
-                activation="tanh",
-                network_type=constants.NetworkType.PLAY,
-                loss='mse',
-                debug=True,
-                timestep=timestep,
-                input_dim=input_dim)
+    # play = Play(batch_size=batch_size,
+    #             units=units,
+    #             activation="tanh",
+    #             network_type=constants.NetworkType.PLAY,
+    #             loss='mse',
+    #             debug=True,
+    #             timestep=timestep,
+    #             input_dim=input_dim)
 
-    play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
+    # play.fit(inputs, outputs, verbose=1, epochs=epochs, steps_per_epoch=steps_per_epoch)
     # end = time.time()
     # LOG.debug("time cost: {}s".format(end-start))
 
@@ -1141,13 +1152,16 @@ if __name__ == "__main__":
     sigma = 0.01
 
     # fname = constants.FNAME_FORMAT["plays"].format(method="sin", weight=1, width=1, points=500)
-    fname = constants.FNAME_FORMAT["F_predictions"].format(method="sin", weight=1, width=1, points=500, mu=mu, sigma=sigma, activation='tanh',
-                                                           units=1, loss='mse')
+    nb_plays = 2
+    nb_plays_ = 2
+    # fname = constants.FNAME_FORMAT["F_predictions"].format(method="sin", weight=1, width=1, points=500, mu=mu, sigma=sigma, activation='tanh', nb_plays=nb_plays, nb_plays_=nb_plays_, batch_size=batch_size, state=state,
+    #                                                        units=1, loss='mse')
+    fname = "training-data/F/method-sin/weight-1/width-1/nb_plays-20/units-20/mu-0/sigma-0.1/points-1000/state-0/base.csv"
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
     length = 50
     inputs, outputs = inputs[:length], outputs[:length]
 
-    nb_plays = 2
+
     LOG.debug("timestap is: {}".format(inputs.shape[0]))
     import time
     start = time.time()
