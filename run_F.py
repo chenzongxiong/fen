@@ -24,7 +24,7 @@ def fit(inputs,
         loss_file_name="./tmp/my_model_loss_history.csv",
         weights_name='model.h5'):
 
-    epochs = 500
+    epochs = 2000
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     # method = 'mixed'
     # method = 'noise'
     interp = 10
-    do_prediction = False
+    do_prediction = True
 
     with_noise = True
     diff_weights = True
@@ -129,21 +129,22 @@ if __name__ == "__main__":
     train_invert = True
 
     mu = 0
-    sigma = 1.8
+    sigma = 2
 
     points = 1000
     input_dim = 1
     ############################## ground truth #############################
     nb_plays = 20
-    units = 20
+    units = 1
     state = 0
-    activation = 'tanh'
-    # activation = None
+    # activation = 'tanh'
+    activation = None
     ############################## predicitons #############################
     __nb_plays__ = 20
-    __units__ = 20
+    __units__ = 1
     __state__ = 0
-    __activation__ = 'tanh'
+    # __activation__ = 'tanh'
+    __activation__ = None
 
     if method == 'noise':
         with_noise = True
