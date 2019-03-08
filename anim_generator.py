@@ -245,26 +245,26 @@ def model_nb_plays_generator_with_noise():
     with_noise = True
     diff_weights = True
     run_test = False
-    train_invert = True
+    train_invert = False
     interp = 10
-    force_rerun = False
+    force_rerun = True
 
     mu = 0
-    sigma = 1.8
+    sigma = 2
     points = 1000
     input_dim = 1
     # ground truth
     nb_plays = 20
-    units = 20
+    units = 1
     state = 0
-    # activation = None
-    activation = 'tanh'
+    activation = None
+    # activation = 'tanh'
     # predicitons
     __nb_plays__ = 20
-    __units__ = 20
+    __units__ = 1
     __state__ = 0
-    # __activation__ = None
-    __activation__ = 'tanh'
+    __activation__ = None
+    # __activation__ = 'tanh'
 
     loss_name = 'mse'
 
@@ -340,7 +340,6 @@ def model_nb_plays_generator_with_noise():
 
     if run_test is True and method == 'sin':
         method = 'mixed'
-    # import ipdb; ipdb.set_trace()
 
     fname = constants.DATASET_PATH[base_file_key].format(interp=interp,
                                                          method=method,
@@ -354,7 +353,7 @@ def model_nb_plays_generator_with_noise():
                                                          input_dim=input_dim)
 
     _inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
-
+    import ipdb; ipdb.set_trace()
     LOG.debug("Load **ground-truth** dataset from file: {}".format(coloring.cyan(fname)))
 
     predicted_fname = constants.DATASET_PATH[predictions_file_key].format(interp=interp,
