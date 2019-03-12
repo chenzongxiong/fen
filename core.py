@@ -875,7 +875,7 @@ class MyModel(object):
 
         def derive_nonlinear(fZ, activation=None):
             if activation is None:
-                return tf.keras.backend.ones(shape=fZ.shape.as_list())
+                return tf.keras.backend.ones(shape=(1, fZ.shape.as_list()[1]))
             elif activation == 'tanh':
                 return 1.0 - tf.square(fZ)
             else:
@@ -937,16 +937,13 @@ class MyModel(object):
             J_list = []
             intral_res_list = []
             aa_list = []
+            by_hand_list = []
+            by_tf_list = []
             ################### CALC J by hand #######################
             for idx in range(self._nb_plays):
                 play = self.plays[idx]
-                trainable_weights = play.model.trainable_weights
 
-                phi_weight = play.model.layers[0].cell.last_kernel
-                theta = play.model.layers[2].last_kernel
-                tilde_theta = play.model.layers[3].last_kernel
-
-                ###### Extract Operator layer's outputs ######
+                ###### Extract Layer's outputs ######
                 reshaped_operator_layer = play.model.layers[1]
                 operator_output = reshaped_operator_layer.output
 
@@ -954,30 +951,52 @@ class MyModel(object):
                 derive_phi_res = derive_phi(operator_output)
                 derive_nonlinear_res = derive_nonlinear(nonlinear_output, activation=self._activation)
 
+                ######## Extract Layer's weights #######
+                trainable_weights = play.model.trainable_weights
+
+                phi_weight = play.model.layers[0].cell.last_kernel
+                theta = play.model.layers[2].last_kernel
+                tilde_theta = play.model.layers[3].last_kernel
+                ######## HANDLE Layer's weights #########
                 # import ipdb; ipdb.set_trace()
-                # auto_derive_phi_res = tf.keras.backend.gradients(play.model.layers[1].output, play.model.layers[0].input)
-                # auto_derive_phi_res1 = tf.keras.backend.gradients(play.model.layers[0].output, play.model.layers[0].input)
-                # auto_derive_phi_res2 = tf.keras.backend.gradients(play.model.layers[1].output, play.model.layers[1].input)
+                _gradient_tilde_theta = tf.transpose(tilde_theta, perm=[1, 0])
+                gradient_tilde_theta = tf.tile(_gradient_tilde_theta, multiples=[operator_output.shape[1].value, 1])
 
+                # _gradient_theta = tf.transpose(theta, perm=[1, 0])
+                gradient_theta = tf.multiply(theta, derive_nonlinear(nonlinear_output, self._activation))
+                # import ipdb; ipdb.set_trace()
+                gradient_theta = tf.transpose(gradient_theta, perm=[1, 0])
+                gradient_nonlinear = tf.keras.backend.dot(gradient_tilde_theta, gradient_theta)
+                #############################################
+
+
+                # import ipdb; ipdb.set_trace()
+                auto_derive_phi_res = tf.keras.backend.gradients(play.model.layers[1].output, play.model.layers[0].input)
+                auto_derive_phi_res1 = tf.keras.backend.gradients(play.model.layers[0].output, play.model.layers[0].input)
+                auto_derive_phi_res2 = tf.keras.backend.gradients(play.model.layers[1].output, play.model.layers[1].input)
                 # auto_derive_nonlinear_res = tf.keras.backend.gradients(play.model.layers[2].output, play.model.layers[2].input)
-
                 # auto_derive_linear_res = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[3].input)
-                # auto_derive_res = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[0].input)
+                auto_derive_res = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[0].input)
+                auto_gradient_nonlinear = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[2].input)
                 theta_res = calculate_theta(theta, tilde_theta)
 
                 aa = tf.keras.backend.dot(derive_nonlinear_res, theta_res)
-                a = (aa * derive_phi_res * phi_weight) / self._nb_plays
+                a = (aa * derive_phi_res * phi_weight)
 
-                # intral_res_list.append([derive_phi_res, auto_derive_phi_res, derive_nonlinear_res, auto_derive_nonlinear_res,
-                #                         auto_derive_linear_res, auto_derive_phi_res1, auto_derive_phi_res2])
-                # intral_res_list.append([auto_derive_phi_res1, auto_derive_phi_res2, auto_derive_phi_res, auto_derive_nonlinear_res, auto_derive_linear_res, auto_derive_res])
-                # aa_list.append([play.model.layers[0].cell.last_kernel, play.model.layers[0].cell.kernel, derive_phi_res, derive_nonlinear_res, theta_res])
+                # intral_res_list.append([auto_derive_phi_res1, auto_derive_phi_res2, auto_derive_phi_res,
+                #                         auto_derive_nonlinear_res, auto_derive_linear_res, auto_derive_res])
+                # aa_list.append([play.model.layers[0].cell.last_kernel, play.model.layers[0].cell.kernel,
+                #                 play.model.layers[2].last_kernel, play.model.layers[2].kernel,
+                #                 play.model.layers[3].last_kernel, play.model.layers[3].kernel,
+                #                 derive_phi_res, derive_nonlinear_res, theta_res])
 
+                by_hand_list.append([gradient_nonlinear])
+                by_tf_list.append([auto_gradient_nonlinear[0]])
                 J_list.append(a)
 
             # J_list = ops.convert_to_tensor(self.J_list, dtype=tf.float32)
-            # J = tf.keras.backend.gradients(model_outputs, model_inputs)
-            J = tf.keras.backend.gradients(y_pred, model_inputs)
+            J = tf.keras.backend.gradients(model_outputs, model_inputs)
+            # J = tf.keras.backend.gradients(y_pred, model_inputs)
 
             detJ = tf.reshape(tf.keras.backend.abs(J[0]), shape=y_pred.shape)
             detJ = tf.keras.backend.clip(detJ, min_value=1e-5, max_value=1e9)
@@ -994,7 +1013,7 @@ class MyModel(object):
 
             training_inputs = feed_inputs + feed_targets
             train_function = tf.keras.backend.function(training_inputs,
-                                                       [loss, J, detJ, J_list, intral_res_list, aa_list],
+                                                       [loss, J, detJ, J_list, by_hand_list, by_tf_list],
                                                        updates=updates)
 
         _x = [x for _ in range(self._nb_plays)]
@@ -1011,10 +1030,27 @@ class MyModel(object):
             for j in range(steps_per_epoch):
                 # import ipdb; ipdb.set_trace()
                 batch_assign_tuples = []
+                k = 0
                 for play in self.plays:
+                    k += 1
                     # print("Before assign: {}".format(tf.keras.backend.get_value(play.model.layers[0].cell.last_kernel)))
-                    # print("Before assign: {}".format(tf.keras.backend.get_value(play.model.layers[2].last_kernel)))
-                    # print("Before assign: {}".format(tf.keras.backend.get_value(play.model.layers[3].last_kernel)))
+                    old_theta = tf.keras.backend.get_value(play.model.layers[2].last_kernel)
+                    old_tilde_theta = tf.keras.backend.get_value(play.model.layers[3].last_kernel)
+                    curr_theta = tf.keras.backend.get_value(play.model.layers[2].kernel)
+                    curr_tilde_theta = tf.keras.backend.get_value(play.model.layers[3].kernel)
+
+                    old_theta = old_theta.reshape(-1)
+                    old_tilde_theta = old_tilde_theta.reshape(-1)
+                    curr_theta = curr_theta.reshape(-1)
+                    curr_tilde_theta = curr_tilde_theta.reshape(-1)
+
+                    print("{} Before assign theta: {}".format(colors.red("Play #{}".format(k)), old_theta))
+                    print("{} Before assign tilde theta: {}".format(colors.red("Play #{}".format(k)), old_tilde_theta))
+                    print("{} Before  results: {}".format(colors.red("Play #{}".format(k)), (old_tilde_theta * old_theta).sum()))
+                    print("{} After assign theta: {}".format(colors.red("Play #{}".format(k)), curr_theta))
+                    print("{} After  assign tilde theta: {}".format(colors.red("Play #{}".format(k)), curr_tilde_theta))
+                    print("{} After  results: {}".format(colors.red("Play #{}".format(k)), (curr_tilde_theta * curr_theta).sum()))
+                    print("------------------------------------------------------------------------------------------")
                     batch_assign_tuples.append(
                         (
                             play.model.layers[0].cell.last_kernel,
@@ -1034,28 +1070,32 @@ class MyModel(object):
                         )
                     )
                 tf.keras.backend.batch_set_value(batch_assign_tuples)
-
-                cost, J_res, detJ_res, J_list_res, intral_res_list_res, aa_list_res = train_function(ins)
-                # for p1, p2 in zip(intral_res_list_res, aa_list_res):
-                #     print("phi_weight1: {}".format(p1[0]))
-                #     print("phi_weight2: {}".format(p2[0]))
-                # print("J: {}".format(J_res[0]))
-                # print("J_list_res: {}".format(J_list_res[0]))
-                for J1, J2 in zip(J_res, J_list_res):
-                    if not np.allclose(J1, J2, rtol=1e-2, atol=1e-8):
-                    # if True:
-                        print("J1: {}".format(J1))
-                        print("J2: {}".format(J2))
-                        print("Diff: {}".format(np.abs(J1-J2)))
+                print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
+                cost, J_res, detJ_res, J_list_res, by_hand_list, by_tf_list = train_function(ins)
+                m = 0
+                for _a, _b in zip(by_hand_list, by_tf_list):
+                    if not np.allclose(_a[0], _b[0]):
+                        print("by_hand: ", _a[0])
+                        print("by_tf: ", _b[0])
+                        print("index is: {}".format(m))
                         import ipdb; ipdb.set_trace()
+                    m += 1
+                # for J1, J2 in zip(J_res, J_list_res):
+                #     if not np.allclose(J1, J2, rtol=1e-5, atol=1e-8):
+                #     # if True:
+                #         print("J1: {}".format(J1))
+                #         print("J2: {}".format(J2))
+                #         print("Diff: {}".format(np.abs(J1-J2)))
+                #         import ipdb; ipdb.set_trace()
 
                         # raise Exception("Not the same....")
                 # print("detJ: {}".format(detJ_res))
                 # print("J_list: {}".format(J_list_res))
-                # print("intral_res_list: {}".format(intral_res_list_res))
+                # print("intral_res_list: {}".format(intral_res_liss))
                 # print("aa_list: {}".format(aa_list_res))
-            self.cost_history.append([i, cost])
             LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
+            self.cost_history.append([i, cost])
+
 
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
@@ -1126,7 +1166,34 @@ if __name__ == "__main__":
     init = tf.global_variables_initializer()
     sess.run(init)
 
-    print(sess.run(a))
+    # print(sess.run(a))
+    aa = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+    aa = aa.reshape([-1, 1])
+    bb = np.array([2, 3])
+
+    bb = bb.reshape([1, -1])
+    cc = np.array([4, 5])
+    cc = cc.reshape([-1, 1])
+
+    a = tf.constant(aa, dtype=tf.float32)
+    b = tf.constant(bb, dtype=tf.float32)
+    c = tf.constant(cc, dtype=tf.float32)
+    d = a * b
+    e = tf.keras.backend.dot(d, c)
+
+    # c_reshape = tf.reshape(c, shape=(-1, ))
+    c_t = tf.transpose(c, perm=[1, 0])
+    cn = tf.tile(c_t, [2, 1])
+
+    # c = tf.keras.backend.dot(a,  b)
+    g1 = tf.gradients(e, [d])
+    g2 = tf.gradients(d, [a])
+    g3 = tf.gradients(e, [a])
+    import ipdb; ipdb.set_trace()
+    print(sess.run(g1))
+    print(sess.run(g2))
+    print(sess.run(g3))
+
     # a = tf.constant([[1], [2], [3], [4], [5], [6]], dtype=tf.float32)
     # b= tf.constant([[1], [2], [3], [4], [5], [6]], dtype=tf.float32)
     # a = tf.constant([[1, 2, 3]], dtype=tf.float32)
@@ -1356,8 +1423,8 @@ if __name__ == "__main__":
     # sigma = 0.01
     sigma = 2
     nb_plays = 20
-    __nb_plays__ = 5
-    __units__ = 20
+    __nb_plays__ = 10
+    __units__ = 10
     # __activation__ = 'tanh'
     __activation__ = None
     import time
