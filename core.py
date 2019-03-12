@@ -217,6 +217,15 @@ class MyDense(Layer):
         self.use_bias = use_bias
 
     def build(self, input_shape):
+        self.last_kernel = self.add_weight(
+            "last_theta",
+            shape=(1, self.units),
+            initializer=self.kernel_initializer,
+            regularizer=self.kernel_regularizer,
+            constraint=self.kernel_constraint,
+            dtype=tf.float32,
+            trainable=False)
+
         if self._debug:
             LOG.debug("init mydense kernel/bias as pre-defined")
             _init_kernel = np.array([[1/2 * (i + 1) for i in range(self.units)]])
@@ -280,6 +289,15 @@ class MySimpleDense(Dense):
 
     def build(self, input_shape):
         assert self.units == 1
+        self.last_kernel = self.add_weight(
+            "last_kernel",
+            shape=(input_shape[-1].value, 1),
+            initializer=self.kernel_initializer,
+            regularizer=self.kernel_regularizer,
+            constraint=self.kernel_constraint,
+            dtype=tf.float32,
+            trainable=False)
+
         if self._debug is True:
             LOG.debug("init mysimpledense kernel/bias as pre-defined")
             _init_kernel = np.array([1 * (i + 1) for i in range(input_shape[-1].value)])
@@ -346,6 +364,7 @@ class Play(object):
         self._name = name
 
     def build(self, inputs=None):
+
         if inputs is None and self._batch_input_shape is None:
             raise Exception("Unknown input shape")
         if inputs is not None:
@@ -943,18 +962,22 @@ class MyModel(object):
                     phi_weight = play.model.layers[0].cell.last_kernel
                     # phi_weight = trainable_weights[0]
                     # assert phi_weight.name == 'operator/weight:0'
-                    theta = trainable_weights[2]
-                    assert theta.name == 'my_dense/theta:0'
-                    tilde_theta = trainable_weights[6]
-                    assert tilde_theta.name == 'my_simple_dense/kernel:0'
+                    # theta = trainable_weights[2]
+                    theta = play.model.layers[2].last_kernel
+                    # assert theta.name == 'my_dense/theta:0'
+                    # tilde_theta = trainable_weights[6]
+                    tilde_theta = play.model.layers[3].last_kernel
+                    # assert tilde_theta.name == 'my_simple_dense/kernel:0'
                 else:
                     phi_weight = play.model.layers[0].cell.last_kernel
                     # phi_weight = trainable_weights[0]
                     # assert phi_weight.name == 'operator_{}/weight:0'.format(idx)
-                    theta = trainable_weights[2]
-                    assert theta.name == 'my_dense_{}/theta:0'.format(idx)
-                    tilde_theta = trainable_weights[6]
-                    assert tilde_theta.name == 'my_simple_dense_{}/kernel:0'.format(idx)
+                    # theta = trainable_weights[2]
+                    theta = play.model.layers[2].last_kernel
+                    # assert theta.name == 'my_dense_{}/theta:0'.format(idx)
+                    # tilde_theta = trainable_weights[6]
+                    tilde_theta = play.model.layers[3].last_kernel
+                    # assert tilde_theta.name == 'my_simple_dense_{}/kernel:0'.format(idx)
 
                 ###### Extract Operator layer's outputs ######
                 reshaped_operator_layer = play.model.layers[1]
@@ -1011,14 +1034,34 @@ class MyModel(object):
 
         writer.add_graph(tf.get_default_graph())
         self.cost_history = []
-        while i < epochs:
-            i += 1
+        steps_per_epoch = 1
+        for i in range(epochs):
             for j in range(steps_per_epoch):
                 # import ipdb; ipdb.set_trace()
+                batch_assign_tuples = []
                 for play in self.plays:
-                    print("Before assign: {}".format(tf.keras.backend.get_value(play.model.layers[0].cell.last_kernel)))
-                    sess.run(play.model.layers[0].cell.last_kernel.assign(tf.keras.backend.get_value(play.model.layers[0].cell.kernel)))
-                    print("After assign: {}".format(tf.keras.backend.get_value(play.model.layers[0].cell.last_kernel)))
+                    # print("Before assign: {}".format(tf.keras.backend.get_value(play.model.layers[0].cell.last_kernel)))
+                    # print("Before assign: {}".format(tf.keras.backend.get_value(play.model.layers[2].last_kernel)))
+                    # print("Before assign: {}".format(tf.keras.backend.get_value(play.model.layers[3].last_kernel)))
+                    batch_assign_tuples.append(
+                        (
+                            play.model.layers[0].cell.last_kernel,
+                            tf.keras.backend.get_value(play.model.layers[0].cell.kernel)
+                        )
+                    )
+                    batch_assign_tuples.append(
+                        (
+                            play.model.layers[2].last_kernel,
+                            tf.keras.backend.get_value(play.model.layers[2].kernel)
+                        )
+                    )
+                    batch_assign_tuples.append(
+                        (
+                            play.model.layers[3].last_kernel,
+                            tf.keras.backend.get_value(play.model.layers[3].kernel)
+                        )
+                    )
+                tf.keras.backend.batch_set_value(batch_assign_tuples)
 
                 cost, J_res, detJ_res, J_list_res, intral_res_list_res, aa_list_res = train_function(ins)
                 # for p1, p2 in zip(intral_res_list_res, aa_list_res):
@@ -1027,7 +1070,7 @@ class MyModel(object):
                 # print("J: {}".format(J_res[0]))
                 # print("J_list_res: {}".format(J_list_res[0]))
                 for J1, J2 in zip(J_res, J_list_res):
-                    if not np.allclose(J1, J2, atol=1e-5):
+                    if not np.allclose(J1, J2, rtol=1e-5, atol=1):
                         print("J1: {}".format(J1))
                         print("J2: {}".format(J2))
                         print("Diff: {}".format(np.abs(J1-J2)))
@@ -1334,16 +1377,16 @@ if __name__ == "__main__":
     LOG.debug("timestap is: {}".format(inputs.shape[0]))
     inputs = inputs.reshape(-1)
     units = 1
-    epochs = 100
+    epochs = 1000
     steps_per_epoch = 1
     mu = 0
     # sigma = 0.01
     sigma = 2
     nb_plays = 20
     __nb_plays__ = 20
-    __units__ = 20
-    # __activation__ = 'tanh'
-    __activation__ = None
+    __units__ = 1
+    __activation__ = 'tanh'
+    # __activation__ = None
     import time
     start = time.time()
     agent = MyModel(input_dim=input_dim,
