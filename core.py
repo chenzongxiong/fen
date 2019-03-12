@@ -43,8 +43,9 @@ def Phi(x, width=1.0):
            = 0         , otherwise
     '''
     # return tf.maximum(x, 0) + tf.minimum(x+width, 0)
-    return tf.maximum(x-width/2, 0) + tf.minimum(x+width/2, 0)
-
+    # return tf.maximum(x-width/2, 0) + tf.minimum(x+width/2, 0)
+    return x
+    # return tf.maximum(x, 0) + tf.minimum(x, 0)
 
 class PhiCell(Layer):
     def __init__(self,
@@ -78,6 +79,16 @@ class PhiCell(Layer):
         self.unroll = False
 
     def build(self, input_shape):
+        self.last_kernel = self.add_weight(
+            "last_weight",
+            shape=(1, 1),
+            initializer=self.kernel_initializer,
+            regularizer=self.kernel_regularizer,
+            constraint=self.kernel_constraint,
+            dtype=tf.float32,
+            trainable=False)
+
+        # self.last_kernel = tf.Variable([[1.0]], name="last_weight", dtype=tf.float32)
         if input_shape[-1] <= 50:
             self.unroll = True
 
@@ -114,27 +125,26 @@ class PhiCell(Layer):
         LOG.debug("inputs.shape: {}".format(inputs.shape))
         LOG.debug("self._inputs.shape: {}".format(self._inputs))
 
-        # outputs_ = tf.multiply(self._inputs, self.kernel)
+        outputs_ = tf.multiply(self._inputs, self.kernel)
 
-        # # NOTE: unroll method, can we use RNN method ?
-        # outputs = [self._state]
-        # for i in range(outputs_.shape[-1].value):
-        #     output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1])), outputs[-1])
-        #     outputs.append(output)
+        # NOTE: unroll method, can we use RNN method ?
+        outputs = [self._state]
+        for i in range(outputs_.shape[-1].value):
+            output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1])), outputs[-1])
+            outputs.append(output)
 
-        # outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
+        outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
 
-        # state = outputs[-1]
-        # outputs = tf.reshape(outputs, shape=self._inputs.shape)
+        state = outputs[-1]
+        outputs = tf.reshape(outputs, shape=self._inputs.shape)
 
-        # LOG.debug("before reshaping state.shape: {}".format(state.shape))
-        # state = tf.reshape(state, shape=(-1, 1))
-        # LOG.debug("after reshaping state.shape: {}".format(state.shape))
-        # return outputs, [state]
-
+        LOG.debug("before reshaping state.shape: {}".format(state.shape))
+        state = tf.reshape(state, shape=(-1, 1))
+        LOG.debug("after reshaping state.shape: {}".format(state.shape))
+        return outputs, [state]
 
         def steps(inputs, states):
-            outputs = Phi(inputs - states[-1]) + states[-1]
+            outputs = Phi(inputs - states[-1], self._width) + states[-1]
             return outputs, [outputs]
 
         self._inputs = tf.multiply(self._inputs, self.kernel)
@@ -149,7 +159,7 @@ class PhiCell(Layer):
 
         self.unroll = True
         last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
-
+        LOG.debug("outputs_.shape: ", outputs_.shape)
         return outputs_, states_x
 
 
@@ -209,7 +219,7 @@ class MyDense(Layer):
     def build(self, input_shape):
         if self._debug:
             LOG.debug("init mydense kernel/bias as pre-defined")
-            _init_kernel = np.array([[1 for i in range(self.units)]])
+            _init_kernel = np.array([[1/2 * (i + 1) for i in range(self.units)]])
             # _init_kernel = np.array([[1*(i+1) for i in range(self.units)]])
             # _init_kernel = np.random.uniform(low=0.0, high=1.5, size=self.units)
             _init_kernel = _init_kernel.reshape([1, -1])
@@ -272,7 +282,7 @@ class MySimpleDense(Dense):
         assert self.units == 1
         if self._debug is True:
             LOG.debug("init mysimpledense kernel/bias as pre-defined")
-            _init_kernel = np.array([1 for i in range(input_shape[-1].value)])
+            _init_kernel = np.array([1 * (i + 1) for i in range(input_shape[-1].value)])
             # _init_kernel = np.array([1 * (i+1) for i in range(input_shape[-1].value)])
             # _init_kernel = np.random.uniform(low=0.0, high=1.5, size=input_shape[-1].value)
             _init_kernel = _init_kernel.reshape(-1, 1)
@@ -350,6 +360,9 @@ class Play(object):
                 # self._batch_input_shape = tf.TensorShape([1, timesteps, self.batch_size])
 
                 if length % (self._play_input_dim * self._play_timestep) != 0:
+                    LOG.error("length is: {}, input_dim: {}, play_timestep: {}".format(length,
+                                                                                       self._play_input_dim,
+                                                                                       self._play_timestep))
                     raise Exception("The batch size cannot be divided by the length of input sequence.")
 
                 self.batch_size = length // (self._play_timestep * self._play_input_dim)
@@ -660,11 +673,11 @@ class MyModel(object):
 
         self.plays = []
         self._nb_plays = nb_plays
-
+        self._activation = activation
         i = 1
         _weight = 1.0
         _width = 0.1
-
+        width = 0
         for nb_play in range(nb_plays):
             # weight =  _weight / (i)
             # weight = 1.0
@@ -839,19 +852,22 @@ class MyModel(object):
             diff = reshaped_P[:, 1:] - reshaped_P[:, :-1]
             x0 = tf.slice(reshaped_P, [0, 0], [1, 1])
             diff_ = tf.concat([x0, diff], axis=1)
-            result = tf.cast(tf.abs(diff_) >= 1e-7, dtype=tf.float32)
+            result = tf.cast(tf.abs(diff_) >= 0.0, dtype=tf.float32)
             return tf.reshape(result, shape=P.shape)
 
-        def derive_nonlinear(fZ):
-            # return tf.keras.backend.ones(shape=fZ.shape.as_list())
-            res = np.ones(fZ.shape.as_list())
-            a = tf.Variable(res, dtype=tf.float32)
+        def derive_nonlinear(fZ, activation=None):
+            LOG.debug("nonlinear is: {}".format(activation))
+            if activation is None:
+                return tf.keras.backend.ones(shape=fZ.shape.as_list())
+            elif activation == 'tanh':
+                return 1.0 - tf.square(fZ)
+
+            # res = np.ones(fZ.shape.as_list())
+            # a = tf.Variable(res, dtype=tf.float32)
             # a = tf.keras.backend.ones(shape=fZ.shape.as_list())
             # init = tf.global_variables_initializer()
             # sess.run(init)
-
-            import ipdb; ipdb.set_trace()
-            return a
+            # return a
             # a = tf.constant(1, dtype=tf.float32)
             # return tf.reshape(a, shape=fZ.shape)
             # return 1.0 - tf.square(fZ)
@@ -912,6 +928,7 @@ class MyModel(object):
 
         with tf.name_scope('training'):
             J = tf.keras.backend.gradients(model_outputs, model_inputs)
+
             detJ = tf.reshape(tf.keras.backend.abs(J[0]), shape=y_pred.shape)
             detJ = tf.keras.backend.clip(detJ, min_value=1e-5, max_value=1e9)
             J_list = []
@@ -921,17 +938,19 @@ class MyModel(object):
             for idx in range(self._nb_plays):
                 play = self.plays[idx]
                 trainable_weights = play.model.trainable_weights
-
+                # import ipdb; ipdb.set_trace()
                 if idx == 0:
-                    phi_weight = trainable_weights[0]
-                    assert phi_weight.name == 'operator/weight:0'
+                    phi_weight = play.model.layers[0].cell.last_kernel
+                    # phi_weight = trainable_weights[0]
+                    # assert phi_weight.name == 'operator/weight:0'
                     theta = trainable_weights[2]
                     assert theta.name == 'my_dense/theta:0'
                     tilde_theta = trainable_weights[6]
                     assert tilde_theta.name == 'my_simple_dense/kernel:0'
                 else:
-                    phi_weight = trainable_weights[0]
-                    assert phi_weight.name == 'operator_{}/weight:0'.format(idx)
+                    phi_weight = play.model.layers[0].cell.last_kernel
+                    # phi_weight = trainable_weights[0]
+                    # assert phi_weight.name == 'operator_{}/weight:0'.format(idx)
                     theta = trainable_weights[2]
                     assert theta.name == 'my_dense_{}/theta:0'.format(idx)
                     tilde_theta = trainable_weights[6]
@@ -944,9 +963,9 @@ class MyModel(object):
                 nonlinear_output = play.model.layers[2].output
                 # a = tilde_theta * theta * phi_weight
                 derive_phi_res = derive_phi(operator_output)
-                derive_nonlinear_res = derive_nonlinear(nonlinear_output)
+                derive_nonlinear_res = derive_nonlinear(nonlinear_output, activation=self._activation)
 
-                import ipdb; ipdb.set_trace()
+                # import ipdb; ipdb.set_trace()
                 auto_derive_phi_res = tf.keras.backend.gradients(play.model.layers[1].output, play.model.layers[0].input)
                 auto_derive_phi_res1 = tf.keras.backend.gradients(play.model.layers[0].output, play.model.layers[0].input)
                 auto_derive_phi_res2 = tf.keras.backend.gradients(play.model.layers[1].output, play.model.layers[1].input)
@@ -954,15 +973,16 @@ class MyModel(object):
                 auto_derive_nonlinear_res = tf.keras.backend.gradients(play.model.layers[2].output, play.model.layers[2].input)
 
                 auto_derive_linear_res = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[3].input)
+                auto_derive_res = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[0].input)
                 theta_res = calculate_theta(theta, tilde_theta)
 
                 aa = tf.keras.backend.dot(derive_nonlinear_res, theta_res)
-                a = (aa * derive_phi_res * phi_weight)
+                a = (aa * derive_phi_res * play.model.layers[0].cell.last_kernel)
 
-                intral_res_list.append([derive_phi_res, auto_derive_phi_res, derive_nonlinear_res, auto_derive_nonlinear_res,
-                                        auto_derive_linear_res, auto_derive_phi_res1, auto_derive_phi_res2])
-
-                aa_list.append(aa)
+                # intral_res_list.append([derive_phi_res, auto_derive_phi_res, derive_nonlinear_res, auto_derive_nonlinear_res,
+                #                         auto_derive_linear_res, auto_derive_phi_res1, auto_derive_phi_res2])
+                intral_res_list.append([auto_derive_phi_res1, auto_derive_phi_res2, auto_derive_phi_res, auto_derive_nonlinear_res, auto_derive_linear_res, auto_derive_res])
+                aa_list.append([play.model.layers[0].cell.last_kernel, play.model.layers[0].cell.kernel, derive_phi_res, derive_nonlinear_res, theta_res])
 
                 J_list.append(a)
 
@@ -984,7 +1004,7 @@ class MyModel(object):
 
         _x = [x for _ in range(self._nb_plays)]
         # _y = [y for _ in range(self._nb_plays)]
-        import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
         _y = [self.mean, self.sigma]
         ins = _x + _y
         utils.init_tf_variables()
@@ -994,10 +1014,26 @@ class MyModel(object):
         while i < epochs:
             i += 1
             for j in range(steps_per_epoch):
-                cost, J_res, detJ_res, J_list_res, intral_res_list_res, aa_list_res = train_function(ins)
-                import ipdb; ipdb.set_trace()
-                print("J: {}".format(J_res))
+                # import ipdb; ipdb.set_trace()
+                for play in self.plays:
+                    print("Before assign: {}".format(tf.keras.backend.get_value(play.model.layers[0].cell.last_kernel)))
+                    sess.run(play.model.layers[0].cell.last_kernel.assign(tf.keras.backend.get_value(play.model.layers[0].cell.kernel)))
+                    print("After assign: {}".format(tf.keras.backend.get_value(play.model.layers[0].cell.last_kernel)))
 
+                cost, J_res, detJ_res, J_list_res, intral_res_list_res, aa_list_res = train_function(ins)
+                # for p1, p2 in zip(intral_res_list_res, aa_list_res):
+                #     print("phi_weight1: {}".format(p1[0]))
+                #     print("phi_weight2: {}".format(p2[0]))
+                # print("J: {}".format(J_res[0]))
+                # print("J_list_res: {}".format(J_list_res[0]))
+                for J1, J2 in zip(J_res, J_list_res):
+                    if not np.allclose(J1, J2, atol=1e-5):
+                        print("J1: {}".format(J1))
+                        print("J2: {}".format(J2))
+                        print("Diff: {}".format(np.abs(J1-J2)))
+                        import ipdb; ipdb.set_trace()
+
+                        raise Exception("Not the same....")
                 # print("detJ: {}".format(detJ_res))
                 # print("J_list: {}".format(J_list_res))
                 # print("intral_res_list: {}".format(intral_res_list_res))
@@ -1066,8 +1102,8 @@ class MyModel(object):
 if __name__ == "__main__":
     # set random seed to make results reproducible
 
-    tf.random.set_random_seed(123)
-    np.random.seed(123)
+    # tf.random.set_random_seed(123)
+    # np.random.seed(123)
 
     ## Test
     a = tf.keras.backend.ones(shape=[1,2,3])
@@ -1294,18 +1330,18 @@ if __name__ == "__main__":
     # print("========================================")
 
     input_dim = 1
-    timestep = length
+    timestep = length // input_dim
     LOG.debug("timestap is: {}".format(inputs.shape[0]))
     inputs = inputs.reshape(-1)
     units = 1
-    epochs = 10
+    epochs = 100
     steps_per_epoch = 1
     mu = 0
     # sigma = 0.01
     sigma = 2
     nb_plays = 20
-    __nb_plays__ = 1
-    __units__ = 2
+    __nb_plays__ = 20
+    __units__ = 20
     # __activation__ = 'tanh'
     __activation__ = None
     import time
