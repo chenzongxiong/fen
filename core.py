@@ -56,7 +56,7 @@ def Phi(x, width=1.0):
     ZEROS = tf.zeros(x.shape, dtype=tf.float32, name='zeros')
     _width = tf.constant([[width/2.0]], dtype=tf.float32)
     r1 = tf.cond(tf.reduce_all(tf.less_equal(x, -_width)), lambda: x - width/2, lambda: ZEROS)
-    r2 = tf.cond(tf.reduce_all(tf.greater_equal(x, _width)), lambda: x + width/2, lambda: r1)
+    r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x + width/2, lambda: r1)
     return r2
 
 
@@ -976,15 +976,6 @@ class MyModel(object):
 
         ##################### Prepare output of nonlinear #############################
 
-        # for play in self.plays:
-        #     shape = tf.keras.backend.int_shape(play.layers[2].output.shape)
-        #     last_nonlinear_output = tf.keras.backend.placeholder(
-        #         ndim=len(shape),
-        #         name="play"
-        #     )
-
-        #     last_nonlinear_outputs.append(last_nonlinear_output)
-
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, decay=decay)
         # self.optimizer = tf.keras.optimizers.SGD(lr=0.001)
         with tf.name_scope('training'):
@@ -1024,9 +1015,9 @@ class MyModel(object):
                 # BUG
                 _theta = tf.tile(theta, multiples=[operator_output.shape[1].value, 1])
                 _gradient_theta = tf.multiply(_theta, derive_nonlinear(nonlinear_output, self._activation))
-                # import ipdb; ipdb.set_trace()
                 # gradient_theta = tf.transpose(_gradient_theta, perm=[1, 0])
                 gradient_nonlinear = tf.matmul(_gradient_theta, tilde_theta)
+                gradient_phi = derive_phi(play.layers[1].output)
                 #############################################
 
                 # import ipdb; ipdb.set_trace()
@@ -1035,7 +1026,8 @@ class MyModel(object):
                 # auto_derive_phi_res2 = tf.keras.backend.gradients(play.model.layers[1].output, play.model.layers[1].input)
                 # auto_derive_res = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[0].input)
                 auto_gradient_nonlinear = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[2].input)
-                # opt = tf.keras.optimizers.Adam(lr=learning_rate, beta_1=0.99999, beta_2=0.99999, decay=decay)
+                import ipdb; ipdb.set_trace()
+                auto_gradient_phi = tf.keras.backend.gradients(play.model.layers[0].output, play.model.layers[0].input)
 
                 theta_res = calculate_theta(theta, tilde_theta)
 
@@ -1049,8 +1041,8 @@ class MyModel(object):
                 #                 play.model.layers[3].last_kernel, play.model.layers[3].kernel,
                 #                 derive_phi_res, derive_nonlinear_res, theta_res])
 
-                _by_hand_list.append([gradient_nonlinear])
-                _by_tf_list.append([auto_gradient_nonlinear[0]])
+                _by_hand_list.append([gradient_nonlinear, gradient_phi])
+                _by_tf_list.append([auto_gradient_nonlinear[0], auto_gradient_phi[0]])
                 J_list.append(a)
 
             # J_list = ops.convert_to_tensor(self.J_list, dtype=tf.float32)
@@ -1119,8 +1111,6 @@ class MyModel(object):
                     print("{} After assign theta: {}".format(colors.red("Play #{}".format(k)), curr_theta))
                     print("{} Before assign tilde theta: {}".format(colors.red("Play #{}".format(k)), old_tilde_theta))
                     print("{} After  assign tilde theta: {}".format(colors.red("Play #{}".format(k)), curr_tilde_theta))
-                    # print("{} Before assign nonlinear output: {}".format(colors.red("Play #{}".format(k)), old_nonlinear_output))
-                    # print("{} After assign nonlinear output: {}".format(colors.red("Play #{}".format(k)), curr_nonlinear_output))
                     print("{} Before  results: {}".format(colors.red("Play #{}".format(k)), (old_tilde_theta * old_theta).sum()))
                     print("{} After  results: {}".format(colors.red("Play #{}".format(k)), (curr_tilde_theta * curr_theta).sum()))
                     print("------------------------------------------------------------------------------------------")
@@ -1157,30 +1147,33 @@ class MyModel(object):
 
 
                 m = 0
+                import ipdb; ipdb.set_trace()
                 for _a, _b in zip(by_hand_list, by_tf_list):
                     print("--------------------------------------------------------------------------------")
                     print("{}".format(colors.red("index is: {}".format(m))))
-                    print("by_hand: ", _a[0].tolist())
-                    print("by_tf: ", _b[0].tolist())
-                    delta = np.abs(_b[0] - _a[0]) / _a[0]
-                    print("delta: ", delta.mean())
-                    if delta.mean() >= 1e-7:
-                        print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
-                        # import ipdb; ipdb.set_trace()
-                        # print("play: {}, result extract from gradient: {}".format(m, (updated_weights_res[5*m+1].reshape(-1) * updated_weights_res[5*m+3].reshape(-1)).sum()))
-                        once = False
-                    if not np.allclose(_a[0], _b[0], rtol=1e-5, atol=1e-8):
-                        # print("{}".format(colors.red("index is: {}".format(m))))
-                        # print("by_hand: ", _a[0])
-                        # print("by_tf: ", _b[0])
-                        print(_by_tf_list[m][0].op.inputs._inputs)
+                    # print("by_hand[0]: ", _a[0].tolist())
+                    # print("by_tf[0]: ", _b[0].tolist())
+
+                    # delta = np.abs(_b[0] - _a[0]) / _a[0]
+                    # print("delta: ", delta.mean())
+                    # if delta.mean() >= 1e-7:
+                    #     print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
+
+                    #     once = False
+                    # if not np.allclose(_a[0], _b[0], rtol=1e-5, atol=1e-8):
+                    #     print(_by_tf_list[m][0].op.inputs._inputs)
+                    #     import ipdb; ipdb.set_trace()
+                    #     print("results: {}".format(sess.run(_by_tf_list[m][0].op.inputs._inputs, feed_dict={'input_{}:0'.format(m+1): _inputs.reshape(1, -1, 1)})))
+                    #     import ipdb; ipdb.set_trace()
+                    #     once = False
+
+                    print("by_hand[1]: ", _a[1].tolist())
+                    print("by_tf[1]: ", _b[1].tolist())
+                    if not np.allclose(_a[1], _b[1], rtol=1e-5, atol=1e-8):
+                        print("============================================================")
                         import ipdb; ipdb.set_trace()
-                        print("results: {}".format(sess.run(_by_tf_list[m][0].op.inputs._inputs, feed_dict={'input_{}:0'.format(m+1): _inputs.reshape(1, -1, 1)})))
-                        import ipdb; ipdb.set_trace()
-                        # print("============================================================")
-                        # get_inputs(_by_tf_list[m][0].op, m=m)
-                        # print("============================================================")
-                        once = False
+                        print("============================================================")
+
                     m += 1
 
                 m = 0
@@ -1275,16 +1268,16 @@ if __name__ == "__main__":
     # a = tf.keras.backend.ones(shape=[1,2,3])
     # init = tf.global_variables_initializer()
     # sess.run(init)
-    # aa = np.array([0])
-    # aa = aa.reshape([1, 1])
-    # a = tf.constant(aa, dtype=tf.float32, name="a")
-    # phi = Phi(a, 0)
-    # g_phi = tf.gradients(phi, [a], name='phi')
-    # print(sess.run(g_phi))
-    # a = tf.constant(aa, dtype=tf.float32, name="a")
-    # phi = Phi(a)
-    # g_phi = tf.gradients(phi, [a], name='phi')
-    # print(sess.run(g_phi))
+    aa = np.array([1])
+    aa = aa.reshape([1, 1])
+    a = tf.constant(aa, dtype=tf.float32, name="a")
+    phi = Phi(a, 0)
+    g_phi = tf.gradients(phi, [a], name='phi')
+    print(sess.run(g_phi))
+    a = tf.constant(aa, dtype=tf.float32, name="a")
+    phi = Phi(a)
+    g_phi = tf.gradients(phi, [a], name='phi')
+    print(sess.run(g_phi))
 
     # import ipdb; ipdb.set_trace()
 
@@ -1405,22 +1398,26 @@ if __name__ == "__main__":
     # sess.run(init)
 
     # LOG.debug("outputs: {}".format(sess.run(outputs)))
+    inputs = np.array([1, 1.5, 2.5, 2.5, -0.5, -0.25, -1, 0.25, 0.33, 0.1, 0, 0.21, -1.5, 0.7, 0.9, 1.5, -0.4, 1, -0.15, 2])
 
-    # _x = np.array([-2.5, -1.5, -0.5, -0.7, 0.5, 1.5])
-    # import trading_data as tdata
-    # # _x = tdata.DatasetGenerator.systhesis_input_generator(100)
-    # _x = _x * 10
-    # # _x = _x.reshape((1, -1, 1))
-    # _x = _x.reshape((1, -1, 2))
-    # x = ops.convert_to_tensor(_x, dtype=tf.float32)
-    # LOG.debug("x.shape: {}".format(x.shape))
-    # initial_state = None
-    # layer = Operator(debug=True, weight=3)
-    # y = layer(x, initial_state)
-    # init = tf.global_variables_initializer()
-    # sess.run(init)
-    # y_res = sess.run(y)
-    # # LOG.debug("y: {}".format(y_res))
+    _x = np.array([1, 1.5, 2.5, 2.5, -0.5, -0.25, -1, 0.25, 0.33, 0.1])
+    # _x = _x.reshape((1, -1, 1))
+    _x = _x.reshape((1, -1, 1))
+    x = ops.convert_to_tensor(_x, dtype=tf.float32)
+    LOG.debug("x.shape: {}".format(x.shape))
+    initial_state = None
+    layer = Operator(debug=True, weight=1)
+    y = layer(x, initial_state)
+    g = tf.gradients(y, [x])
+    init = tf.global_variables_initializer()
+    sess.run(init)
+
+    import ipdb; ipdb.set_trace()
+
+    y_res = sess.run(y)
+
+    LOG.debug("y: {}".format(y_res))
+    LOG.debug("g: {}".format(sess.run(g)))
     # _y_true = y_res
 
     # # _x = _x.reshape((1, -1, 10))
@@ -1553,7 +1550,7 @@ if __name__ == "__main__":
     # sigma = 0.01
     sigma = 2
     nb_plays = 20
-    __nb_plays__ = 5
+    __nb_plays__ = 1
     __units__ = 5
     __activation__ = 'tanh'
     # __activation__ = None
