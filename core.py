@@ -39,7 +39,7 @@ SESSION = utils.get_session()
 
 
 # np.random.seed(123)
-
+tf.keras.backend.set_epsilon(0.5)
 
 def Phi(x, width=1.0):
     '''
@@ -49,8 +49,16 @@ def Phi(x, width=1.0):
     '''
     # return tf.maximum(x, 0) + tf.minimum(x+width, 0)
     # return tf.maximum(x-width/2, 0) + tf.minimum(x+width/2, 0)
-    return x
-    # return tf.maximum(x, 0) + tf.minimum(x, 0)
+    # return x
+
+    assert x.shape[0].value == 1 and x.shape[1].value == 1, "x must be a scalar"
+
+    ZEROS = tf.zeros(x.shape, dtype=tf.float32, name='zeros')
+    _width = tf.constant([[width/2.0]], dtype=tf.float32)
+    r1 = tf.cond(tf.reduce_all(tf.less_equal(x, -_width)), lambda: x - width/2, lambda: ZEROS)
+    r2 = tf.cond(tf.reduce_all(tf.greater_equal(x, _width)), lambda: x + width/2, lambda: r1)
+    return r2
+
 
 class PhiCell(Layer):
     def __init__(self,
@@ -100,7 +108,7 @@ class PhiCell(Layer):
         if self.debug:
             LOG.debug("Initialize *weight* as pre-defined: {} ....".format(self._weight))
             self.kernel = tf.Variable([[self._weight]], name="weight", dtype=tf.float32)
-            self._trainable_weights.append(self.kernel)
+            # self._trainable_weights.append(self.kernel)
 
         else:
             LOG.debug("Initialize *weight* randomly...")
@@ -191,6 +199,10 @@ class Operator(RNN):
     def call(self, inputs, initial_state=None):
         return super(Operator, self).call(inputs, initial_state=initial_state)
 
+    @property
+    def kernel(self):
+        return self.cell.kernel
+
 
 class MyDense(Layer):
     def __init__(self, units=1,
@@ -239,7 +251,7 @@ class MyDense(Layer):
             _init_kernel = _init_kernel.reshape([1, -1])
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
             self.kernel = tf.Variable(_init_kernel, name="theta", dtype=tf.float32)
-            self._trainable_weights.append(self.kernel)
+            # self._trainable_weights.append(self.kernel)
 
             if self.use_bias is True:
                 _init_bias = 0
@@ -247,7 +259,7 @@ class MyDense(Layer):
                 LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
 
                 self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
-                self._trainable_weights.append(self.bias)
+                # self._trainable_weights.append(self.bias)
 
         else:
             self.kernel = self.add_weight(
@@ -283,6 +295,7 @@ class MyDense(Layer):
         if self.activation is not None:
             outputs =  self.activation(outputs)
 
+        self.last_output = tf.identity(outputs)
         return outputs
 
 
@@ -290,6 +303,7 @@ class MySimpleDense(Dense):
     def __init__(self, **kwargs):
         self._debug = kwargs.pop("debug", False)
 
+        kwargs['activation'] = None
         super(MySimpleDense, self).__init__(**kwargs)
 
     def build(self, input_shape):
@@ -312,14 +326,14 @@ class MySimpleDense(Dense):
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
 
             self.kernel = tf.Variable(_init_kernel, name="kernel", dtype=tf.float32)
-            self._trainable_weights.append(self.kernel)
+            # self._trainable_weights.append(self.kernel)
 
             if self.use_bias:
                 _init_bias = (0,)
                 # _init_bias = np.random.uniform(low=-3, high=3, size=1)
                 LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
                 self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
-                self._trainable_weights.append(self.bias)
+                # self._trainable_weights.append(self.bias)
         else:
             super(MySimpleDense, self).build(input_shape)
 
@@ -676,6 +690,25 @@ class Play(object):
     def save(self):
         pass
 
+    @property
+    def layers(self):
+        if hasattr(self, 'model'):
+            return self.model.layers
+        return []
+
+
+    @property
+    def _layers(self):
+        if hasattr(self, 'model'):
+            return self.model.layers
+        return []
+
+    @property
+    def trainable_weights(self):
+        return self.model.trainable_weights
+    @property
+    def trainable_variables(self):
+        return self.model.trainable_variables
 
 class MyModel(object):
     def __init__(self, nb_plays=1,
@@ -875,7 +908,7 @@ class MyModel(object):
             diff = reshaped_P[:, 1:] - reshaped_P[:, :-1]
             x0 = tf.slice(reshaped_P, [0, 0], [1, 1])
             diff_ = tf.concat([x0, diff], axis=1)
-            result = tf.cast(tf.abs(diff_) >= 0.0, dtype=tf.float32)
+            result = tf.cast(tf.abs(diff_) > 0.0, dtype=tf.float32)
             return tf.reshape(result, shape=P.shape)
 
         def derive_nonlinear(fZ, activation=None):
@@ -883,7 +916,10 @@ class MyModel(object):
                 # return tf.keras.backend.ones(shape=(1, fZ.shape.as_list()[1]))
                 return tf.keras.backend.ones(shape=fZ.shape.as_list()[1:])  # ignore #sample
             elif activation == 'tanh':
-                return 1.0 - tf.square(fZ)
+                ### might be a bug here
+                ### we need to ensure the right epoch of fZ
+                _fZ = tf.reshape(fZ, shape=fZ.shape.as_list()[1:])
+                return 1.0 - tf.square(_fZ)
             else:
                 raise Exception("activation: {} not support".format(activation))
 
@@ -896,7 +932,7 @@ class MyModel(object):
         # x = self.plays[0].reshape(inputs)
         # NOTE(zxchen): don't move
         _x = [play.reshape(inputs) for play in self.plays]
-
+        # import ipdb; ipdb.set_trace()
         self.mean = tf.Variable(mean, name="mean", dtype=tf.float32)
         self.sigma = tf.Variable(sigma, name="sigma", dtype=tf.float32)
 
@@ -938,12 +974,24 @@ class MyModel(object):
 
         feed_inputs = model_inputs
 
-        self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, beta_1=0.99999, beta_2=0.99999, decay=decay)
+        ##################### Prepare output of nonlinear #############################
+
+        # for play in self.plays:
+        #     shape = tf.keras.backend.int_shape(play.layers[2].output.shape)
+        #     last_nonlinear_output = tf.keras.backend.placeholder(
+        #         ndim=len(shape),
+        #         name="play"
+        #     )
+
+        #     last_nonlinear_outputs.append(last_nonlinear_output)
+
+        self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, decay=decay)
         # self.optimizer = tf.keras.optimizers.SGD(lr=0.001)
         with tf.name_scope('training'):
             J_list = []
             _by_hand_list = []
             _by_tf_list = []
+            last_nonlinear_outputs = []
             # import ipdb; ipdb.set_trace()
             ################### CALC J by hand #######################
             for idx in range(self._nb_plays):
@@ -954,6 +1002,10 @@ class MyModel(object):
                 operator_output = reshaped_operator_layer.output
 
                 nonlinear_output = play.model.layers[2].output
+                # nonlinear_last_output = play.model.layers[2].last_output
+                # TODO: create a placeholder for last
+                # shape = tf.keras.backend.int_shape(nonlinear.shape)
+
                 derive_phi_res = derive_phi(operator_output)
                 derive_nonlinear_res = derive_nonlinear(nonlinear_output, activation=self._activation)
 
@@ -964,7 +1016,7 @@ class MyModel(object):
                 theta = play.model.layers[2].last_kernel
                 tilde_theta = play.model.layers[3].last_kernel
                 ######## HANDLE Layer's weights #########
-                # import ipdb; ipdb.set_trace()
+
                 _gradient_tilde_theta = tf.transpose(tilde_theta, perm=[1, 0])
                 # gradient_tilde_theta = tf.tile(_gradient_tilde_theta, multiples=[operator_output.shape[1].value, 1])
 
@@ -977,15 +1029,14 @@ class MyModel(object):
                 gradient_nonlinear = tf.matmul(_gradient_theta, tilde_theta)
                 #############################################
 
-
                 # import ipdb; ipdb.set_trace()
-                auto_derive_phi_res = tf.keras.backend.gradients(play.model.layers[1].output, play.model.layers[0].input)
-                auto_derive_phi_res1 = tf.keras.backend.gradients(play.model.layers[0].output, play.model.layers[0].input)
-                auto_derive_phi_res2 = tf.keras.backend.gradients(play.model.layers[1].output, play.model.layers[1].input)
-                # auto_derive_nonlinear_res = tf.keras.backend.gradients(play.model.layers[2].output, play.model.layers[2].input)
-                # auto_derive_linear_res = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[3].input)
-                auto_derive_res = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[0].input)
+                # auto_derive_phi_res = tf.keras.backend.gradients(play.model.layers[1].output, play.model.layers[0].input)
+                # auto_derive_phi_res1 = tf.keras.backend.gradients(play.model.layers[0].output, play.model.layers[0].input)
+                # auto_derive_phi_res2 = tf.keras.backend.gradients(play.model.layers[1].output, play.model.layers[1].input)
+                # auto_derive_res = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[0].input)
                 auto_gradient_nonlinear = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[2].input)
+                # opt = tf.keras.optimizers.Adam(lr=learning_rate, beta_1=0.99999, beta_2=0.99999, decay=decay)
+
                 theta_res = calculate_theta(theta, tilde_theta)
 
                 aa = tf.keras.backend.dot(derive_nonlinear_res, theta_res)
@@ -1005,6 +1056,8 @@ class MyModel(object):
             # J_list = ops.convert_to_tensor(self.J_list, dtype=tf.float32)
             J = tf.keras.backend.gradients(model_outputs, model_inputs)
             # J = tf.keras.backend.gradients(y_pred, model_inputs)
+            ###################### TODO: calculate J by hand ###############################
+            ################################################################################
 
             detJ = tf.reshape(tf.keras.backend.abs(J[0]), shape=y_pred.shape)
             detJ = tf.keras.backend.clip(detJ, min_value=1e-5, max_value=1e9)
@@ -1020,12 +1073,11 @@ class MyModel(object):
                                                      loss=loss)
             # updates += update_inputs
             updated_weights = updates[2::3]
-            updated_weights = updated_weights[::2]
+            # updated_weights = updated_weights[::2]
             training_inputs = feed_inputs + feed_targets
             train_function = tf.keras.backend.function(training_inputs,
-                                                       [loss, J, detJ, J_list, _by_hand_list, _by_tf_list, updated_weights],
+                                                       [loss, _by_hand_list, _by_tf_list, updated_weights],
                                                        updates=updates)
-
 
         # _y = [y for _ in range(self._nb_plays)]
         # import ipdb; ipdb.set_trace()
@@ -1037,16 +1089,17 @@ class MyModel(object):
         self.cost_history = []
         steps_per_epoch = 1
         once = True
+        cost = -1
         for i in range(epochs):
             for j in range(steps_per_epoch):
-                # import ipdb; ipdb.set_trace()
+
                 batch_assign_tuples = []
                 k = 0
                 print(colors.yellow("############################################################################################"))
                 for play in self.plays:
-                    print("name: {}, results: {}".format(
-                        _by_tf_list[k][0].op.inputs._inputs[0],
-                        tf.keras.backend.get_value(_by_tf_list[k][0].op.inputs._inputs[0])))
+                    # print("name: {}, results: {}".format(
+                    #     _by_tf_list[k][0].op.inputs._inputs[0],
+                    #     tf.keras.backend.get_value(_by_tf_list[k][0].op.inputs._inputs[0])))
 
                     # print("Before assign: {}".format(tf.keras.backend.get_value(play.model.layers[0].cell.last_kernel)))
                     old_theta = tf.keras.backend.get_value(play.model.layers[2].last_kernel)
@@ -1054,16 +1107,20 @@ class MyModel(object):
                     curr_theta = tf.keras.backend.get_value(play.model.layers[2].kernel)
                     curr_tilde_theta = tf.keras.backend.get_value(play.model.layers[3].kernel)
 
+                    # old_nonlinear_output = tf.keras.backend.get_value(play.model.layers[2].last_output)
+                    # curr_nonlinear_output = tf.keras.backend.get_value(play.model.layers[2].output)
+
                     old_theta = old_theta.reshape(-1)
                     old_tilde_theta = old_tilde_theta.reshape(-1)
                     curr_theta = curr_theta.reshape(-1)
                     curr_tilde_theta = curr_tilde_theta.reshape(-1)
 
                     print("{} Before assign theta: {}".format(colors.red("Play #{}".format(k)), old_theta))
-                    print("{} Before assign tilde theta: {}".format(colors.red("Play #{}".format(k)), old_tilde_theta))
                     print("{} After assign theta: {}".format(colors.red("Play #{}".format(k)), curr_theta))
+                    print("{} Before assign tilde theta: {}".format(colors.red("Play #{}".format(k)), old_tilde_theta))
                     print("{} After  assign tilde theta: {}".format(colors.red("Play #{}".format(k)), curr_tilde_theta))
-
+                    # print("{} Before assign nonlinear output: {}".format(colors.red("Play #{}".format(k)), old_nonlinear_output))
+                    # print("{} After assign nonlinear output: {}".format(colors.red("Play #{}".format(k)), curr_nonlinear_output))
                     print("{} Before  results: {}".format(colors.red("Play #{}".format(k)), (old_tilde_theta * old_theta).sum()))
                     print("{} After  results: {}".format(colors.red("Play #{}".format(k)), (curr_tilde_theta * curr_theta).sum()))
                     print("------------------------------------------------------------------------------------------")
@@ -1089,12 +1146,15 @@ class MyModel(object):
 
                 tf.keras.backend.batch_set_value(batch_assign_tuples)
                 print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-                cost, J_res, detJ_res, J_list_res, by_hand_list, by_tf_list, updated_weights_res = train_function(ins)
-                def get_inputs(op):
+                # cost, J_res, detJ_res, J_list_res, by_hand_list, by_tf_list, updated_weights_res = train_function(ins)
+                cost, by_hand_list, by_tf_list, updated_weights_res = train_function(ins)
+                def get_inputs(op, m=0):
                     if len(op.inputs._inputs) == 0:
                         return
-                    print("op.name: {}, inputs are: {}, inputs values: {}".format(op.name, op.inputs._inputs, sess.run(op.inputs._inputs)))
-                    get_inputs(op.inputs._inputs[0].op)
+                    print("op.name: {}, inputs are: {}, inputs values: {}".format(op.name, op.inputs._inputs,
+                                                                                  sess.run(op.inputs._inputs, feed_dict={'input_{}:0'.format(m+1): _inputs.reshape(1, -1, 1)})))
+                    get_inputs(op.inputs._inputs[0].op, m=m)
+
 
                 m = 0
                 for _a, _b in zip(by_hand_list, by_tf_list):
@@ -1104,21 +1164,22 @@ class MyModel(object):
                     print("by_tf: ", _b[0].tolist())
                     delta = np.abs(_b[0] - _a[0]) / _a[0]
                     print("delta: ", delta.mean())
-                    if delta.mean() >= 1e-5:
+                    if delta.mean() >= 1e-7:
                         print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
                         # import ipdb; ipdb.set_trace()
                         # print("play: {}, result extract from gradient: {}".format(m, (updated_weights_res[5*m+1].reshape(-1) * updated_weights_res[5*m+3].reshape(-1)).sum()))
                         once = False
-                    if not np.allclose(_a[0], _b[0], rtol=1e-3, atol=1e-8):
+                    if not np.allclose(_a[0], _b[0], rtol=1e-5, atol=1e-8):
                         # print("{}".format(colors.red("index is: {}".format(m))))
                         # print("by_hand: ", _a[0])
                         # print("by_tf: ", _b[0])
                         print(_by_tf_list[m][0].op.inputs._inputs)
-                        print("results: {}".format(sess.run(_by_tf_list[m][0].op.inputs._inputs)))
                         import ipdb; ipdb.set_trace()
-                        print("============================================================")
-                        get_inputs(_by_tf_list[m][0].op)
-                        print("============================================================")
+                        print("results: {}".format(sess.run(_by_tf_list[m][0].op.inputs._inputs, feed_dict={'input_{}:0'.format(m+1): _inputs.reshape(1, -1, 1)})))
+                        import ipdb; ipdb.set_trace()
+                        # print("============================================================")
+                        # get_inputs(_by_tf_list[m][0].op, m=m)
+                        # print("============================================================")
                         once = False
                     m += 1
 
@@ -1127,8 +1188,8 @@ class MyModel(object):
                     print("play: {}, result extract from gradient: {}".format(m,
                                                                               (updated_weights_res[5*m+1].reshape(-1) * updated_weights_res[5*m+3].reshape(-1)).sum()))
                 print(colors.yellow("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"))
-                if not once:
-                    import ipdb; ipdb.set_trace()
+                # if not once:
+                #     import ipdb; ipdb.set_trace()
                 # for J1, J2 in zip(J_res, J_list_res):
                 #     if not np.allclose(J1, J2, rtol=1e-5, atol=1e-3):
                 #     # if True:
@@ -1214,6 +1275,18 @@ if __name__ == "__main__":
     # a = tf.keras.backend.ones(shape=[1,2,3])
     # init = tf.global_variables_initializer()
     # sess.run(init)
+    # aa = np.array([0])
+    # aa = aa.reshape([1, 1])
+    # a = tf.constant(aa, dtype=tf.float32, name="a")
+    # phi = Phi(a, 0)
+    # g_phi = tf.gradients(phi, [a], name='phi')
+    # print(sess.run(g_phi))
+    # a = tf.constant(aa, dtype=tf.float32, name="a")
+    # phi = Phi(a)
+    # g_phi = tf.gradients(phi, [a], name='phi')
+    # print(sess.run(g_phi))
+
+    # import ipdb; ipdb.set_trace()
 
     # print(sess.run(a))
     writer = utils.get_tf_summary_writer("./log/")
@@ -1245,9 +1318,10 @@ if __name__ == "__main__":
     writer.add_graph(tf.get_default_graph())
 
 
-    print(sess.run(g1))
-    print(sess.run(g2))
-    print(sess.run(g3))
+    # print(sess.run(g1))
+    # print(sess.run(g2))
+    # print(sess.run(g3))
+    # import ipdb; ipdb.set_trace()
 
     # import ipdb; ipdb.set_trace()
     # a = tf.constant([[1], [2], [3], [4], [5], [6]], dtype=tf.float32)
@@ -1480,9 +1554,9 @@ if __name__ == "__main__":
     sigma = 2
     nb_plays = 20
     __nb_plays__ = 5
-    __units__ = 10
-    # __activation__ = 'tanh'
-    __activation__ = None
+    __units__ = 5
+    __activation__ = 'tanh'
+    # __activation__ = None
     import time
     start = time.time()
     agent = MyModel(input_dim=input_dim,
