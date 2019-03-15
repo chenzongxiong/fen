@@ -38,8 +38,7 @@ SESSION = utils.get_session()
 
 
 
-# np.random.seed(123)
-tf.keras.backend.set_epsilon(0.5)
+tf.keras.backend.set_epsilon(1e-7)
 
 def Phi(x, width=1.0):
     '''
@@ -47,16 +46,12 @@ def Phi(x, width=1.0):
            = x + width , if x < - width
            = 0         , otherwise
     '''
-    # return tf.maximum(x, 0) + tf.minimum(x+width, 0)
-    # return tf.maximum(x-width/2, 0) + tf.minimum(x+width/2, 0)
-    # return x
-
     assert x.shape[0].value == 1 and x.shape[1].value == 1, "x must be a scalar"
 
     ZEROS = tf.zeros(x.shape, dtype=tf.float32, name='zeros')
     _width = tf.constant([[width/2.0]], dtype=tf.float32)
-    r1 = tf.cond(tf.reduce_all(tf.less_equal(x, -_width)), lambda: x - width/2, lambda: ZEROS)
-    r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x + width/2, lambda: r1)
+    r1 = tf.cond(tf.reduce_all(tf.less_equal(x, -_width)), lambda: x - _width, lambda: ZEROS)
+    r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x + _width, lambda: r1)
     return r2
 
 
@@ -138,30 +133,33 @@ class PhiCell(Layer):
         LOG.debug("inputs.shape: {}".format(inputs.shape))
         LOG.debug("self._inputs.shape: {}".format(self._inputs))
 
-        outputs_ = tf.multiply(self._inputs, self.kernel)
+        ############### IMPL from Scratch #####################
+        # outputs_ = tf.multiply(self._inputs, self.kernel)
 
-        # NOTE: unroll method, can we use RNN method ?
-        outputs = [self._state]
-        for i in range(outputs_.shape[-1].value):
-            output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1])), outputs[-1])
-            outputs.append(output)
+        # # NOTE: unroll method, can we use RNN method ?
+        # outputs = [self._state]
+        # for i in range(outputs_.shape[-1].value):
+        #     output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1]), self._width), outputs[-1])
+        #     outputs.append(output)
 
-        outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
+        # outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
 
-        state = outputs[-1]
-        outputs = tf.reshape(outputs, shape=self._inputs.shape)
+        # state = outputs[-1]
+        # outputs = tf.reshape(outputs, shape=self._inputs.shape)
 
-        LOG.debug("before reshaping state.shape: {}".format(state.shape))
-        state = tf.reshape(state, shape=(-1, 1))
-        LOG.debug("after reshaping state.shape: {}".format(state.shape))
-        return outputs, [state]
+        # LOG.debug("before reshaping state.shape: {}".format(state.shape))
+        # state = tf.reshape(state, shape=(-1, 1))
+        # LOG.debug("after reshaping state.shape: {}".format(state.shape))
+        # return outputs, [state]
 
+
+        ################ IMPL via RNN ###########################
         def steps(inputs, states):
             outputs = Phi(inputs - states[-1], self._width) + states[-1]
             return outputs, [outputs]
 
+        import ipdb; ipdb.set_trace()
         self._inputs = tf.multiply(self._inputs, self.kernel)
-
         inputs_ = tf.reshape(self._inputs, shape=(1, self._inputs.shape[0].value*self._inputs.shape[1].value, 1))
         if isinstance(states, list) or isinstance(states, tuple):
             self._states = ops.convert_to_tensor(states[-1], dtype=tf.float32)
@@ -170,10 +168,12 @@ class PhiCell(Layer):
 
         states_ = [tf.reshape(self._states, shape=(1, 1))]
 
-        self.unroll = True
+        # states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
+
+        self.unroll = False
         last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
-        LOG.debug("outputs_.shape: ", outputs_.shape)
-        return outputs_, states_x
+        LOG.debug("outputs_.shape: {}".format(outputs_.shape))
+        return outputs_, list(states_x)
 
 
 class Operator(RNN):
@@ -192,12 +192,18 @@ class Operator(RNN):
             return_sequences=True,
             return_state=False,
             stateful=True,
-            # unroll=False
-            unroll=True,
+            unroll=False,
+            # unroll=True,
             )
 
     def call(self, inputs, initial_state=None):
-        return super(Operator, self).call(inputs, initial_state=initial_state)
+        # return super(Operator, self).call(inputs, initial_state=initial_state)
+        LOG.debug("Operator.inputs.shape: {}".format(inputs.shape))
+        output = super(Operator, self).call(inputs, initial_state=initial_state)
+        assert inputs.shape.ndims == 3
+        shape = inputs.shape.as_list()
+
+        return tf.reshape(output, shape=(shape[0], -1, 1))
 
     @property
     def kernel(self):
@@ -388,7 +394,7 @@ class Play(object):
         self._name = name
 
     def build(self, inputs=None):
-
+        import ipdb; ipdb.set_trace()
         if inputs is None and self._batch_input_shape is None:
             raise Exception("Unknown input shape")
         if inputs is not None:
@@ -429,6 +435,7 @@ class Play(object):
                                 width=getattr(self, "_width", None),
                                 debug=getattr(self, "_debug", False)))
         # import ipdb; ipdb.set_trace()
+        # TODO/NOTE: remove in future
         self.model.add(tf.keras.layers.Reshape(target_shape=(length, 1)))
 
         if self._network_type == constants.NetworkType.PLAY:
@@ -586,7 +593,7 @@ class Play(object):
         )
         feed_targets = [target_mean, target_std]
 
-        import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
         with tf.name_scope('training'):
             J = tf.keras.backend.gradients(self._model_output, self._model_input)
             detJ = tf.reshape(tf.keras.backend.abs(J[0]), shape=self._model_output.shape)
@@ -741,7 +748,7 @@ class MyModel(object):
         i = 1
         _weight = 1.0
         _width = 0.1
-        width = 0
+        width = 1
         for nb_play in range(nb_plays):
             # weight =  _weight / (i)
             # weight = 1.0
@@ -919,13 +926,13 @@ class MyModel(object):
             p1 = tf.cast(tf.abs(diff) >= 1e-7, dtype=tf.float32)
             p2 = 1.0 - p1
             p3_list = []
-            for j in range(1, P.shape[1].value):
+            for j in range(1, _P.shape[1].value):
                 p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
             _p3 = tf.stack(p3_list, axis=1) + 1
             p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
 
             result = tf.multiply(p1, p3)
-            return tf.reshape(result, shape=P.shape.as_list()[1:])
+            return tf.reshape(result, shape=P.shape.as_list())
 
 
         def gradient_nonlinear_layer(fZ, activation=None):
@@ -1029,7 +1036,7 @@ class MyModel(object):
                 tilde_theta = play.model.layers[3].kernel
 
                 ######## HANDLE Layer's weights #########
-
+                # import ipdb; ipdb.set_trace()
                 _gradient_tilde_theta = tf.transpose(tilde_theta, perm=[1, 0])
                 # gradient_tilde_theta = tf.tile(_gradient_tilde_theta, multiples=[operator_output.shape[1].value, 1])
 
@@ -1045,6 +1052,7 @@ class MyModel(object):
 
                 #############################################
                 # import ipdb; ipdb.set_trace()
+
                 # auto_derive_phi_res = tf.keras.backend.gradients(play.model.layers[1].output, play.model.layers[0].input)
                 # auto_derive_phi_res1 = tf.keras.backend.gradients(play.model.layers[0].output, play.model.layers[0].input)
                 # auto_derive_phi_res2 = tf.keras.backend.gradients(play.model.layers[1].output, play.model.layers[1].input)
@@ -1060,21 +1068,31 @@ class MyModel(object):
                 # import ipdb; ipdb.set_trace()
                 _by_hand_list.append([gradient_nonlinear, gradient_phi, gradient_J])
                 _by_tf_list.append([auto_gradient_nonlinear[0], auto_gradient_phi[0], auto_gradient_J[0]])
-                # J_list.append(a)
+                J_list.append(gradient_J)
 
             # J_list = ops.convert_to_tensor(self.J_list, dtype=tf.float32)
-            J = tf.keras.backend.gradients(model_outputs, model_inputs)
-            # J = tf.keras.backend.gradients(y_pred, model_inputs)
+            # J = tf.keras.backend.gradients(model_outputs, model_inputs)
+            J = tf.keras.backend.gradients(y_pred, model_inputs)
             ###################### TODO: calculate J by hand ###############################
-
+            import ipdb; ipdb.set_trace()
+            # (T * 1)
+            J_by_hand = tf.reduce_mean(tf.concat(J_list, axis=-1), axis=-1, keepdims=True) / self._nb_plays
+            normalized_J = tf.clip_by_value(tf.abs(J_by_hand), clip_value_min=1e-5, clip_value_max=1e9)
             ################################################################################
 
             detJ = tf.reshape(tf.keras.backend.abs(J[0]), shape=y_pred.shape)
             detJ = tf.keras.backend.clip(detJ, min_value=1e-5, max_value=1e9)
 
             diff = y_pred[:, 1:, :] - y_pred[:, :-1, :]
+            # BUGS: if the number of samples is not equal to 1, then error occurs
+            # diff = tf.transpose(tf.reshape(_diff, shape=(_diff.shape[0].value, -1)), perm=[1, 0])
 
-            _loss = tf.keras.backend.square((diff-self.mean)/self.sigma)/2.0 - tf.keras.backend.log(detJ[:, 1:, :])
+            # TODO: support derivation for p0
+
+            # _loss = tf.keras.backend.square((diff-self.mean)/self.sigma)/2.0 - tf.keras.backend.log(detJ[:, 1:, :])
+
+            _loss = tf.keras.backend.square((diff-self.mean)/self.sigma)/2.0 - tf.keras.backend.log(normalized_J[:, 1:, :])
+
             loss = tf.keras.backend.mean(_loss)
             # import ipdb; ipdb.set_trace()
 
@@ -1086,7 +1104,7 @@ class MyModel(object):
             # updated_weights = updated_weights[::2]
             training_inputs = feed_inputs + feed_targets
             train_function = tf.keras.backend.function(training_inputs,
-                                                       [loss, _by_hand_list, _by_tf_list, updated_weights],
+                                                       [loss, _by_hand_list, _by_tf_list, updated_weights, J[0], J_by_hand],
                                                        updates=updates)
 
         # _y = [y for _ in range(self._nb_plays)]
@@ -1159,7 +1177,7 @@ class MyModel(object):
                 tf.keras.backend.batch_set_value(batch_assign_tuples)
                 print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
                 # cost, J_res, detJ_res, J_list_res, by_hand_list, by_tf_list, updated_weights_res = train_function(ins)
-                cost, by_hand_list, by_tf_list, updated_weights_res = train_function(ins)
+                cost, by_hand_list, by_tf_list, updated_weights_res, J_res, J_by_hand_res = train_function(ins)
                 def get_inputs(op, m=0):
                     if len(op.inputs._inputs) == 0:
                         return
@@ -1199,14 +1217,24 @@ class MyModel(object):
 
                     print("by_hand[2]: ", _a[2].tolist())
                     print("by_tf[2]: ", _b[2].reshape(_a[2].shape).tolist())
+
                     delta2 = np.abs(_b[2].reshape(_a[2].shape)-_a[2])
                     print(colors.red("XXXXXXXXXXXXXXXXX   DELTA2: {}".format(delta2.reshape(-1).tolist())))
+                    print(colors.red("XXXXXXXXXXXXXXXXX   DELTA2: {}".format(delta2.mean())))
                     if not np.allclose(_a[2], _b[2].reshape(_a[2].shape), rtol=1e-2, atol=1e-7):
                         print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
                         once = False
 
-
                     m += 1
+
+                print(colors.yellow("J_res: {}".format(J_res)))
+                print(colors.yellow("J_by_handres: {}".format(J_by_hand_res)))
+
+                delta_J = np.abs(J_res.reshape(-1) - J_by_hand_res.reshape(-1))
+                print(colors.yellow("diff J: {}, mean: {}".format(delta_J, delta_J.mean())))
+                if not np.allclose(J_by_hand_res.reshape(-1), J_res.reshape(-1), rtol=1e-2, equal_nan=True, atol=1e-2):
+                    print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
+                    once = False
 
                 m = 0
                 for m in range(self._nb_plays):
@@ -1289,6 +1317,25 @@ class MyModel(object):
             path = "{}/{}.{}".format(dirname, play._name, suffix)
             play.model.load_weights(path, by_name=False)
             LOG.debug(colors.red("Set Weights for {}".format(play._name)))
+
+
+def gradient_phi_cell(P):
+    _P = tf.reshape(P, shape=(P.shape[0].value, -1))
+    _diff = _P[:, 1:] - _P[:, :-1]
+
+    x0 = tf.slice(_P, [0, 0], [1, 1])
+    diff = tf.concat([x0, _diff], axis=1)
+
+    p1 = tf.cast(tf.abs(diff) >= 1e-7, dtype=tf.float32)
+    p2 = 1.0 - p1
+    p3_list = []
+    for j in range(1, _P.shape[1].value):
+        p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
+    _p3 = tf.stack(p3_list, axis=1) + 1
+    p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
+
+    result = tf.multiply(p1, p3)
+    return tf.reshape(result, shape=P.shape.as_list()[1:])
 
 
 
@@ -1434,24 +1481,28 @@ if __name__ == "__main__":
     # LOG.debug("outputs: {}".format(sess.run(outputs)))
     # inputs = np.array([1, 1.5, 2.5, 2.5, -0.5, -0.25, -1, 0.25, 0.33, 0.1, 0, 0.21, -1.5, 0.7, 0.9, 1.5, -0.4, 1, -0.15, 2])
 
+
+    _x = np.array([1, 1.5, 2.5, 2.5, -0.5, -0.25, -1, 0.25, 0.33, 0.1, 0, 0.21, -1.5, 0.7, 0.9, 1.5, -0.4, 1, -0.15, 2])
     # _x = np.array([1, 1.5, 2.5, 2.5, -0.5, -0.25, -1, 0.25, 0.33, 0.1])
-    # # _x = _x.reshape((1, -1, 1))
     # _x = _x.reshape((1, -1, 1))
-    # x = ops.convert_to_tensor(_x, dtype=tf.float32)
-    # LOG.debug("x.shape: {}".format(x.shape))
-    # initial_state = None
-    # layer = Operator(debug=True, weight=1)
-    # y = layer(x, initial_state)
-    # g = tf.gradients(y, [x])
-    # init = tf.global_variables_initializer()
-    # sess.run(init)
+    _x = _x.reshape((1, -1, 2))
+    x = ops.convert_to_tensor(_x, dtype=tf.float32)
+    LOG.debug("x.shape: {}".format(x.shape))
+    initial_state = None
+    layer = Operator(debug=True, weight=1)
+    y = layer(x, initial_state)
+    g = tf.gradients(y, [x])
+    init = tf.global_variables_initializer()
+    sess.run(init)
 
-    # y_res = sess.run(y)
-    # g_by_hand = gradient_phi_cell(y)
+    y_res = sess.run(y)
+    LOG.debug("y: {}".format(y_res))
 
-    # LOG.debug("y: {}".format(y_res))
-    # LOG.debug("g: {}".format(sess.run(g)))
+    g_by_hand = gradient_phi_cell(y)
 
+
+    LOG.debug("g: {}".format(sess.run(g)))
+    LOG.debug("g_by_hand: {}".format(sess.run(g_by_hand)))
 
     # import ipdb; ipdb.set_trace()
 
@@ -1564,7 +1615,8 @@ if __name__ == "__main__":
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
     length = 10
     inputs = np.array([1, 1.5, 2.5, 2.5, -0.5, -0.25, -1, 0.25, 0.33, 0.1, 0, 0.21, -1.5, 0.7, 0.9, 1.5, -0.4, 1, -0.15, 2])
-    inputs, outputs = inputs[:length], outputs[:length]
+
+    inputs, outputs = inputs[:2*length], outputs[:2*length]
     print(inputs)
     # layer = Operator(debug=True, weight=1.0)
     # inputs = inputs.reshape([1, -1, 1])
@@ -1576,8 +1628,8 @@ if __name__ == "__main__":
     # print(sess.run(outputs))
     # print("========================================")
 
-    input_dim = 1
-    timestep = length // input_dim
+    input_dim = 2
+    timestep = 2*length // input_dim
     LOG.debug("timestap is: {}".format(inputs.shape[0]))
     inputs = inputs.reshape(-1)
     units = 1
