@@ -50,7 +50,7 @@ def Phi(x, width=1.0):
 
     ZEROS = tf.zeros(x.shape, dtype=tf.float32, name='zeros')
     _width = tf.constant([[width/2.0]], dtype=tf.float32)
-    r1 = tf.cond(tf.reduce_all(tf.less_equal(x, -_width)), lambda: x - _width, lambda: ZEROS)
+    r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: x - _width, lambda: ZEROS)
     r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x + _width, lambda: r1)
     return r2
 
@@ -896,7 +896,7 @@ class MyModel(object):
             x0 = tf.slice(_P, [0, 0], [1, 1])
             diff = tf.concat([x0, _diff], axis=1)
 
-            p1 = tf.cast(tf.abs(diff) >= 1e-7, dtype=tf.float32)
+            p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
             p2 = 1.0 - p1
             p3_list = []
             for j in range(1, _P.shape[1].value):
@@ -1210,11 +1210,12 @@ class MyModel(object):
 
                 #     m += 1
 
-                print(colors.yellow("J_res: {}".format(J_res)))
-                print(colors.yellow("J_by_handres: {}".format(J_by_hand_res)))
+                # print(colors.yellow("J_res: {}".format(J_res)))
+                # print(colors.yellow("J_by_handres: {}".format(J_by_hand_res)))
 
                 delta_J = np.abs(J_res.reshape(-1) - J_by_hand_res.reshape(-1))
-                print(colors.yellow("diff J: {}, mean: {}".format(delta_J, delta_J.mean())))
+                # print(colors.yellow("diff J: {}, mean: {}".format(delta_J, delta_J.mean())))
+                print(colors.yellow("diff mean: {}".format(delta_J.mean())))
                 if not np.allclose(J_by_hand_res.reshape(-1), J_res.reshape(-1), rtol=1e-2, equal_nan=True, atol=1e-3):
                     print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
                     once = False
@@ -1322,9 +1323,8 @@ def gradient_phi_cell(P):
 
 if __name__ == "__main__":
     # set random seed to make results reproducible
-
-    # tf.random.set_random_seed(123)
-    # np.random.seed(123)
+    tf.random.set_random_seed(123)
+    np.random.seed(123)
 
     ## Test
     # a = tf.keras.backend.ones(shape=[1,2,3])
