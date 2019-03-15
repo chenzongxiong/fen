@@ -1030,17 +1030,17 @@ class MyModel(object):
                 # auto_derive_phi_res1 = tf.keras.backend.gradients(play.model.layers[0].output, play.model.layers[0].input)
                 # auto_derive_phi_res2 = tf.keras.backend.gradients(play.model.layers[1].output, play.model.layers[1].input)
                 # auto_derive_res = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[0].input)
-                auto_gradient_nonlinear = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[2].input)
-                auto_gradient_phi = tf.keras.backend.gradients(play.model.layers[0].output, play.model.layers[0].input)
-                auto_gradient_J = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[0].input)
-                theta_res = calculate_theta(theta, tilde_theta)
+                # auto_gradient_nonlinear = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[2].input)
+                # auto_gradient_phi = tf.keras.backend.gradients(play.model.layers[0].output, play.model.layers[0].input)
+                # auto_gradient_J = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[0].input)
+                # theta_res = calculate_theta(theta, tilde_theta)
 
                 # aa = tf.keras.backend.dot(derive_nonlinear_res, theta_res)
                 # a = (aa * derive_phi_res * phi_weight)
 
                 # import ipdb; ipdb.set_trace()
-                _by_hand_list.append([gradient_nonlinear, gradient_phi, gradient_J])
-                _by_tf_list.append([auto_gradient_nonlinear[0], auto_gradient_phi[0], auto_gradient_J[0]])
+                # _by_hand_list.append([gradient_nonlinear, gradient_phi, gradient_J])
+                # _by_tf_list.append([auto_gradient_nonlinear[0], auto_gradient_phi[0], auto_gradient_J[0]])
                 J_list.append(gradient_J)
 
             # J_list = ops.convert_to_tensor(self.J_list, dtype=tf.float32)
@@ -1210,22 +1210,19 @@ class MyModel(object):
 
                 #     m += 1
 
-                # print(colors.yellow("J_res: {}".format(J_res)))
-                # print(colors.yellow("J_by_handres: {}".format(J_by_hand_res)))
+                print(colors.yellow("J_res: {}".format(J_res)))
+                print(colors.yellow("J_by_handres: {}".format(J_by_hand_res)))
 
-                # delta_J = np.abs(J_res.reshape(-1) - J_by_hand_res.reshape(-1))
-                # print(colors.yellow("diff J: {}, mean: {}".format(delta_J, delta_J.mean())))
-                # if not np.allclose(J_by_hand_res.reshape(-1), J_res.reshape(-1), rtol=1e-2, equal_nan=True, atol=1e-2):
-                #     print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
-                #     once = False
+                delta_J = np.abs(J_res.reshape(-1) - J_by_hand_res.reshape(-1))
+                print(colors.yellow("diff J: {}, mean: {}".format(delta_J, delta_J.mean())))
+                if not np.allclose(J_by_hand_res.reshape(-1), J_res.reshape(-1), rtol=1e-2, equal_nan=True, atol=1e-3):
+                    print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
+                    once = False
 
-                # m = 0
-                # for m in range(self._nb_plays):
-                #     print("play: {}, result extract from gradient: {}".format(m,
-                #                                                               (updated_weights_res[5*m+1].reshape(-1) * updated_weights_res[5*m+3].reshape(-1)).sum()))
-                # print(colors.yellow("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"))
-                # if not once:
-                #     import ipdb; ipdb.set_trace()
+
+                print(colors.yellow("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"))
+                if not once:
+                    import ipdb; ipdb.set_trace()
 
                 # for J1, J2 in zip(J_res, J_list_res):
                 #     if not np.allclose(J1, J2, rtol=1e-5, atol=1e-3):
@@ -1597,10 +1594,10 @@ if __name__ == "__main__":
 
     fname = "./new-dataset/models/method-sin/activation-None/state-0/mu-0/sigma-0/units-1/nb_plays-1/points-1000/input_dim-1/base.csv"
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    length = 10
-    inputs = np.array([1, 1.5, 2.5, 2.5, -0.5, -0.25, -1, 0.25, 0.33, 0.1, 0, 0.21, -1.5, 0.7, 0.9, 1.5, -0.4, 1, -0.15, 2])
+    length = 500
+    # inputs = np.array([1, 1.5, 2.5, 2.5, -0.5, -0.25, -1, 0.25, 0.33, 0.1, 0, 0.21, -1.5, 0.7, 0.9, 1.5, -0.4, 1, -0.15, 2])
 
-    inputs, outputs = inputs[:2*length], outputs[:2*length]
+    inputs, outputs = inputs[:length], outputs[:length]
     print(inputs)
     # layer = Operator(debug=True, weight=1.0)
     # inputs = inputs.reshape([1, -1, 1])
@@ -1612,8 +1609,8 @@ if __name__ == "__main__":
     # print(sess.run(outputs))
     # print("========================================")
 
-    input_dim = 2
-    timestep = 2*length // input_dim
+    input_dim = 10
+    timestep = length // input_dim
     LOG.debug("timestap is: {}".format(inputs.shape[0]))
     inputs = inputs.reshape(-1)
     units = 1
