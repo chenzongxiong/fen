@@ -37,8 +37,8 @@ SESS = utils.get_session()
 SESSION = utils.get_session()
 
 
-
 tf.keras.backend.set_epsilon(1e-7)
+
 
 def Phi(x, width=1.0):
     '''
@@ -53,6 +53,7 @@ def Phi(x, width=1.0):
     r1 = tf.cond(tf.reduce_all(tf.less_equal(x, -_width)), lambda: x - _width, lambda: ZEROS)
     r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x + _width, lambda: r1)
     return r2
+
 
 
 class PhiCell(Layer):
@@ -96,15 +97,12 @@ class PhiCell(Layer):
             dtype=tf.float32,
             trainable=False)
 
-        # self.last_kernel = tf.Variable([[1.0]], name="last_weight", dtype=tf.float32)
         if input_shape[-1] <= 50:
             self.unroll = True
 
         if self.debug:
             LOG.debug("Initialize *weight* as pre-defined: {} ....".format(self._weight))
             self.kernel = tf.Variable([[self._weight]], name="weight", dtype=tf.float32)
-            # self._trainable_weights.append(self.kernel)
-
         else:
             LOG.debug("Initialize *weight* randomly...")
             assert self.units == 1, "Phi Cell unit must be equal to 1"
@@ -158,7 +156,6 @@ class PhiCell(Layer):
             outputs = Phi(inputs - states[-1], self._width) + states[-1]
             return outputs, [outputs]
 
-        import ipdb; ipdb.set_trace()
         self._inputs = tf.multiply(self._inputs, self.kernel)
         inputs_ = tf.reshape(self._inputs, shape=(1, self._inputs.shape[0].value*self._inputs.shape[1].value, 1))
         if isinstance(states, list) or isinstance(states, tuple):
@@ -166,11 +163,10 @@ class PhiCell(Layer):
         else:
             self._states = ops.convert_to_tensor(states, dtype=tf.float32)
 
-        states_ = [tf.reshape(self._states, shape=(1, 1))]
+        assert self._state.shape.ndims == 2, colors.red("PhiCell states must be 2 dimensions")
+        states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
 
-        # states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
-
-        self.unroll = False
+        self.unroll = True
         last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
         LOG.debug("outputs_.shape: {}".format(outputs_.shape))
         return outputs_, list(states_x)
@@ -193,14 +189,12 @@ class Operator(RNN):
             return_state=False,
             stateful=True,
             unroll=False,
-            # unroll=True,
             )
 
     def call(self, inputs, initial_state=None):
-        # return super(Operator, self).call(inputs, initial_state=initial_state)
         LOG.debug("Operator.inputs.shape: {}".format(inputs.shape))
         output = super(Operator, self).call(inputs, initial_state=initial_state)
-        assert inputs.shape.ndims == 3
+        assert inputs.shape.ndims == 3, colors.red("ERROR: Input from Operator must be 3 dimensions")
         shape = inputs.shape.as_list()
 
         return tf.reshape(output, shape=(shape[0], -1, 1))
@@ -257,7 +251,6 @@ class MyDense(Layer):
         if self._debug:
             LOG.debug("init mydense kernel/bias as pre-defined")
             _init_kernel = np.array([[1/2 * (i + 1) for i in range(self.units)]])
-            # _init_kernel = np.array([[1*(i+1) for i in range(self.units)]])
             # _init_kernel = np.random.uniform(low=0.0, high=1.5, size=self.units)
             _init_kernel = _init_kernel.reshape([1, -1])
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
@@ -266,12 +259,9 @@ class MyDense(Layer):
 
             if self.use_bias is True:
                 _init_bias = 0
-                # _init_bias = np.random.uniform(low=-3, high=3, size=1)
                 LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
 
                 self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
-                # self._trainable_weights.append(self.bias)
-
         else:
             self.kernel = self.add_weight(
                 "theta",
@@ -337,14 +327,11 @@ class MySimpleDense(Dense):
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
 
             self.kernel = tf.Variable(_init_kernel, name="kernel", dtype=tf.float32)
-            # self._trainable_weights.append(self.kernel)
 
             if self.use_bias:
                 _init_bias = (0,)
-                # _init_bias = np.random.uniform(low=-3, high=3, size=1)
                 LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
                 self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
-                # self._trainable_weights.append(self.bias)
         else:
             super(MySimpleDense, self).build(input_shape)
 
@@ -394,7 +381,6 @@ class Play(object):
         self._name = name
 
     def build(self, inputs=None):
-        import ipdb; ipdb.set_trace()
         if inputs is None and self._batch_input_shape is None:
             raise Exception("Unknown input shape")
         if inputs is not None:
