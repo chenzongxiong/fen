@@ -918,7 +918,8 @@ class MyModel(object):
                 _fZ = tf.reshape(fZ, shape=fZ.shape.as_list()[1:])
                 return (1.0 + _fZ) * (1.0 - _fZ)
             elif activation == 'relu':
-                pass
+                _fZ = tf.reshape(fZ, shape=fZ.shape.as_list()[1:])
+                return tf.cast(_fZ >= 1e-8, dtype=tf.float32)
             else:
                 raise Exception("activation: {} not support".format(activation))
 
@@ -1101,33 +1102,33 @@ class MyModel(object):
         updated_weights_res = sess.run(updated_weights, feed_dict=_x_feed_dict)
 
         k = 0
-        for play in self.plays:
-            batch_assign_tuples.append(
-                (
-                    play.layers[0].last_kernel,
-                    # tf.keras.backend.get_value(play.layers[0].kernel)
-                    updated_weights_res[k*5+0]
-                )
-            )
-            batch_assign_tuples.append(
-                (
-                    play.layers[2].last_kernel,
-                    updated_weights_res[k*5+1]
-                    # tf.keras.backend.get_value(play.layers[2].kernel)
-                )
-            )
-            batch_assign_tuples.append(
-                (
-                    play.layers[3].last_kernel,
-                    updated_weights_res[k*5+3]
-                    # tf.keras.backend.get_value(play.layers[3].kernel)
-                )
-            )
+        # batch_assign_tuples = []
+        # for play in self.plays:
+        #     batch_assign_tuples.append(
+        #         (
+        #             play.layers[0].last_kernel,
+        #             # tf.keras.backend.get_value(play.layers[0].kernel)
+        #             updated_weights_res[k*5+0]
+        #         )
+        #     )
+        #     batch_assign_tuples.append(
+        #         (
+        #             play.layers[2].last_kernel,
+        #             updated_weights_res[k*5+1]
+        #             # tf.keras.backend.get_value(play.layers[2].kernel)
+        #         )
+        #     )
+        #     batch_assign_tuples.append(
+        #         (
+        #             play.layers[3].last_kernel,
+        #             updated_weights_res[k*5+3]
+        #             # tf.keras.backend.get_value(play.layers[3].kernel)
+        #         )
+        #     )
 
 
         for i in range(epochs):
             for j in range(steps_per_epoch):
-                batch_assign_tuples = []
                 # import ipdb; ipdb.set_trace()
 
                 # k = 0
@@ -1174,7 +1175,7 @@ class MyModel(object):
                 #     )
                 #     k += 1
 
-                tf.keras.backend.batch_set_value(batch_assign_tuples)
+                # tf.keras.backend.batch_set_value(batch_assign_tuples)
                 print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
                 cost, by_hand_list, by_tf_list, updated_weights_res, J_res, J_by_hand_res = train_function(ins)
