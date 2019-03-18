@@ -101,6 +101,32 @@ our derivation is:
 \end{eqnarray}
                # &=& \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \frac{\partial \tanh(\theta_{i}^{k} p_{j}^{k} + \theta_{i0})}{\partial p_{j}^{k}} \frac{\partial{\Phi(w^{k} x_{j} - p_{j-1}^{k})}}{\partial{x_{j}}} \\
                # &=&                        \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \theta_{i}^{k} (1 - \tanh^{2}(\theta_{i}^{k} p_{j}^{k} + \theta_{i0}^{k})) w^{k}
+
+* RNN gradients
+  \begin{eqnarray}
+  \frac{\partial{p_j}}{\partial x_j} &=& \Phi'(\sigma_j) \frac{\partial \sigma_j}{\partial x_j} \\
+  &=& \Phi'(\sigma_j) w^{1} \\
+
+  \\
+  \\
+
+  \frac{\partial{p_{j+1}}}{\partial x_j} &=& \frac{\partial (\Phi(\sigma_{j+1}) + p_j)}{\partial x_j} \\
+  &=& \Phi'(\sigma_{j+1}) \frac{\partial \sigma_{j+1}}{\partial x_j} + \frac{\partial p_j}{\partial x_j} \\
+  &=& \Phi'(\sigma_{j+1}) \frac{\partial (w^{1}x_{j+1} - p_{j})}{\partial x_j} + \frac{\partial p_j}{\partial x_j} \\
+  &=& (1-\Phi'(\sigma_{j+1})) \Phi'(\sigma_j) w^{1}
+
+
+  \\
+  \\
+  \frac{\partial{p_{j+2}}}{\partial x_j} &=&  (1-\Phi'(\sigma_{j+2})) (1-\Phi'(\sigma_{j+1})) \Phi'(\sigma_j) w^{1} \\
+
+  \\
+  \\
+  \frac{\partial{p_{j+i}}}{\partial x_j} &=&  (1-\Phi'(\sigma_{j+i})) ... (1-\Phi'(\sigma_{j+1})) \Phi'(\sigma_j) w^{1} \\
+
+
+
+  \end{eqnarray}
 * implementation
 
   Consider \(P_{n} = [p_{1}, p_{2}, p_{3}, ..., p_{n}]\), \(G(P_{n}, w^{1}) = [y_{1}, y_{2}, y_{3}, ..., y_{n}]\)
