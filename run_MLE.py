@@ -29,11 +29,11 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 5000
+    epochs = 500
     # steps_per_epoch = batch_size
 
     start = time.time()
-    input_dim = 20
+    input_dim = 10
     timestep = inputs.shape[0] // input_dim
 
     steps_per_epoch = 1
@@ -152,15 +152,15 @@ if True:
     nb_plays = 20
     units = 20
     state = 0
-    activation = 'tanh'
-    # activation = None
+    # activation = 'tanh'
+    activation = None
     ############################## predicitons #############################
     __nb_plays__ = 20
     __units__ = 20
     __state__ = 0
-    __activation__ = 'tanh'
-    # __activation__ = None
+    # __activation__ = 'tanh'
     # __activation__ = 'relu'
+    __activation__ = None
     __mu__ = 0
     __sigma__ = 2
 

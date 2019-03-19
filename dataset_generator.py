@@ -205,7 +205,7 @@ def model_nb_plays_generator_with_noise():
     run_test = False
 
     activation = 'tanh'
-    # activation = None
+    activation = None
 
     input_dim = 1
     state = 0
