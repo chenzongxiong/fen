@@ -29,7 +29,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 1500
+    epochs = 5000
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -122,8 +122,7 @@ def predict(inputs,
     return predictions, loss
 
 
-# if __name__ == "__main__":
-if True:
+if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
     # Hyper Parameters
@@ -136,7 +135,7 @@ if True:
     # method = 'mixed'
     # method = 'noise'
     interp = 1
-    do_prediction = True
+    do_prediction = False
 
     with_noise = True
     diff_weights = True
@@ -289,6 +288,6 @@ if True:
                                 loss_file_name=loss_history_file,
                                 weights_name=weights_fname,
                                 loss_name=loss_name)
-    import ipdb; ipdb.set_trace()
+    # import ipdb; ipdb.set_trace()
     LOG.debug("Write data into predicted_fname: {}".format(predicted_fname))
     tdata.DatasetSaver.save_data(inputs, predictions, predicted_fname)
