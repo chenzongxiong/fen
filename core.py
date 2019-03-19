@@ -907,26 +907,21 @@ class MyModel(object):
             result = tf.multiply(p1, p3)
             return tf.reshape(result, shape=P.shape.as_list())
 
-
         def gradient_nonlinear_layer(fZ, activation=None):
+            LOG.debug("gradient nonlinear activation {}".format(activation))
+            # ignore sample
+            _fZ = tf.reshape(fZ, shape=fZ.shape.as_list()[1:])
             if activation is None:
-                # return tf.keras.backend.ones(shape=(1, fZ.shape.as_list()[1]))
-                return tf.keras.backend.ones(shape=fZ.shape.as_list()[1:])  # ignore #sample
+                return tf.keras.backend.ones(shape=_fZ.shape)
             elif activation == 'tanh':
                 ### might be a bug here
                 ### we need to ensure the right epoch of fZ
-                _fZ = tf.reshape(fZ, shape=fZ.shape.as_list()[1:])
                 return (1.0 + _fZ) * (1.0 - _fZ)
             elif activation == 'relu':
                 _fZ = tf.reshape(fZ, shape=fZ.shape.as_list()[1:])
                 return tf.cast(_fZ >= 1e-8, dtype=tf.float32)
             else:
                 raise Exception("activation: {} not support".format(activation))
-
-        # def calculate_theta(theta, tilde_theta):
-        #     _theta = tf.reshape(theta, shape=(-1,))
-        #     _tilde_theta = tf.reshape(tilde_theta, shape=(-1,))
-        #     return tf.reshape(_tilde_theta * _theta, shape=(-1, 1))
 
         ################# FINISH GRADIENT BY HAND HERE ##################
         # x = self.plays[0].reshape(inputs)
@@ -978,7 +973,7 @@ class MyModel(object):
         ##################### Prepare output of nonlinear #############################
 
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, decay=decay)
-        # self.optimizer = tf.keras.optimizers.SGD(lr=0.001)
+
         with tf.name_scope('training'):
             J_list = []
             _by_hand_list = []
@@ -1131,51 +1126,52 @@ class MyModel(object):
             for j in range(steps_per_epoch):
                 # import ipdb; ipdb.set_trace()
 
-                # k = 0
+                k = 0
+                batch_assign_tuples = []
                 print(colors.yellow("############################################################################################"))
-                # for play in self.plays:
-                #     old_phi_weight = tf.keras.backend.get_value(play.model.layers[0].last_kernel)
-                #     old_theta = tf.keras.backend.get_value(play.model.layers[2].last_kernel)
-                #     old_tilde_theta = tf.keras.backend.get_value(play.model.layers[3].last_kernel)
-                #     curr_phi_weight = tf.keras.backend.get_value(play.model.layers[0].kernel)
-                #     curr_theta = tf.keras.backend.get_value(play.model.layers[2].kernel)
-                #     curr_tilde_theta = tf.keras.backend.get_value(play.model.layers[3].kernel)
+                for play in self.plays:
+                    old_phi_weight = tf.keras.backend.get_value(play.model.layers[0].last_kernel)
+                    old_theta = tf.keras.backend.get_value(play.model.layers[2].last_kernel)
+                    old_tilde_theta = tf.keras.backend.get_value(play.model.layers[3].last_kernel)
+                    curr_phi_weight = tf.keras.backend.get_value(play.model.layers[0].kernel)
+                    curr_theta = tf.keras.backend.get_value(play.model.layers[2].kernel)
+                    curr_tilde_theta = tf.keras.backend.get_value(play.model.layers[3].kernel)
 
-                #     old_theta = old_theta.reshape(-1)
-                #     old_tilde_theta = old_tilde_theta.reshape(-1)
-                #     curr_theta = curr_theta.reshape(-1)
-                #     curr_tilde_theta = curr_tilde_theta.reshape(-1)
-                #     print("{} Before assign phiweight: {}".format(colors.red("Play #{}".format(k)), old_phi_weight))
-                #     print("{} After assign phi_weight: {}".format(colors.red("Play #{}".format(k)), curr_phi_weight))
-                #     print("{} Before assign theta: {}".format(colors.red("Play #{}".format(k)), old_theta))
-                #     print("{} After assign theta: {}".format(colors.red("Play #{}".format(k)), curr_theta))
-                #     print("{} Before assign tilde theta: {}".format(colors.red("Play #{}".format(k)), old_tilde_theta))
-                #     print("{} After  assign tilde theta: {}".format(colors.red("Play #{}".format(k)), curr_tilde_theta))
-                #     print("{} Before  results: {}".format(colors.red("Play #{}".format(k)), (old_tilde_theta * old_theta).sum()))
-                #     print("{} After  results: {}".format(colors.red("Play #{}".format(k)), (curr_tilde_theta * curr_theta).sum()))
-                #     print("------------------------------------------------------------------------------------------")
+                    old_theta = old_theta.reshape(-1)
+                    old_tilde_theta = old_tilde_theta.reshape(-1)
+                    curr_theta = curr_theta.reshape(-1)
+                    curr_tilde_theta = curr_tilde_theta.reshape(-1)
+                    print("{} Before assign phiweight: {}".format(colors.red("Play #{}".format(k)), old_phi_weight))
+                    print("{} After assign phi_weight: {}".format(colors.red("Play #{}".format(k)), curr_phi_weight))
+                    print("{} Before assign theta: {}".format(colors.red("Play #{}".format(k)), old_theta))
+                    print("{} After assign theta: {}".format(colors.red("Play #{}".format(k)), curr_theta))
+                    print("{} Before assign tilde theta: {}".format(colors.red("Play #{}".format(k)), old_tilde_theta))
+                    print("{} After  assign tilde theta: {}".format(colors.red("Play #{}".format(k)), curr_tilde_theta))
+                    print("{} Before  results: {}".format(colors.red("Play #{}".format(k)), (old_tilde_theta * old_theta).sum()))
+                    print("{} After  results: {}".format(colors.red("Play #{}".format(k)), (curr_tilde_theta * curr_theta).sum()))
+                    print("------------------------------------------------------------------------------------------")
 
-                #     batch_assign_tuples.append(
-                #         (
-                #             play.model.layers[0].cell.last_kernel,
-                #             tf.keras.backend.get_value(play.model.layers[0].cell.kernel)
-                #         )
-                #     )
-                #     batch_assign_tuples.append(
-                #         (
-                #             play.model.layers[2].last_kernel,
-                #             tf.keras.backend.get_value(play.model.layers[2].kernel)
-                #         )
-                #     )
-                #     batch_assign_tuples.append(
-                #         (
-                #             play.model.layers[3].last_kernel,
-                #             tf.keras.backend.get_value(play.model.layers[3].kernel)
-                #         )
-                #     )
-                #     k += 1
+                    batch_assign_tuples.append(
+                        (
+                            play.model.layers[0].cell.last_kernel,
+                            tf.keras.backend.get_value(play.model.layers[0].cell.kernel)
+                        )
+                    )
+                    batch_assign_tuples.append(
+                        (
+                            play.model.layers[2].last_kernel,
+                            tf.keras.backend.get_value(play.model.layers[2].kernel)
+                        )
+                    )
+                    batch_assign_tuples.append(
+                        (
+                            play.model.layers[3].last_kernel,
+                            tf.keras.backend.get_value(play.model.layers[3].kernel)
+                        )
+                    )
+                    k += 1
 
-                # tf.keras.backend.batch_set_value(batch_assign_tuples)
+                tf.keras.backend.batch_set_value(batch_assign_tuples)
                 print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
                 cost, by_hand_list, by_tf_list, updated_weights_res, J_res, J_by_hand_res = train_function(ins)
@@ -1185,28 +1181,27 @@ class MyModel(object):
                 for _a, _b in zip(by_hand_list, by_tf_list):
                     print("--------------------------------------------------------------------------------")
                     print("{}".format(colors.red("index is: {}".format(m))))
-                    # print("by_hand[0]: ", _a[0].reshape(-1).tolist())
-                    # print("by_tf[0]: ", _b[0].reshape(-1).tolist())
 
-                    delta = np.abs(_b[0] - _a[0])
+                    delta = np.abs(_b[0].reshape(-1) - _a[0].reshape(-1))
+                    argmax = np.argmax(delta)
+                    print("_a[0][{}]: {}".format(argmax, _a[0].reshape(-1)[argmax]))
+                    print("_b[0][{}]: {}".format(argmax, _b[0].reshape(-1)[argmax]))
                     print("delta, mean: {}, max: {}".format(delta.mean(), delta.max()))
+
                     if delta.max() >= 0.1:
-                        print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX theta  XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
+                        print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX theta max XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
                         once = False
-                #     if not np.allclose(_a[0], _b[0], rtol=1e-5, atol=1e-8):
-                #         print(_by_tf_list[m][0].op.inputs._inputs)
-                #         print("results: {}".format(sess.run(_by_tf_list[m][0].op.inputs._inputs, feed_dict={'input_{}:0'.format(m+1): _inputs.reshape(1, -1, 10)})))
-                        # import ipdb; ipdb.set_trace()
-                        # once = False
+                    if not np.allclose(_a[0], _b[0], rtol=1e-5, atol=1e-8):
+                        print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX theta  allclose XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
+                        once = False
 
                     # print("by_hand[1]: ", _a[1].reshape(-1).tolist())
                     # print("by_tf[1]: ", _b[1].reshape(-1).tolist())
-                    delta1 = np.abs(_b[1].reshape(-1)-_a[1].reshape(-1)).max()
-                    print(colors.red("delta1, max {}".format(delta1)))
-                    # if not np.allclose(_a[1].reshape(-1), _b[1].reshape(-1), rtol=1e-5, atol=1e-8):
-                    #     print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXX      Phi      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
-                    #     import ipdb; ipdb.set_trace()
-                    #     once = False
+                    delta1 = np.abs(_b[1].reshape(-1)-_a[1].reshape(-1))
+                    print(colors.red("delta1, max {}".format(delta1.max())))
+                    if not np.allclose(_a[1].reshape(-1), _b[1].reshape(-1), rtol=1e-5, atol=1e-8):
+                        print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXX      Phi      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
+                        once = False
 
                     # print("by_hand[2]: ", _a[2].reshape(-1).tolist())
                     # print("by_tf[2]: ", _b[2].reshape(-1).tolist())
@@ -1630,9 +1625,10 @@ if __name__ == "__main__":
     sigma = 2
     nb_plays = 20
     __nb_plays__ = 5
-    __units__ = 20
-    __activation__ = 'tanh'
-    # __activation__ = None
+    __units__ = 1
+    # __activation__ = 'tanh'
+    __activation__ = None
+    # __activation__ = 'relu'
     import time
     start = time.time()
     agent = MyModel(input_dim=input_dim,
