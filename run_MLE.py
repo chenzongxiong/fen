@@ -107,7 +107,6 @@ def predict(inputs,
     for i in range(num_samples):
         LOG.debug("Predict on #{} sample".format(i+1))
         pred, mu, sigma = mymodel.predict2(inputs[i*(input_dim*timestep): (i+1)*(input_dim*timestep)])
-
         predictions_list.append(pred)
 
     end = time.time()
