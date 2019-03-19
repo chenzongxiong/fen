@@ -24,7 +24,7 @@ def fit(inputs,
         loss_file_name="./tmp/my_model_loss_history.csv",
         weights_name='model.h5'):
 
-    epochs = 2000
+    epochs = 400
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -60,7 +60,6 @@ def fit(inputs,
     loss = float(loss)
     LOG.debug("loss: {}".format(loss))
     return predictions, loss
-
 
 
 def predict(inputs,
@@ -179,15 +178,16 @@ if __name__ == "__main__":
     input_dim = 1
     ############################## ground truth #############################
     nb_plays = 20
-    units = 1
+    units = 20
     state = 0
-    # activation = 'tanh'
-    activation = None
+    activation = 'tanh'
+    # activation = None
     ############################## predicitons #############################
     __units__ = 20
     __state__ = 0
-    # __activation__ = 'tanh'
-    __activation__ = None
+    __activation__ = 'tanh'
+    # __activation__ = 'relu'
+    # __activation__ = None
     __nb_plays__ = 20
     ############################ For markov chain ##########################
     __mu__ = 0
@@ -301,6 +301,7 @@ if __name__ == "__main__":
 
     if use_inversion is True and do_prediction is False:
         if interp == 1:
+            LOG.debug(colors.red("swap inputs and outputs..."))
             inputs, ground_truth = ground_truth, inputs
         clip_seq = inputs.shape[0] // 100
         inputs = inputs[:clip_seq*100]
