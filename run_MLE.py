@@ -89,7 +89,6 @@ def predict(inputs,
     shape = list(map(int, line.split(":")))
 
     assert len(shape) == 3, "shape must be 3 dimensions"
-    import ipdb; ipdb.set_trace()
     start = time.time()
     predictions_list = []
 
@@ -107,7 +106,7 @@ def predict(inputs,
     mymodel.load_weights(weights_fname)
     for i in range(num_samples):
         LOG.debug("Predict on #{} sample".format(i+1))
-        pred = mymodel.predict(inputs[i*(input_dim*timestep): (i+1)*(input_dim*timestep)])
+        pred, mu, sigma = mymodel.predict2(inputs[i*(input_dim*timestep): (i+1)*(input_dim*timestep)])
 
         predictions_list.append(pred)
 
@@ -137,7 +136,7 @@ if True:
     # method = 'mixed'
     # method = 'noise'
     interp = 1
-    do_prediction = False
+    do_prediction = True
 
     with_noise = True
     diff_weights = True
@@ -290,5 +289,6 @@ if True:
                                 loss_file_name=loss_history_file,
                                 weights_name=weights_fname,
                                 loss_name=loss_name)
-
+    import ipdb; ipdb.set_trace()
+    LOG.debug("Write data into predicted_fname: {}".format(predicted_fname))
     tdata.DatasetSaver.save_data(inputs, predictions, predicted_fname)
