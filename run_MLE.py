@@ -70,7 +70,7 @@ def fit(inputs,
     # mymodel.weights
     mymodel.save_weights(weights_fname)
 
-    predictions = mymodel.predict(inputs)
+    predictions, mu, sigma = mymodel.predict2(inputs)
 
     loss = ((predictions - outputs) ** 2).mean()
     loss = float(loss)
@@ -135,6 +135,7 @@ if __name__ == "__main__":
     # method = 'noise'
     interp = 1
     do_prediction = False
+
 
     with_noise = True
     diff_weights = True
