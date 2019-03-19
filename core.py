@@ -893,34 +893,43 @@ class MyModel(object):
         # pool.join()
         # pool.close()
 
-        import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
         #################### DO GRADIENT BY HAND HERE ####################
         def gradient_phi_cell(P):
-            _P = tf.reshape(P, shape=(P.shape[0].value, -1))
-            _diff = _P[:, 1:] - _P[:, :-1]
 
-            x0 = tf.slice(_P, [0, 0], [1, 1])
-            diff = tf.concat([x0, _diff], axis=1)
 
-            p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
-            p2 = 1.0 - p1
-            p3_list = []
-            # TODO: multiple process here
+            # _P = tf.reshape(P, shape=(P.shape[0].value, -1))
+            # _diff = _P[:, 1:] - _P[:, :-1]
 
-            for j in range(1, _P.shape[1].value):
-                p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
+            # x0 = tf.slice(_P, [0, 0], [1, 1])
+            # diff = tf.concat([x0, _diff], axis=1)
 
-            # from pool import _pool as pool
-            # p3_list = pool.map(lambda j:
-            #                    (print("j: {}".format(j)),
-            #                    tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1)),
-            #                    [j for j in range(1, _P.shape[1].value)])
+            # p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
+            # p2 = 1.0 - p1
+            # p3_list = []
+            # # TODO: multiple process here
 
-            _p3 = tf.stack(p3_list, axis=1) + 1
-            p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
+            # for j in range(1, _P.shape[1].value):
+            #     p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
 
-            result = tf.multiply(p1, p3)
-            return tf.reshape(result, shape=P.shape.as_list())
+            # # from pool import _pool as pool
+            # # p3_list = pool.map(lambda j:
+            # #                    (print("j: {}".format(j)),
+            # #                    tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1)),
+            # #                    [j for j in range(1, _P.shape[1].value)])
+
+            # _p3 = tf.stack(p3_list, axis=1) + 1
+            # p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
+
+            # result = tf.multiply(p1, p3)
+            # return tf.reshape(result, shape=P.shape.as_list())
+
+            reshaped_P = tf.reshape(P, shape=(P.shape[0].value, -1))
+            diff = reshaped_P[:, 1:] - reshaped_P[:, :-1]
+            x0 = tf.slice(reshaped_P, [0, 0], [1, 1])
+            diff_ = tf.concat([x0, diff], axis=1)
+            result = tf.cast(tf.abs(diff_) >= 1e-7, dtype=tf.float32)
+            return tf.reshape(result, shape=P.shape)
 
         def gradient_nonlinear_layer(fZ, activation=None):
             LOG.debug("gradient nonlinear activation {}".format(activation))
@@ -1090,7 +1099,7 @@ class MyModel(object):
             # TODO: support derivation for p0
 
             # _loss = tf.keras.backend.square((diff-self.mean)/self.sigma)/2.0 - tf.keras.backend.log(detJ[:, 1:, :])
-
+            # BUGS: something wrong here
             _loss = tf.keras.backend.square((diff-self.mean)/self.sigma)/2.0 - tf.keras.backend.log(normalized_J[:, 1:, :])
 
             loss = tf.keras.backend.mean(_loss)
@@ -1253,8 +1262,8 @@ class MyModel(object):
                     once = False
 
                 print(colors.yellow("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"))
-                if not once:
-                    import ipdb; ipdb.set_trace()
+                # if not once:
+                #     import ipdb; ipdb.set_trace()
 
                 # for J1, J2 in zip(J_res, J_list_res):
                 #     if not np.allclose(J1, J2, rtol=1e-5, atol=1e-3):
