@@ -246,8 +246,9 @@ class MyDense(Layer):
 
         if self._debug:
             LOG.debug("init mydense kernel/bias as pre-defined")
-            _init_kernel = np.array([[1/2 * (i + 1) for i in range(self.units)]])
-            # _init_kernel = np.random.uniform(low=0.0, high=1.5, size=self.units)
+            # _init_kernel = np.array([[1/2 * (i + 1) for i in range(self.units)]])
+            # _init_kernel = np.array([[1 for i in range(self.units)]])
+            _init_kernel = np.random.uniform(low=0.0, high=1.5, size=self.units)
             _init_kernel = _init_kernel.reshape([1, -1])
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
             self.kernel = tf.Variable(_init_kernel, name="theta", dtype=tf.float32)
@@ -316,9 +317,9 @@ class MySimpleDense(Dense):
 
         if self._debug is True:
             LOG.debug("init mysimpledense kernel/bias as pre-defined")
-            _init_kernel = np.array([1 * (i + 1) for i in range(input_shape[-1].value)])
-            # _init_kernel = np.array([1 * (i+1) for i in range(input_shape[-1].value)])
-            # _init_kernel = np.random.uniform(low=0.0, high=1.5, size=input_shape[-1].value)
+            # _init_kernel = np.array([1 * (i + 1) for i in range(input_shape[-1].value)])
+            # _init_kernel = np.array([1 for i in range(input_shape[-1].value)])
+            _init_kernel = np.random.uniform(low=0.0, high=1.5, size=input_shape[-1].value)
             _init_kernel = _init_kernel.reshape(-1, 1)
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
 
@@ -896,25 +897,25 @@ class MyModel(object):
         # import ipdb; ipdb.set_trace()
         #################### DO GRADIENT BY HAND HERE ####################
         def gradient_phi_cell(P):
-            _P = tf.reshape(P, shape=(P.shape[0].value, -1))
-            _diff = _P[:, 1:] - _P[:, :-1]
+            # _P = tf.reshape(P, shape=(P.shape[0].value, -1))
+            # _diff = _P[:, 1:] - _P[:, :-1]
 
-            x0 = tf.slice(_P, [0, 0], [1, 1])
-            diff = tf.concat([x0, _diff], axis=1)
+            # x0 = tf.slice(_P, [0, 0], [1, 1])
+            # diff = tf.concat([x0, _diff], axis=1)
 
-            p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
-            p2 = 1.0 - p1
-            p3_list = []
-            # TODO: multiple process here
+            # p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
+            # p2 = 1.0 - p1
+            # p3_list = []
+            # # TODO: multiple process here
 
-            for j in range(1, _P.shape[1].value):
-                p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
+            # for j in range(1, _P.shape[1].value):
+            #     p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
 
-            _p3 = tf.stack(p3_list, axis=1) + 1
-            p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
+            # _p3 = tf.stack(p3_list, axis=1) + 1
+            # p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
 
-            result = tf.multiply(p1, p3)
-            return tf.reshape(result, shape=P.shape.as_list())
+            # result = tf.multiply(p1, p3)
+            # return tf.reshape(result, shape=P.shape.as_list())
 
             reshaped_P = tf.reshape(P, shape=(P.shape[0].value, -1))
             diff = reshaped_P[:, 1:] - reshaped_P[:, :-1]
@@ -1082,7 +1083,6 @@ class MyModel(object):
 
             J = tf.reduce_mean(tf.concat(J, axis=-1), axis=-1,keepdims=True) / self._nb_plays
             ###################### Calculate J by hand ###############################
-            # import ipdb; ipdb.set_trace()
             # (T * 1)
             J_by_hand = tf.reduce_mean(tf.concat(J_list, axis=-1), axis=-1, keepdims=True) / self._nb_plays
             normalized_J = tf.clip_by_value(tf.abs(J_by_hand), clip_value_min=1e-7, clip_value_max=1e9)
@@ -1092,9 +1092,10 @@ class MyModel(object):
 
             # _loss = tf.keras.backend.square((diff-self.mean)/self.sigma)/2.0 - tf.keras.backend.log(detJ[:, 1:, :])
             # BUGS: something wrong here
-            _loss = tf.keras.backend.square((diff-self.mean)/self.sigma)/2.0 - tf.keras.backend.log(normalized_J[:, 1:, :])
-
+            # _loss = tf.keras.backend.square((diff-self.mean)/self.sigma)/2.0 - tf.keras.backend.log(normalized_J[:, 1:, :])
+            _loss = tf.keras.backend.square(diff/sigma)/2.0 - tf.keras.backend.log(normalized_J[:, 1:, :])
             loss = tf.keras.backend.mean(_loss)
+
             with tf.name_scope(self.optimizer.__class__.__name__):
                 updates = self.optimizer.get_updates(params=params_list,
                                                      loss=loss)
