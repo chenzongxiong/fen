@@ -34,10 +34,10 @@ def fit(inputs,
     steps_per_epoch = 1
 
     mymodel = MyModel(input_dim=input_dim,
-                    timestep=timestep,
-                    units=units,
-                    activation=activation,
-                    nb_plays=nb_plays)
+                      timestep=timestep,
+                      units=units,
+                      activation=activation,
+                      nb_plays=nb_plays)
     # mymodel.load_weights(weights_fname)
     LOG.debug("Learning rate is {}".format(learning_rate))
     mymodel.fit(inputs,
@@ -147,7 +147,6 @@ def generate_Gdata_from_mc(mu,
     return inputs, predictions
 
 
-
 if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
@@ -180,19 +179,18 @@ if __name__ == "__main__":
     nb_plays = 20
     units = 20
     state = 0
-    activation = 'tanh'
-    # activation = None
+    # activation = 'tanh'
+    activation = None
     ############################## predicitons #############################
     __units__ = 20
     __state__ = 0
     __activation__ = 'tanh'
     # __activation__ = 'relu'
-    # __activation__ = None
+    __activation__ = None
     __nb_plays__ = 20
     ############################ For markov chain ##########################
     __mu__ = 0
     __sigma__ = 2
-
 
     if method == 'noise':
         with_noise = True
