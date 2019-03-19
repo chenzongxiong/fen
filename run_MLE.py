@@ -60,7 +60,7 @@ def fit(inputs,
     mymodel.save_weights(weights_fname)
 
     predictions = mymodel.predict(inputs)
-    import ipdb; ipdb.set_trace()
+
     loss = ((predictions - outputs) ** 2).mean()
     loss = float(loss)
     LOG.debug("loss: {}".format(loss))
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     # method = 'mixed'
     # method = 'noise'
     interp = 1
-    do_prediction = True
+    do_prediction = False
 
     with_noise = True
     diff_weights = True
@@ -137,16 +137,16 @@ if __name__ == "__main__":
     input_dim = 1
     ############################## ground truth #############################
     nb_plays = 20
-    units = 1
+    units = 20
     state = 0
-    # activation = 'tanh'
-    activation = None
+    activation = 'tanh'
+    # activation = None
     ############################## predicitons #############################
     __nb_plays__ = 20
-    __units__ = 1
+    __units__ = 20
     __state__ = 0
-    # __activation__ = 'tanh'
-    __activation__ = None
+    __activation__ = 'tanh'
+    # __activation__ = None
     __mu__ = 0
     __sigma__ = 2
 
