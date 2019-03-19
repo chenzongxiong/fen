@@ -263,4 +263,12 @@ DATASET_PATH = dict(
     #################### OPERATOR ####################
     operators=_prefix+'/operators/method-{method}/state-{state}/mu-{mu}/sigma-{sigma}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/base.csv',
     operators_multi=_prefix+'/operators/method-{method}/state-{state}/mu-{mu}/sigma-{sigma}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/base_multi.csv',
+
+
+    #################### Markov Chain ####################
+    # models_mc=_prefix+'/models/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/base.csv',
+    models_diff_weights_mc=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/base.csv',
+    models_diff_weights_mc_predictions=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/predictions.csv',
+    models_diff_weights_mc_saved_weights=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/weights.h5',
+    models_diff_weights_mc_loss_history=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/loss-{loss}/history.csv',
 )

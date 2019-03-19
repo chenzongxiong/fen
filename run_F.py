@@ -108,6 +108,47 @@ def predict(inputs,
     return predictions, loss
 
 
+def generate_Gdata_from_mc(mu,
+                           sigma,
+                           nb_plays=1,
+                           weights_name='model.h5'):
+    with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
+        line = f.read()
+    shape = list(map(int, line.split(":")))
+
+    assert len(shape) == 3, colors.red("shape must be 3 dimensions")
+
+    predictions_list = []
+
+    input_dim = shape[2]
+    timestep = shape[1]
+
+    # num_samples = inputs.shape[0] // (input_dim * timestep)
+    num_samples = 1
+    points = num_samples * timestep * input_dim
+    inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(points, mu, sigma)
+
+    start = time.time()
+    mymodel = MyModel(input_dim=input_dim,
+                      timestep=timestep,
+                      units=units,
+                      activation=activation,
+                      nb_plays=nb_plays)
+
+    mymodel.load_weights(weights_fname)
+
+    for i in range(num_samples):
+        LOG.debug("Predict on #{} sample".format(i+1))
+        pred = mymodel.predict(inputs[i*(input_dim*timestep): (i+1)*(input_dim*timestep)])
+
+        predictions_list.append(pred)
+
+    predictions = np.hstack(predictions_list)
+
+    return inputs, predictions
+
+
+
 if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
@@ -118,15 +159,18 @@ if __name__ == "__main__":
     method = 'sin'
     # method = 'mixed'
     # method = 'noise'
-    interp = 10
-    do_prediction = True
+
+    generated_Gdata = True
+
+    interp = 1
+    do_prediction = False
 
     with_noise = True
     diff_weights = True
 
     run_test = False
 
-    train_invert = True
+    use_inversion = True
 
     mu = 0
     sigma = 2
@@ -140,11 +184,15 @@ if __name__ == "__main__":
     # activation = 'tanh'
     activation = None
     ############################## predicitons #############################
-    __nb_plays__ = 20
-    __units__ = 1
+    __units__ = 20
     __state__ = 0
     # __activation__ = 'tanh'
     __activation__ = None
+    __nb_plays__ = 20
+    ############################ For markov chain ##########################
+    __mu__ = 0
+    __sigma__ = 2
+
 
     if method == 'noise':
         with_noise = True
@@ -153,7 +201,11 @@ if __name__ == "__main__":
         mu = 0
         sigma = 0
 
-    if train_invert is False:
+
+    if use_inversion is False:
+        raise Exception(colors.red("F is an inverted neural network, use_inversion must be True"))
+
+    if use_inversion is False:
         if run_test is False:
             if diff_weights is True:
                 input_file_key = 'models_diff_weights'
@@ -167,7 +219,8 @@ if __name__ == "__main__":
                 predictions_file_key = 'models_predictions'
         elif run_test is True:
             raise
-    elif train_invert is True:
+
+    elif use_inversion is True:
         if run_test is False:
             if diff_weights is True:
                 invert_file_key = 'models_diff_weights_invert'
@@ -178,7 +231,6 @@ if __name__ == "__main__":
         elif run_test is True:
             raise
 
-    import ipdb; ipdb.set_trace()
     # XXXX: place weights_fname before run_test
     weights_fname = constants.DATASET_PATH[weights_file_key].format(method=method,
                                                                     activation=activation,
@@ -198,48 +250,29 @@ if __name__ == "__main__":
     # sigma = 0.5
 
     if interp != 1:
-        # if do_prediction is False:
-        #     raise
-
-        if train_invert is True:
+        if use_inversion is True:
             if run_test is False:
                 if diff_weights is True:
                     input_file_key = 'models_diff_weights_invert_interp'
-                    # input_file_key = 'models_diff_weights_interp'
                     predictions_file_key = 'models_diff_weights_invert_interp_predictions'
                 else:
                     raise
             elif run_test is True:
                 raise
-        elif train_invert is False:
+        elif use_inversion is False:
             if run_test is False:
                 if diff_weights is True:
                     input_file_key = 'models_diff_weights_interp'
+    if generated_Gdata is True:
+        if diff_weights is True:
+            predictions_file_key = 'models_diff_weights_mc'
+        else:
+            raise
 
-                # if diff_weights is True:
-                #     input_file_key = 'models_diff_weights_interp'
-                #     # loss_file_key = 'models_diff_weights_loss_history_interp'
-                #     predictions_file_key = 'models_diff_weights_predictions_interp'
-                # else:
-                #     raise
-    # elif interp == 1:
-    #     if run_test is True:
-    #         if diff_weights is True:
-    #             input_file_key = 'models_diff_weights_test'
-    #             loss_file_key = 'models_diff_weights_test_loss_history'
-    #             predictions_file_key = 'models_diff_weights_test_predictions'
-    #         else:
-    #             raise
-    #     elif run_test is False:
-    #         if diff_weights is True:
-    #             input_file_key = 'models_diff_weights'
-    #             loss_file_key = 'models_diff_weights_loss_history'
-    #             predictions_file_key = 'models_diff_weights_predictions'
-    #         else:
-    #             raise
-    # if run_test is True and method == 'sin':
-    #     # method = 'mixed'        # all data generated by mixed method is test dataset
-    #     pass
+
+    if do_prediction is True and generated_Gdata is True:
+        raise Exception(colors.red("both do_prediction and generated_Gdata are True"))
+
 
     fname = constants.DATASET_PATH[input_file_key].format(interp=interp,
                                                           method=method,
@@ -265,8 +298,8 @@ if __name__ == "__main__":
 
     LOG.debug("Load data from file: {}".format(colors.cyan(fname)))
     inputs, ground_truth = tdata.DatasetLoader.load_data(fname)
-    import ipdb; ipdb.set_trace()
-    if train_invert is True and do_prediction is False:
+
+    if use_inversion is True and do_prediction is False:
         if interp == 1:
             inputs, ground_truth = ground_truth, inputs
         clip_seq = inputs.shape[0] // 100
@@ -307,9 +340,14 @@ if __name__ == "__main__":
                                                                           __units__=__units__,
                                                                           __nb_plays__=__nb_plays__,
                                                                           loss=loss_name)
-
-    if do_prediction is True:
-        LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
+    if generated_Gdata is True:
+        LOG.debug(colors.red("Generated Gdata, Load weights from {}".format(weights_fname)))
+        inputs, predictions = generate_Gdata_from_mc(mu=__mu__,
+                                                     sigma=__sigma__,
+                                                     nb_plays=__nb_plays__,
+                                                     weights_name=weights_fname)
+    elif do_prediction is True:
+        LOG.debug(colors.red("Do predictions, Load weights from {}".format(weights_fname)))
         predictions, loss = predict(inputs=inputs,
                                     outputs=ground_truth,
                                     units=__units__,

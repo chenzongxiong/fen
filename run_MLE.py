@@ -18,7 +18,7 @@ EPOCHS = constants.EPOCHS
 
 
 def fit(inputs,
-        # outputs,
+        outputs,
         mu,
         sigma,
         units=1,
@@ -32,7 +32,7 @@ def fit(inputs,
     # steps_per_epoch = batch_size
 
     start = time.time()
-    input_dim = 20
+    input_dim = 50
     timestep = inputs.shape[0] // input_dim
 
     steps_per_epoch = 1
@@ -42,7 +42,6 @@ def fit(inputs,
                     units=units,
                     activation=activation,
                     nb_plays=nb_plays)
-    # mymodel.load_weights(weights_fname)
     LOG.debug("Learning rate is {}".format(learning_rate))
     mymodel.fit2(inputs=inputs,
                  # outputs,
@@ -58,10 +57,10 @@ def fit(inputs,
     LOG.debug("time cost: {}s".format(end-start))
     LOG.debug("print weights info")
     # mymodel.weights
-    import ipdb; ipdb.set_trace()
     mymodel.save_weights(weights_fname)
 
     predictions = mymodel.predict(inputs)
+    import ipdb; ipdb.set_trace()
     loss = ((predictions - outputs) ** 2).mean()
     loss = float(loss)
     LOG.debug("loss: {}".format(loss))
@@ -79,7 +78,7 @@ def predict(inputs,
     shape = list(map(int, line.split(":")))
 
     assert len(shape) == 3, "shape must be 3 dimensions"
-
+    import ipdb; ipdb.set_trace()
     start = time.time()
     predictions_list = []
 
@@ -117,20 +116,19 @@ if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
     # Hyper Parameters
-    learning_rate = 0.1
+    learning_rate = 0.01
     loss_name = 'mse'
 
     method = 'sin'
     # method = 'mixed'
     # method = 'noise'
     interp = 1
-    do_prediction = False
+    do_prediction = True
 
     with_noise = True
     diff_weights = True
 
     run_test = False
-
 
     mu = 0
     sigma = 2
@@ -139,15 +137,18 @@ if __name__ == "__main__":
     input_dim = 1
     ############################## ground truth #############################
     nb_plays = 20
-    units = 20
+    units = 1
     state = 0
-    activation = 'tanh'
-    # activation = None
+    # activation = 'tanh'
+    activation = None
     ############################## predicitons #############################
-    __nb_plays__ = 1
-    __units__ = 20
+    __nb_plays__ = 20
+    __units__ = 1
     __state__ = 0
-    __activation__ = 'tanh'
+    # __activation__ = 'tanh'
+    __activation__ = None
+    __mu__ = 0
+    __sigma__ = 2
 
     if method == 'noise':
         with_noise = True
@@ -157,15 +158,16 @@ if __name__ == "__main__":
         sigma = 0
 
     if diff_weights is True:
-        input_file_key = 'models_diff_weights'
-        loss_file_key = 'models_diff_weights_loss_history'
-        weights_file_key = 'models_diff_weights_saved_weights'
-        predictions_file_key = 'models_diff_weights_predictions'
+        # input_file_key = 'models_diff_weights'
+        # loss_file_key = 'models_diff_weights_loss_history'
+        weights_file_key = 'models_diff_weights_mc_saved_weights'
+        # predictions_file_key = 'models_diff_weights_predictions'
     else:
-        input_file_key = 'models'
-        loss_file_key = 'models_loss_history'
-        weights_file_key = 'models_saved_weights'
-        predictions_file_key = 'models_predictions'
+        # input_file_key = 'models'
+        # loss_file_key = 'models_loss_history'
+        # weights_file_key = 'models_saved_weights'
+        # predictions_file_key = 'models_predictions'
+        raise
 
     # XXXX: place weights_fname before run_test
     weights_fname = constants.DATASET_PATH[weights_file_key].format(method=method,
@@ -189,40 +191,19 @@ if __name__ == "__main__":
         if do_prediction is False:
             raise
         if run_test is True:
-            if diff_weights is True:
-                # input_file_key = 'models_diff_weights_interp'
-                # loss_file_key = 'models_diff_weights_loss_history_interp'
-                # predictions_file_key = 'models_diff_weights_predictions_interp'
-                input_file_key = 'models_diff_weights_test_interp'
-                loss_file_key = 'models_diff_weights_loss_history_interp'
-                predictions_file_key = 'models_diff_weights_test_predictions_interp'
-            else:
-                raise
+            raise
         elif run_test is False:
-            if diff_weights is True:
-                input_file_key = 'models_diff_weights_interp'
-                loss_file_key = 'models_diff_weights_loss_history_interp'
-                predictions_file_key = 'models_diff_weights_predictions_interp'
-            else:
-                raise
+            raise
     elif interp == 1:
         if run_test is True:
-            if diff_weights is True:
-                input_file_key = 'models_diff_weights_test'
-                loss_file_key = 'models_diff_weights_test_loss_history'
-                predictions_file_key = 'models_diff_weights_test_predictions'
-            else:
-                raise
+            raise
         elif run_test is False:
             if diff_weights is True:
-                input_file_key = 'models_diff_weights'
-                loss_file_key = 'models_diff_weights_loss_history'
-                predictions_file_key = 'models_diff_weights_predictions'
+                input_file_key = 'models_diff_weights_mc'
+                loss_file_key = 'models_diff_weights_mc_loss_history'
+                predictions_file_key = 'models_diff_weights_mc_predictions'
             else:
                 raise
-    # if run_test is True and method == 'sin':
-    #     # method = 'mixed'        # all data generated by mixed method is test dataset
-    #     pass
 
     fname = constants.DATASET_PATH[input_file_key].format(interp=interp,
                                                           method=method,
@@ -236,10 +217,9 @@ if __name__ == "__main__":
                                                           input_dim=input_dim)
 
     LOG.debug("Load data from file: {}".format(colors.cyan(fname)))
-    import ipdb; ipdb.set_trace()
-    inputs, grouth_truth = tdata.DatasetLoader.load_data(fname)
 
-
+    inputs, outputs= tdata.DatasetLoader.load_data(fname)
+    inputs, outputs = outputs, inputs
     loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
                                                                      method=method,
                                                                      activation=activation,
@@ -272,21 +252,20 @@ if __name__ == "__main__":
                                                                           __nb_plays__=__nb_plays__,
                                                                           loss=loss_name)
 
-    # if do_prediction is True:
-    #     LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
-    #     predictions, loss = predict(inputs=inputs,
-    #                                 outputs=grouth_truth,
-    #                                 units=__units__,
-    #                                 activation=__activation__,
-    #                                 nb_plays=__nb_plays__,
-    #                                 weights_name=weights_fname)
-    #     inputs = inputs[:predictions.shape[-1]]
-    # else:
-    if True:
+    if do_prediction is True:
+        LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
+        predictions, loss = predict(inputs=inputs,
+                                    outputs=outputs,
+                                    units=__units__,
+                                    activation=__activation__,
+                                    nb_plays=__nb_plays__,
+                                    weights_name=weights_fname)
+        inputs = inputs[:predictions.shape[-1]]
+    else:
         predictions, loss = fit(inputs=inputs,
-                                # outputs=grouth_truth,
-                                mu=mu,
-                                sigma=sigma,
+                                outputs=outputs,
+                                mu=__mu__,
+                                sigma=__sigma__,
                                 units=__units__,
                                 activation=__activation__,
                                 nb_plays=__nb_plays__,
