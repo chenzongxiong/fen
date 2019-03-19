@@ -26,33 +26,44 @@ def fit(inputs,
         nb_plays=1,
         learning_rate=0.001,
         loss_file_name="./tmp/my_model_loss_history.csv",
-        weights_name='model.h5'):
+        weights_name='model.h5',
+        loss_name='mse'):
 
-    epochs = 200
+    epochs = 1000
     # steps_per_epoch = batch_size
 
     start = time.time()
-    input_dim = 50
+    input_dim = 20
     timestep = inputs.shape[0] // input_dim
 
     steps_per_epoch = 1
 
     mymodel = MyModel(input_dim=input_dim,
-                    timestep=timestep,
-                    units=units,
-                    activation=activation,
-                    nb_plays=nb_plays)
+                      timestep=timestep,
+                      units=units,
+                      activation=activation,
+                      nb_plays=nb_plays)
     LOG.debug("Learning rate is {}".format(learning_rate))
-    mymodel.fit2(inputs=inputs,
-                 # outputs,
-                 mean=mu,
-                 sigma=sigma,
-                 epochs=epochs,
-                 verbose=1,
-                 steps_per_epoch=steps_per_epoch,
-                 loss_file_name=loss_file_name,
-                 learning_rate=learning_rate)
-
+    mymodel.load_weights(weights_fname)
+    if loss_name == 'mse':
+        mymodel.fit(inputs,
+                    outputs,
+                    verbose=1,
+                    epochs=epochs,
+                    steps_per_epoch=steps_per_epoch,
+                    loss_file_name=loss_file_name,
+                    learning_rate=learning_rate)
+    elif loss_name == 'mle':
+        mymodel.fit2(inputs=inputs,
+                     mean=mu,
+                     sigma=sigma,
+                     epochs=epochs,
+                     verbose=1,
+                     steps_per_epoch=steps_per_epoch,
+                     loss_file_name=loss_file_name,
+                     learning_rate=learning_rate)
+    else:
+        raise Exception("loss {} not support".format(loss_name))
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
     LOG.debug("print weights info")
@@ -111,12 +122,15 @@ def predict(inputs,
     return predictions, loss
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
+if True:
     LOG.debug(colors.red("Test multiple plays"))
 
     # Hyper Parameters
     learning_rate = 0.01
+
     loss_name = 'mse'
+    loss_name = 'mle'
 
     method = 'sin'
     # method = 'mixed'
@@ -146,6 +160,7 @@ if __name__ == "__main__":
     __state__ = 0
     __activation__ = 'tanh'
     # __activation__ = None
+    # __activation__ = 'relu'
     __mu__ = 0
     __sigma__ = 2
 
@@ -216,8 +231,10 @@ if __name__ == "__main__":
                                                           input_dim=input_dim)
 
     LOG.debug("Load data from file: {}".format(colors.cyan(fname)))
+    import ipdb; ipdb.set_trace()
 
     inputs, outputs= tdata.DatasetLoader.load_data(fname)
+
     inputs, outputs = outputs, inputs
     loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
                                                                      method=method,
@@ -270,6 +287,7 @@ if __name__ == "__main__":
                                 nb_plays=__nb_plays__,
                                 learning_rate=learning_rate,
                                 loss_file_name=loss_history_file,
-                                weights_name=weights_fname)
+                                weights_name=weights_fname,
+                                loss_name=loss_name)
 
     tdata.DatasetSaver.save_data(inputs, predictions, predicted_fname)

@@ -36,19 +36,19 @@ def fit(inputs,
     steps_per_epoch = 1
 
     mymodel = MyModel(input_dim=input_dim,
-                    timestep=timestep,
-                    units=units,
-                    activation=activation,
-                    nb_plays=nb_plays)
+                      timestep=timestep,
+                      units=units,
+                      activation=activation,
+                      nb_plays=nb_plays)
     # mymodel.load_weights(weights_fname)
     LOG.debug("Learning rate is {}".format(learning_rate))
     mymodel.fit(inputs,
-              outputs,
-              verbose=1,
-              epochs=epochs,
-              steps_per_epoch=steps_per_epoch,
-              loss_file_name=loss_file_name,
-              learning_rate=learning_rate)
+                outputs,
+                verbose=1,
+                epochs=epochs,
+                steps_per_epoch=steps_per_epoch,
+                loss_file_name=loss_file_name,
+                learning_rate=learning_rate)
 
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))

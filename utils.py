@@ -16,6 +16,7 @@ LOG = logging.getLogger(__name__)
 # np.random.seed(345)
 # LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is 345"))
 
+
 def update(i, *fargs):
     inputs = fargs[0]
     outputs = fargs[1]
@@ -134,3 +135,14 @@ def read_saved_weights(fname=None):
             for kkk in list(f[k][kk].keys())[::-1]:
                 print("Layer *{}*, {}: {}".format(colors.red(kk.upper()), colors.red(kkk), list(f[k][kk][kkk])))
     f.close()
+
+
+def build_play(play, inputs):
+    if not play.built:
+        play.build(inputs)
+    return play
+
+
+def build_p3(p2, j):
+    import tensorflow as tf
+    return tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1)
