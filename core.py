@@ -97,8 +97,8 @@ class PhiCell(Layer):
         #     dtype=tf.float32,
         #     trainable=False)
 
-        # if input_shape[-1] <= 10:
-        #     self.unroll = True
+        if input_shape[-1] <= 20:
+            self.unroll = True
 
         if self.debug:
             LOG.debug("Initialize *weight* as pre-defined: {} ....".format(self._weight))
@@ -868,7 +868,6 @@ class MyModel(object):
             return prediction, outputs_
         return prediction
 
-
     @property
     def weights(self):
         i = 1
@@ -973,7 +972,10 @@ class MyModel(object):
 
         ##################### Prepare output of nonlinear #############################
 
-        self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, beta_1=0.9, beta_2=0.999, decay=decay)
+        self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate,
+                                                  beta_1=0.9,
+                                                  beta_2=0.999,
+                                                  decay=decay)
 
         with tf.name_scope('training'):
             J_list = []
@@ -1004,18 +1006,40 @@ class MyModel(object):
 
                 ######## HANDLE Layer's weights #########
                 # import ipdb; ipdb.set_trace()
+                start_tick = time.time()
                 _gradient_tilde_theta = tf.transpose(tilde_theta, perm=[1, 0])
-                # gradient_tilde_theta = tf.tile(_gradient_tilde_theta, multiples=[operator_output.shape[1].value, 1])
+                end_tick = time.time()
+                LOG.debug("Play #{} _gradient_tilde_theta cost: {} s".format(end_tick-start_tick))
 
-                # _gradient_theta = tf.transpose(theta, perm=[1, 0])
+                start_tick = time.time()
                 _theta = tf.tile(theta, multiples=[operator_output.shape[1].value, 1])
+                end_tick = time.time()
+                LOG.debug("Play #{} _theta cost: {} s".format(end_tick-start_tick))
+
+                start_tick = time.time()
                 _gradient_theta = tf.multiply(_theta, gradient_nonlinear_layer(nonlinear_output, self._activation))
+                end_tick = time.time()
+                LOG.debug("Play #{} _gradient_theta cost: {} s".format(end_tick-start_tick))
+
+                start_tick = time.time()
                 gradient_nonlinear = tf.matmul(_gradient_theta, tilde_theta)
+                end_tick = time.time()
+                LOG.debug("Play #{} gradient_nonlinear cost: {} s".format(end_tick-start_tick))
+
+                start_tick = time.time()
                 _gradient_phi = gradient_phi_cell(play.layers[1].output)
+                end_tick = time.time()
+                LOG.debug("Play #{} _gradient_phi cost: {} s".format(end_tick-start_tick))
+
+                start_tick = time.time()
                 gradient_phi = tf.multiply(_gradient_phi, phi_weight)
+                end_tick = time.time()
+                LOG.debug("Play #{} gradient_phi cost: {} s".format(end_tick-start_tick))
 
+                start_tick = time.time()
                 gradient_J = tf.multiply(gradient_phi, gradient_nonlinear)
-
+                end_tick = time.time()
+                LOG.debug("Play #{} gradient_J cost: {} s".format(end_tick-start_tick))
                 #############################################
                 # import ipdb; ipdb.set_trace()
                 # auto_gradient_nonlinear = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[2].input)
