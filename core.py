@@ -55,7 +55,6 @@ def Phi(x, width=1.0):
     return r2
 
 
-
 class PhiCell(Layer):
     def __init__(self,
                  input_dim=1,
@@ -887,7 +886,14 @@ class MyModel(object):
         for play in self.plays:
             if not play.built:
                 play.build(inputs)
+        # from pool import _pool as pool
+        # # import ipdb; ipdb.set_trace()
+        # args_list = [(play, inputs) for play in self.plays]
+        # self.plays = pool.starmap(utils.build_play, args_list)
+        # pool.join()
+        # pool.close()
 
+        import ipdb; ipdb.set_trace()
         #################### DO GRADIENT BY HAND HERE ####################
         def gradient_phi_cell(P):
             _P = tf.reshape(P, shape=(P.shape[0].value, -1))
@@ -899,8 +905,17 @@ class MyModel(object):
             p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
             p2 = 1.0 - p1
             p3_list = []
+            # TODO: multiple process here
+
             for j in range(1, _P.shape[1].value):
                 p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
+
+            # from pool import _pool as pool
+            # p3_list = pool.map(lambda j:
+            #                    (print("j: {}".format(j)),
+            #                    tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1)),
+            #                    [j for j in range(1, _P.shape[1].value)])
+
             _p3 = tf.stack(p3_list, axis=1) + 1
             p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
 
@@ -1009,65 +1024,62 @@ class MyModel(object):
                 start_tick = time.time()
                 _gradient_tilde_theta = tf.transpose(tilde_theta, perm=[1, 0])
                 end_tick = time.time()
-                LOG.debug("Play #{} _gradient_tilde_theta cost: {} s".format(end_tick-start_tick))
+                LOG.debug("Play #{} _gradient_tilde_theta cost: {} s".format(idx, end_tick-start_tick))
 
                 start_tick = time.time()
                 _theta = tf.tile(theta, multiples=[operator_output.shape[1].value, 1])
                 end_tick = time.time()
-                LOG.debug("Play #{} _theta cost: {} s".format(end_tick-start_tick))
+                LOG.debug("Play #{} _theta cost: {} s".format(idx, end_tick-start_tick))
 
                 start_tick = time.time()
                 _gradient_theta = tf.multiply(_theta, gradient_nonlinear_layer(nonlinear_output, self._activation))
                 end_tick = time.time()
-                LOG.debug("Play #{} _gradient_theta cost: {} s".format(end_tick-start_tick))
+                LOG.debug("Play #{} _gradient_theta cost: {} s".format(idx, end_tick-start_tick))
 
                 start_tick = time.time()
                 gradient_nonlinear = tf.matmul(_gradient_theta, tilde_theta)
                 end_tick = time.time()
-                LOG.debug("Play #{} gradient_nonlinear cost: {} s".format(end_tick-start_tick))
+                LOG.debug("Play #{} gradient_nonlinear cost: {} s".format(idx, end_tick-start_tick))
 
                 start_tick = time.time()
                 _gradient_phi = gradient_phi_cell(play.layers[1].output)
                 end_tick = time.time()
-                LOG.debug("Play #{} _gradient_phi cost: {} s".format(end_tick-start_tick))
+                LOG.debug("Play #{} _gradient_phi cost: {} s".format(idx, end_tick-start_tick))
 
                 start_tick = time.time()
                 gradient_phi = tf.multiply(_gradient_phi, phi_weight)
                 end_tick = time.time()
-                LOG.debug("Play #{} gradient_phi cost: {} s".format(end_tick-start_tick))
+                LOG.debug("Play #{} gradient_phi cost: {} s".format(idx, end_tick-start_tick))
 
                 start_tick = time.time()
                 gradient_J = tf.multiply(gradient_phi, gradient_nonlinear)
                 end_tick = time.time()
-                LOG.debug("Play #{} gradient_J cost: {} s".format(end_tick-start_tick))
+                LOG.debug("Play #{} gradient_J cost: {} s".format(idx, end_tick-start_tick))
                 #############################################
                 # import ipdb; ipdb.set_trace()
-                # auto_gradient_nonlinear = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[2].input)
-                # auto_gradient_phi = tf.keras.backend.gradients(play.model.layers[0].output, play.model.layers[0].input)
-                # auto_gradient_J = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[0].input)
+                auto_gradient_nonlinear = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[2].input)
+                auto_gradient_phi = tf.keras.backend.gradients(play.model.layers[0].output, play.model.layers[0].input)
+                auto_gradient_J = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[0].input)
 
                 # import ipdb; ipdb.set_trace()
                 ###############################################
-                # _by_hand_list.append([gradient_nonlinear, gradient_phi, gradient_J])
-                # _by_tf_list.append([auto_gradient_nonlinear[0], auto_gradient_phi[0], auto_gradient_J[0]])
+                _by_hand_list.append([gradient_nonlinear, gradient_phi, gradient_J])
+                _by_tf_list.append([auto_gradient_nonlinear[0], auto_gradient_phi[0], auto_gradient_J[0]])
                 J_list.append(gradient_J)
 
             diff = y_pred[:, 1:, :] - y_pred[:, :-1, :]
 
             ###################### Calculate J by Tensorflow ###############################
-            # for i in range(self._nb_plays):
-            #     model_outputs[i] = tf.reshape(model_outputs[i], shape=model_inputs[i].shape)
+            for i in range(self._nb_plays):
+                model_outputs[i] = tf.reshape(model_outputs[i], shape=model_inputs[i].shape)
 
-            # y_pred = tf.reshape(y_pred, shape=model_inputs[0].shape)
+            y_pred = tf.reshape(y_pred, shape=model_inputs[0].shape)
 
-            # J = tf.keras.backend.gradients(model_outputs, model_inputs)
-            # for i in range(self._nb_plays):
-            #     J[i] = tf.reshape(J[i], shape=(1, -1, 1))
+            J = tf.keras.backend.gradients(model_outputs, model_inputs)
+            for i in range(self._nb_plays):
+                J[i] = tf.reshape(J[i], shape=(1, -1, 1))
 
-            # J = tf.reduce_mean(tf.concat(J, axis=-1), axis=-1,keepdims=True) / self._nb_plays
-            # J = tf.keras.backend.gradients(y_pred, model_inputs)
-            # detJ = tf.reshape(tf.keras.backend.abs(J[0]), shape=y_pred.shape)
-            # detJ = tf.keras.backend.clip(detJ, min_value=1e-5, max_value=1e9)
+            J = tf.reduce_mean(tf.concat(J, axis=-1), axis=-1,keepdims=True) / self._nb_plays
             ###################### Calculate J by hand ###############################
             # import ipdb; ipdb.set_trace()
             # (T * 1)
@@ -1086,16 +1098,14 @@ class MyModel(object):
                 updates = self.optimizer.get_updates(params=params_list,
                                                      loss=loss)
 
-            # updated_weights = updates[2::3]
+            updated_weights = updates[2::3]
             # import ipdb; ipdb.set_trace()
 
-            # import ipdb; ipdb.set_trace()
-            # updates += update_inputs
-            # updated_weights = updated_weights[::2]
             training_inputs = feed_inputs + feed_targets
             train_function = tf.keras.backend.function(training_inputs,
                                                        # [loss, _by_hand_list, _by_tf_list, updated_weights, J, J_by_hand],
-                                                       [loss],
+                                                       [loss, J, J_by_hand],
+                                                       # [loss],
                                                        updates=updates)
 
         # _y = [y for _ in range(self._nb_plays)]
@@ -1191,8 +1201,8 @@ class MyModel(object):
                 # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
                 # cost, by_hand_list, by_tf_list, updated_weights_res, J_res, J_by_hand_res = train_function(ins)
-
-                cost = train_function(ins)[0]
+                cost, J_res, J_by_hand_res = train_function(ins)
+                # cost = train_function(ins)[0]
 
                 # m = 0
                 # # import ipdb; ipdb.set_trace()
@@ -1236,16 +1246,15 @@ class MyModel(object):
                 # # print(colors.yellow("J_res: {}".format(J_res)))
                 # # print(colors.yellow("J_by_handres: {}".format(J_by_hand_res)))
                 # # import ipdb; ipdb.set_trace()
-                # delta_J = np.abs(J_res.reshape(-1) - J_by_hand_res.reshape(-1))
-                # # print(colors.yellow("diff J: {}, mean: {}".format(delta_J, delta_J.mean())))
-                # print(colors.yellow("diff mean: {}, max: {}".format(delta_J.mean(), np.max(delta_J))))
-                # if not np.allclose(J_by_hand_res.reshape(-1), J_res.reshape(-1), rtol=1e-2, equal_nan=True, atol=1e-3):
-                #     print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
-                #     once = False
+                delta_J = np.abs(J_res.reshape(-1) - J_by_hand_res.reshape(-1))
+                print(colors.yellow("diff mean: {}, max: {}".format(delta_J.mean(), np.max(delta_J))))
+                if not np.allclose(J_by_hand_res.reshape(-1), J_res.reshape(-1), rtol=1e-2, equal_nan=True, atol=1e-3):
+                    print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
+                    once = False
 
-                # print(colors.yellow("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"))
-                # if not once:
-                #     import ipdb; ipdb.set_trace()
+                print(colors.yellow("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"))
+                if not once:
+                    import ipdb; ipdb.set_trace()
 
                 # for J1, J2 in zip(J_res, J_list_res):
                 #     if not np.allclose(J1, J2, rtol=1e-5, atol=1e-3):

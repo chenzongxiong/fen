@@ -123,7 +123,8 @@ def predict(inputs,
     return predictions, loss
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
+if True:
     LOG.debug(colors.red("Test multiple plays"))
 
     # Hyper Parameters
