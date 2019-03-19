@@ -6,27 +6,28 @@ LOG = logging.getLogger(__name__)
 
 
 nb_plays = 20
-weights_file_key = 'models_diff_weights_saved_weights'
+# weights_file_key = 'models_diff_weights_saved_weights'
+weights_file_key = 'models_diff_weights_mc_saved_weights'
 method = 'sin'
 loss_name = 'mse'
 
 mu = 0
-sigma = 0
+sigma = 2
 points = 1000
 input_dim = 1
 # ground truth
 nb_plays = 20
-units = 20
+units = 1
 state = 0
-# activation = None
-activation = 'tanh'
+activation = None
+# activation = 'tanh'
 # predicitons
 __nb_plays__ = 20
 __nb_plays__ = 20
-__units__ = 20
+__units__ = 1
 __state__ = 0
-# __activation__ = None
-__activation__ = 'tanh'
+__activation__ = None
+# __activation__ = 'tanh'
 
 
 
@@ -44,6 +45,7 @@ weights_fname = constants.DATASET_PATH[weights_file_key].format(method=method,
                                                                 __units__=__units__,
                                                                 __nb_plays__=__nb_plays__,
                                                                 loss=loss_name)
+
 
 for i in range(nb_plays):
     LOG.debug("==================== PLAY {} ====================".format(i+1))
