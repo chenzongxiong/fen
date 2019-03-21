@@ -1,0 +1,211 @@
+% Created 2019-03-20 Wed 14:40
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\date{\today}
+\title{}
+\hypersetup{
+ pdfauthor={},
+ pdftitle={},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 26.1 (Org mode 9.1.9)},
+ pdflang={English}}
+\begin{document}
+
+\tableofcontents
+
+\section{formula}
+\label{sec:orgf02c92a}
+First we only consider \textbf{one play}
+\begin{eqnarray}
+G(P_{n}, w^{1}) = \sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} P_{n} + \theta_{i0}) + \tilde{\theta_{0}}
+\end{eqnarray}
+
+Where \(P_{n} = [p_{1}, p_{2}, p_{3}, ..., p_{n}]\), \(G(P_{n}, w^{1}) = [y_{1}, y_{2}, y_{3}, ..., y_{n}]\)
+
+\(\forall{i} \in [1, ..., S]\), \(\theta_{i} P_{n} = (\theta_{i} p_{1}, \theta_{i} p_{2}, \theta_{i} p_{3}, ..., \theta_{i} p_{n})\),
+
+So
+\(\tanh(\theta_{i} P_{n} + \theta_{i0}) =
+[\tanh(\theta_{i} p_{1} + \theta_{i0}),
+\tanh(\theta_{i} p_{2} + \theta_{i0}),
+\tanh(\theta_{i} p_{3} + \theta_{i0}),
+...,
+\tanh(\theta_{i} p_{n} + \theta_{i0})]\)
+
+So \(\sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} P_{n} + \theta_{i0}) + \tilde{\theta_{0}} =
+[\sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} p_{1} + \theta_{i0}) + \tilde{\theta_{0}},
+\sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} p_{2} + \theta_{i0}) + \tilde{\theta_{0}},
+...,
+\sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} p_{n} + \theta_{i0}) + \tilde{\theta_{0}}] =
+[y_{1}, y_{2}, ..., y_{n}]\).
+
+Take \(y_{j}\), where \(j \in [1, ..., n]\) for example
+
+Let \(z_j=\theta_i p_j + \theta_{i0}\) and \(f(z_j) = \tanh(\theta_i p_j + \theta_{i0})\), we obtain
+\begin{eqnarray}
+y_{j}  &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} p_{j} + \theta_{i0}) + \tilde{\theta_{0}}  \\
+       &=& \sum_{i=1}^{S} \tilde{\theta_{i}} f(z_j) + \tilde{\theta_{i0}} \\
+\end{eqnarray}
+
+Calculate derivation for \(y_{j}\),
+\begin{eqnarray}
+\frac{\partial y_{j}}{\partial p_{j}} &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} \frac{\partial f(z_j)}{\partial z_{j}}  \\
+\end{eqnarray}
+
+Now let's consider the mapping between \(p_{j}\) and \(x_{j}\). let \(\sigma_{j} = w^{1} x_{j} - p_{j-1}\)
+\begin{eqnarray}
+p_{j} = \Phi(\sigma_{j}) + p_{j-1}
+\end{eqnarray}
+
+and
+
+\begin{eqnarray}
+\Phi(x) =
+        \begin{cases}
+        x, x > 0 \\
+        0, -1 < x < 0 \\
+        x-1, x < -1 \\
+        \end{cases}
+
+\end{eqnarray}
+
+Using chain rule, we obtain
+\begin{eqnarray}
+\frac{\partial y_{j}}{\partial x_{j}} &=& \frac{\partial y_{j}}{\partial p_{j}} \frac{\partial p_{j}}{\partial x_{j}} \\
+                                      &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} w^{1} \frac{\partial f(z_j)}{\partial z_{j}} \frac{\partial{\Phi(\sigma_{j})}}{\partial{\sigma_{j}}}
+\end{eqnarray}
+
+
+To consider \textbf{multiple plays} case, we reformulate the derivation as following:
+
+\begin{eqnarray}
+\frac{\partial {y_{j}^{1}}}{\partial x_{j}} &=& \frac{\partial{y_{j}^{1}}}{\partial{p_{j}^{1}}} \frac{\partial{ p_{j}}^{1}}{\partial x_{j}} \\
+                                      &=& \sum_{i=1}^{S} \tilde{\theta_{i}^{1}} \theta_{i}^{1} w^{1} \frac{\partial f(z_{j}^{1})}{\partial z_{j}^{1}} \frac{\partial{\Phi(\sigma_{j}^{1})}}{\partial{\sigma_{j}^{1}}}
+\end{eqnarray}
+
+
+Now from the architecture, we know that if we have \(P\) plays,
+\begin{eqnarray}
+F = \frac{1}{P} \sum_{k=1}^{P} G^{k}
+\end{eqnarray}
+Where \(F=[f_1, f_2, ..., f_n]\),
+and
+\begin{eqnarray}
+f_{j} = \frac{1}{P} \sum_{k=1}^{P} y_{j}^{k}
+\end{eqnarray}
+
+our derivation is:
+
+\begin{eqnarray}
+\frac{\partial f_{j}}{\partial x_{j}} &=& \frac{1}{P} \sum_{k=1}^{P} \frac{\partial {{y_{j}^{k}}}}{\partial {{x_{j}}}} \\
+               &=& \frac{1}{P} \sum_{k=1}^{P} \frac{\partial {y_{j}^{k}}}{\partial {p_{j}^{k}}} \frac{\partial {p_{j}^{k}}}{\partial {x_{j}}} \\
+               &=& \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \theta_{i}^{k} w^{k} \frac{\partial f(z_{j}^{k})}{\partial z_{j}^{k}} \frac{\partial{\Phi(\sigma_{j}^{k})}}{\partial{\sigma_{j}^{k}}} \\
+\end{eqnarray}
+
+\section{RNN gradients}
+\label{sec:orgdb5b91f}
+\begin{eqnarray}
+\frac{\partial{p_j}}{\partial x_j} &=& \Phi'(\sigma_j) \frac{\partial \sigma_j}{\partial x_j} \\
+&=& \Phi'(\sigma_j) w^{1} \\
+
+\\
+\\
+
+\frac{\partial{p_{j+1}}}{\partial x_j} &=& \frac{\partial (\Phi(\sigma_{j+1}) + p_j)}{\partial x_j} \\
+&=& \Phi'(\sigma_{j+1}) \frac{\partial \sigma_{j+1}}{\partial x_j} + \frac{\partial p_j}{\partial x_j} \\
+&=& \Phi'(\sigma_{j+1}) \frac{\partial (w^{1}x_{j+1} - p_{j})}{\partial x_j} + \frac{\partial p_j}{\partial x_j} \\
+&=& (1-\Phi'(\sigma_{j+1})) \Phi'(\sigma_j) w^{1}
+
+
+\\
+\\
+\frac{\partial{p_{j+2}}}{\partial x_j} &=&  (1-\Phi'(\sigma_{j+2})) (1-\Phi'(\sigma_{j+1})) \Phi'(\sigma_j) w^{1} \\
+
+\\
+\\
+\frac{\partial{p_{j+i}}}{\partial x_j} &=&  (1-\Phi'(\sigma_{j+i})) ... (1-\Phi'(\sigma_{j+1})) \Phi'(\sigma_j) w^{1} \\
+
+
+
+\end{eqnarray}
+\section{implementation}
+\label{sec:org91cf35d}
+
+Consider \(P_{n} = [p_{1}, p_{2}, p_{3}, ..., p_{n}]\), \(G(P_{n}, w^{1}) = [y_{1}, y_{2}, y_{3}, ..., y_{n}]\)
+\section{Trading}
+\label{sec:org8840527}
+Assume, we observe prices \(p_1, p_2, ..., p_N\) for a fixed \(N > 0\). Based on Dima's paper,
+assume that the price \(p_{n}\) hysteretically depends on the underlying noise \(b_n\), with \(b_n\) being a
+Brownian motion. Using the notation
+
+\[\mathcal{B}_n := (b_1, b_2, ..., b_n), \mathcal{P}_n := (p_1, p_2, ..., p_n)\]
+
+we have
+\begin{eqnarray}
+b_{0} = 0, \, b_{n} \thicksim \mathcal{N} (b_{n-1} + \mu_{b}, \sigma_{b}) \\
+p_{n} = F(\mathcal{B}_n, W_{p})
+\end{eqnarray}
+
+
+Based on Dima's paperr again, the underlying noise \(b_n\) can be expressed as a hysteresis operator depending on
+the observed prices \(p_n\), i.e.,
+\[b_n=G(\mathcal{P}_n, W_b)\]
+
+
+**This is very nice as long as F and G are Prandtl-Ishlinskii operators. However, if one explicitly adds N's strategy,
+G becomes Preisach and F is not Preisach anymore. It is not clear how well it can be approximated by compositions of
+plays and nonlinear functions**
+
+
+\section{Direct Learning}
+\label{sec:org0464e23}
+We learn the parameters \(W_b, \mu_b, \sigma_b\) and the initial state \(p_0\) of the network \(G\) by maximizing
+the likelihood of \(\mathcal{P}\). Since \(\mathcal{P}\) is the determenistic function of a random variable
+\(mathcal{B}\), its probability density is given by
+
+\begin{eqnarray}
+p(\mathcal{P}) &=& p(p_1, p_2, ..., p_N) \\
+               &=& p_b(b_1, b_2, ..., b_N) \left|\det \mathcal{J(P)}\right| \\
+               &=& p_b(G(\mathcal{P}_1, W_b), G(\mathcal{P}_2, W_b), ..., G(\mathcal{P}_N, W_b)) \left|\det \mathcal{J(P)}\right| \\
+\end{eqnarray}
+
+where
+\begin{eqnarray}
+p_b({\mathcal{B}}) &=& \prod_{n=1}^{N} p_b(b_1, b_2, ..., b_N) \\
+                   &=& \prod_{n=1}^{N} p_b(b_n|b_{n-1}) \\
+                   &=& \prod_{n=1}^{N} \frac{1}{\sqrt{2 \pi \sigma}} \exp\left(-\frac{(b_{n}-b_{n-1}-\mu_{b})^2}{2 \sigma^2}\right)
+\end{eqnarray}
+is the probability distribution of \(\mathcal{B}\) and \(\mathcal{J(P)}\) is the Jacobian matrix. Recall that \(G\) has the
+causality property, hence \(\mathcal{J(P)}\) is a triangular matrix. Therefore, yield
+\begin{eqnarray}
+p(\mathcal{P}) &=& p_b(G(\mathcal{P}_1, W_b), G(\mathcal{P}_2, W_b), ..., G(\mathcal{P}_N, W_b)) \left|\det \mathcal{J(P)}\right| \\
+               &=& \prod_{n=1}^{N} \frac{1}{\sqrt{2 \pi \sigma}} \exp\left(-\frac{(b_{n}-b_{n-1}-\mu_{b})^2}{2 \sigma^2}\right)
+                   \prod_{n=1}^{N} \left| \frac{\partial b_n}{\partial p_n} \right| \\
+               &=& \prod_{n=1}^{N} \frac{1}{\sqrt{2 \pi \sigma}} \exp\left(-\frac{(b_{n}-b_{n-1}-\mu_{b})^2}{2 \sigma^2}\right) \left|\frac{\partial b_n}{\partial p_n}\right|
+\end{eqnarray}
+
+Thus, maximizing the log-likelihood of \(p(\mathcal{P})\) is equivalent to the following:
+\begin{eqnarray}
+L &\thicksim& \sum_{n=1}^{N} \left(- \frac{(b_n-b_{n-1}-\mu_{b})^2}{2 \sigma_{b}^2} + \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right) \\
+  &=& - \frac{1}{2} \sum_{n=1}^{N} \left[\left(\frac{b_n - b_{n-1} - \mu_{b}}{\sigma_b} \right)^2 - 2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right]
+\end{eqnarray}
+
+It's also equivalent to mimizing the loss function as following:
+\begin{eqnarray}
+\min L &=& \min \sum_{n=1}^{N} \left[\left(\frac{b_n - b_{n-1} - \mu_{b}}{\sigma_b} \right)^2 - 2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right]
+\end{eqnarray}
+\end{document}

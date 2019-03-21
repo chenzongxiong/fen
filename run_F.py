@@ -24,7 +24,7 @@ def fit(inputs,
         loss_file_name="./tmp/my_model_loss_history.csv",
         weights_name='model.h5'):
 
-    epochs = 400
+    epochs = 500
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -38,7 +38,7 @@ def fit(inputs,
                       units=units,
                       activation=activation,
                       nb_plays=nb_plays)
-    # mymodel.load_weights(weights_fname)
+    mymodel.load_weights(weights_fname)
     LOG.debug("Learning rate is {}".format(learning_rate))
     mymodel.fit(inputs,
                 outputs,
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
     # Hyper Parameters
-    learning_rate = 0.05
+    learning_rate = 0.001
     loss_name = 'mse'
 
     method = 'sin'
@@ -177,12 +177,12 @@ if __name__ == "__main__":
     input_dim = 1
     ############################## ground truth #############################
     nb_plays = 20
-    units = 20
+    units = 2
     state = 0
-    # activation = 'tanh'
+    activation = 'tanh'
     activation = None
     ############################## predicitons #############################
-    __units__ = 20
+    __units__ = 2
     __state__ = 0
     __activation__ = 'tanh'
     # __activation__ = 'relu'

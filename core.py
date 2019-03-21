@@ -574,7 +574,7 @@ class Play(object):
 
             diff = self._model_output[:, 1:, :] - self._model_output[:, :-1, :]
             # _loss = (tf.keras.backend.square((diff - self.mean) / self.std) + tf.keras.backend.log(self.std*self.std)) + tf.keras.backend.log(detJ[:, 1:, :])
-            _loss = tf.keras.backend.square((diff-self.mean)/self.std)/2.0 - tf.keras.backend.log(detJ[:, 1:, :])
+            _loss = tf.keras.backend.square((diff-mean)/std)/2.0 - tf.keras.backend.log(detJ[:, 1:, :])
             loss = tf.keras.backend.mean(_loss)
 
             params = self.model.trainable_weights
@@ -758,7 +758,16 @@ class MyModel(object):
         else:
             self.optimizer = None
 
-    def fit(self, inputs, outputs, epochs=100, verbose=0, steps_per_epoch=1, loss_file_name="./tmp/mymodel_loss_history.csv", learning_rate=0.001, decay=0.):
+    def fit(self,
+            inputs,
+            outputs,
+            epochs=100,
+            verbose=0,
+            steps_per_epoch=1,
+            loss_file_name="./tmp/mymodel_loss_history.csv",
+            learning_rate=0.001,
+            decay=0.):
+
         writer = utils.get_tf_summary_writer("./log/mse")
 
         inputs = ops.convert_to_tensor(inputs, tf.float32)
@@ -778,8 +787,11 @@ class MyModel(object):
         update_inputs = []
 
         for play in self.plays:
-            inputs = play.model._layers[0].input
-            outputs = play.model._layers[-1].output
+            # inputs = play.model._layers[0].input
+            # outputs = play.model._layers[-1].output
+            inputs = play._layers[0].input
+            outputs = play._layers[-1].output
+
             model_inputs.append(inputs)
             model_outputs.append(outputs)
             feed_inputs.append(inputs)
@@ -794,7 +806,7 @@ class MyModel(object):
 
                 feed_targets.append(target)
 
-            update_inputs += play.model.get_updates_for(inputs)
+            # update_inputs += play.model.get_updates_for(inputs)
             params_list += play.model.trainable_weights
 
         if self._nb_plays > 1:
@@ -876,13 +888,27 @@ class MyModel(object):
             LOG.debug("Play #{}, weight: {}".format(i, play.weight))
             i += 1
 
-    def fit2(self, inputs, mean, sigma, epochs=100, verbose=0,
-             steps_per_epoch=1, loss_file_name="./tmp/mymodel_loss_history.csv",
-             learning_rate=0.001, decay=0.):
-        LOG.debug("Using MLE to fit")
+    def fit2(self,
+             inputs,
+             mean,
+             sigma,
+             outputs=None,
+             epochs=100,
+             verbose=0,
+             steps_per_epoch=1,
+             loss_file_name="./tmp/mymodel_loss_history.csv",
+             learning_rate=0.001,
+             decay=0.):
+
         _inputs = inputs
         writer = utils.get_tf_summary_writer("./log/mle")
         inputs = ops.convert_to_tensor(inputs, tf.float32)
+        if outputs is not None:
+            LOG.debug("Random walk: mu: {}, sigma: {}".format(outputs.mean(), outputs.std()))
+            __mu__ = (outputs[1:] - outputs[:-1]).mean()
+            __sigma__ = (outputs[1:] - outputs[:-1]).std()
+            outputs = ops.convert_to_tensor(outputs, tf.float32)
+
         import time
         for play in self.plays:
             if not play.built:
@@ -897,32 +923,32 @@ class MyModel(object):
         # import ipdb; ipdb.set_trace()
         #################### DO GRADIENT BY HAND HERE ####################
         def gradient_phi_cell(P):
-            _P = tf.reshape(P, shape=(P.shape[0].value, -1))
-            _diff = _P[:, 1:] - _P[:, :-1]
+            # _P = tf.reshape(P, shape=(P.shape[0].value, -1))
+            # _diff = _P[:, 1:] - _P[:, :-1]
 
-            x0 = tf.slice(_P, [0, 0], [1, 1])
-            diff = tf.concat([x0, _diff], axis=1)
+            # x0 = tf.slice(_P, [0, 0], [1, 1])
+            # diff = tf.concat([x0, _diff], axis=1)
 
-            p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
-            p2 = 1.0 - p1
-            p3_list = []
-            # TODO: multiple process here
+            # p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
+            # p2 = 1.0 - p1
+            # p3_list = []
+            # # TODO: multiple process here
 
-            for j in range(1, _P.shape[1].value):
-                p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
+            # for j in range(1, _P.shape[1].value):
+            #     p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
 
-            _p3 = tf.stack(p3_list, axis=1) + 1
-            p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
+            # _p3 = tf.stack(p3_list, axis=1) + 1
+            # p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
 
-            result = tf.multiply(p1, p3)
-            return tf.reshape(result, shape=P.shape.as_list())
+            # result = tf.multiply(p1, p3)
+            # return tf.reshape(result, shape=P.shape.as_list())
 
-            # reshaped_P = tf.reshape(P, shape=(P.shape[0].value, -1))
-            # diff = reshaped_P[:, 1:] - reshaped_P[:, :-1]
-            # x0 = tf.slice(reshaped_P, [0, 0], [1, 1])
-            # diff_ = tf.concat([x0, diff], axis=1)
-            # result = tf.cast(tf.abs(diff_) >= 1e-7, dtype=tf.float32)
-            # return tf.reshape(result, shape=P.shape)
+            reshaped_P = tf.reshape(P, shape=(P.shape[0].value, -1))
+            diff = reshaped_P[:, 1:] - reshaped_P[:, :-1]
+            x0 = tf.slice(reshaped_P, [0, 0], [1, 1])
+            diff_ = tf.concat([x0, diff], axis=1)
+            result = tf.cast(tf.abs(diff_) >= 1e-7, dtype=tf.float32)
+            return tf.reshape(result, shape=P.shape)
 
         def gradient_nonlinear_layer(fZ, activation=None):
             LOG.debug("gradient nonlinear activation {}".format(activation))
@@ -946,46 +972,53 @@ class MyModel(object):
         _x = [play.reshape(inputs) for play in self.plays]
         _x_feed_dict = {"input_{}:0".format(k+1) : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
         # import ipdb; ipdb.set_trace()
-        self.mean = tf.Variable(mean, name="mean", dtype=tf.float32)
-        self.sigma = tf.Variable(sigma, name="sigma", dtype=tf.float32)
+        # self.mean = tf.Variable(mean, name="mean", dtype=tf.float32)
+        # self.sigma = tf.Variable(sigma, name="sigma", dtype=tf.float32)
+
+        self.mean = tf.constant(mean, name="mean", dtype=tf.float32)
+        self.sigma = tf.constant(sigma, name="sigma", dtype=tf.float32)
 
         params_list = []
-        model_inputs = []
-        model_outputs = []
+        # model_inputs = []
         feed_inputs = []
-        feed_targets = []
-        update_inputs = []
+        model_outputs = []
 
-        target_mean = tf.keras.backend.placeholder(ndim=0, name="mean_target", dtype=tf.float32)
-        target_sigma = tf.keras.backend.placeholder(ndim=0, name="mean_sigma", dtype=tf.float32)
+        feed_targets = []
+        # update_inputs = []
+
+        # target_mean = tf.keras.backend.placeholder(ndim=0, name="mu_target", dtype=tf.float32)
+        # target_sigma = tf.keras.backend.placeholder(ndim=0, name="sigma_target", dtype=tf.float32)
+
         # feed_targets = [target_mean, target_mean]
 
         for play in self.plays:
-            inputs = play.model._layers[0].input
-            outputs = play.model._layers[-1].output
-            model_inputs.append(inputs)
-            model_outputs.append(outputs)
-            feed_inputs.append(inputs)
+            # inputs = play.model._layers[0].input
+            # outputs = play.model._layers[-1].output
+            # model_inputs.append(inputs)
+            # model_outputs.append(outputs)
 
-            for i in range(len(play.model.outputs)):
-                shape = tf.keras.backend.int_shape(play.model.outputs[i])
-                name = 'test{}'.format(i)
-                target = tf.keras.backend.placeholder(
-                    ndim=len(shape),
-                    name=name + '_target',
-                    dtype=tf.keras.backend.dtype(play.model.outputs[i]))
+            feed_inputs.append(play._layers[0].input)
+            model_outputs.append(play._layers[-1].output)
 
-                feed_targets.append(target)
+            # feed_inputs.append(inputs)
 
-            update_inputs += play.model.get_updates_for(inputs)
-            params_list += play.model.trainable_weights
+            # for i in range(len(play.model.outputs)):
+            #     shape = tf.keras.backend.int_shape(play.model.outputs[i])
+            #     name = 'test{}'.format(i)
+            #     target = tf.keras.backend.placeholder(
+            #         ndim=len(shape),
+            #         name=name + '_target',
+            #         dtype=tf.keras.backend.dtype(play.model.outputs[i]))
+
+            #     feed_targets.append(target)
+
+            # update_inputs += play.model.get_updates_for(inputs)
+            params_list += play.trainable_weights
 
         if self._nb_plays > 1:
             y_pred = tf.keras.layers.Average()(model_outputs)
         else:
             y_pred = model_outputs[0]
-
-        feed_inputs = model_inputs
 
         ##################### Prepare output of nonlinear #############################
 
@@ -1005,63 +1038,64 @@ class MyModel(object):
                 play = self.plays[idx]
 
                 ###### Extract Layer's outputs ######
-                reshaped_operator_layer = play.model.layers[1]
+                reshaped_operator_layer = play.layers[1]
                 operator_output = reshaped_operator_layer.output
 
-                nonlinear_output = play.model.layers[2].output
+                nonlinear_output = play.layers[2].output
 
                 ######## Extract Layer's weights #######
-                trainable_weights = play.model.trainable_weights
+                trainable_weights = play.trainable_weights
 
                 # phi_weight = play.model.layers[0].cell.last_kernel
                 # theta = play.model.layers[2].last_kernel
                 # tilde_theta = play.model.layers[3].last_kernel
 
-                phi_weight = play.model.layers[0].cell.kernel
-                theta = play.model.layers[2].kernel
-                tilde_theta = play.model.layers[3].kernel
+                phi_weight = play.layers[0].cell.kernel  # shape: 1 by 1
+                theta = play.layers[2].kernel            # shape: 1 by units
+                tilde_theta = play.layers[3].kernel      # shape: units by 1
 
                 ######## HANDLE Layer's weights #########
                 # import ipdb; ipdb.set_trace()
                 start_tick = time.time()
-                _gradient_tilde_theta = tf.transpose(tilde_theta, perm=[1, 0])
+                _gradient_tilde_theta = tf.transpose(tilde_theta, perm=[1, 0])  # shape: 1 by units
                 end_tick = time.time()
                 LOG.debug("Play #{} _gradient_tilde_theta cost: {} s".format(idx, end_tick-start_tick))
 
                 start_tick = time.time()
-                _theta = tf.tile(theta, multiples=[operator_output.shape[1].value, 1])
+                _theta = tf.tile(theta, multiples=[operator_output.shape[1].value, 1])  # timestep by units
                 end_tick = time.time()
                 LOG.debug("Play #{} _theta cost: {} s".format(idx, end_tick-start_tick))
 
                 start_tick = time.time()
+                # gradient nonlinear layer, shape: timestep by units
                 _gradient_theta = tf.multiply(_theta, gradient_nonlinear_layer(nonlinear_output, self._activation))
                 end_tick = time.time()
                 LOG.debug("Play #{} _gradient_theta cost: {} s".format(idx, end_tick-start_tick))
 
                 start_tick = time.time()
-                gradient_nonlinear = tf.matmul(_gradient_theta, tilde_theta)
+                gradient_nonlinear = tf.matmul(_gradient_theta, tilde_theta)  # shape: timestep by 1
                 end_tick = time.time()
                 LOG.debug("Play #{} gradient_nonlinear cost: {} s".format(idx, end_tick-start_tick))
 
                 start_tick = time.time()
-                _gradient_phi = gradient_phi_cell(play.layers[1].output)
+                _gradient_phi = gradient_phi_cell(play.layers[1].output)  # shape: timestep by 1
                 end_tick = time.time()
                 LOG.debug("Play #{} _gradient_phi cost: {} s".format(idx, end_tick-start_tick))
 
                 start_tick = time.time()
-                gradient_phi = tf.multiply(_gradient_phi, phi_weight)
+                gradient_phi = tf.multiply(_gradient_phi, phi_weight)  # shape: timestep by 1
                 end_tick = time.time()
                 LOG.debug("Play #{} gradient_phi cost: {} s".format(idx, end_tick-start_tick))
 
                 start_tick = time.time()
-                gradient_J = tf.multiply(gradient_phi, gradient_nonlinear)
+                gradient_J = tf.multiply(gradient_phi, gradient_nonlinear)  # shape: timestep by 1
                 end_tick = time.time()
                 LOG.debug("Play #{} gradient_J cost: {} s".format(idx, end_tick-start_tick))
                 #############################################
                 # import ipdb; ipdb.set_trace()
-                auto_gradient_nonlinear = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[2].input)
-                auto_gradient_phi = tf.keras.backend.gradients(play.model.layers[0].output, play.model.layers[0].input)
-                auto_gradient_J = tf.keras.backend.gradients(play.model.layers[3].output, play.model.layers[0].input)
+                auto_gradient_nonlinear = tf.keras.backend.gradients(play.layers[3].output, play.layers[2].input)
+                auto_gradient_phi = tf.keras.backend.gradients(play.layers[0].output, play.layers[0].input)
+                auto_gradient_J = tf.keras.backend.gradients(play.layers[3].output, play.layers[0].input)
 
                 # import ipdb; ipdb.set_trace()
                 ###############################################
@@ -1070,14 +1104,17 @@ class MyModel(object):
                 J_list.append(gradient_J)
 
             diff = y_pred[:, 1:, :] - y_pred[:, :-1, :]
+            # import ipdb;ipdb.set_trace()
 
+            mse_loss1 = tf.keras.backend.mean(tf.square(y_pred - tf.reshape(outputs, shape=y_pred.shape)))
+            mse_loss2 = tf.keras.backend.mean(tf.square(y_pred + tf.reshape(outputs, shape=y_pred.shape)))
             ###################### Calculate J by Tensorflow ###############################
             for i in range(self._nb_plays):
-                model_outputs[i] = tf.reshape(model_outputs[i], shape=model_inputs[i].shape)
+                model_outputs[i] = tf.reshape(model_outputs[i], shape=feed_inputs[i].shape)
 
-            y_pred = tf.reshape(y_pred, shape=model_inputs[0].shape)
+            y_pred = tf.reshape(y_pred, shape=feed_inputs[0].shape)
 
-            J = tf.keras.backend.gradients(model_outputs, model_inputs)
+            J = tf.keras.backend.gradients(model_outputs, feed_inputs)
             for i in range(self._nb_plays):
                 J[i] = tf.reshape(J[i], shape=(1, -1, 1))
 
@@ -1100,20 +1137,22 @@ class MyModel(object):
                 updates = self.optimizer.get_updates(params=params_list,
                                                      loss=loss)
 
-            updated_weights = updates[2::3]
+            # updated_weights = updates[2::3]
             # import ipdb; ipdb.set_trace()
 
-            training_inputs = feed_inputs + feed_targets
+            # training_inputs = feed_inputs + feed_targets
+            training_inputs = feed_inputs
             train_function = tf.keras.backend.function(training_inputs,
                                                        # [loss, _by_hand_list, _by_tf_list, updated_weights, J, J_by_hand],
-                                                       [loss, J, J_by_hand],
+                                                       [loss, J, J_by_hand, mse_loss1, mse_loss2, diff],
                                                        # [loss],
                                                        updates=updates)
 
         # _y = [y for _ in range(self._nb_plays)]
         # import ipdb; ipdb.set_trace()
-        _y = [self.mean, self.sigma]
-        ins = _x + _y
+        # _y = [self.mean, self.sigma]
+        # ins = _x + _y
+        ins = _x
         utils.init_tf_variables()
 
         writer.add_graph(tf.get_default_graph())
@@ -1203,7 +1242,7 @@ class MyModel(object):
                 # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
                 # cost, by_hand_list, by_tf_list, updated_weights_res, J_res, J_by_hand_res = train_function(ins)
-                cost, J_res, J_by_hand_res = train_function(ins)
+                cost, J_res, J_by_hand_res, mse_cost1, mse_cost2, diff_res = train_function(ins)
                 # cost = train_function(ins)[0]
 
                 # m = 0
@@ -1271,7 +1310,7 @@ class MyModel(object):
                 # print("J_list: {}".format(J_list_res))
                 # print("intral_res_list: {}".format(intral_res_liss))
                 # print("aa_list: {}".format(aa_list_res))
-            LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
+            LOG.debug("Epoch: {}, Loss: {}, MSE Loss1: {}, MSE Loss2: {}, diff_res.mu: {}, diff_res.sigma: {}, mu: {}, sigma: {}".format(i, cost, mse_cost1, mse_cost2, diff_res.mean(), diff_res.std(), __mu__, __sigma__))
             self.cost_history.append([i, cost])
 
 
@@ -1307,7 +1346,7 @@ class MyModel(object):
             LOG.debug(colors.cyan("Saving {}'s Weights to {}".format(play._name, path)))
             play.model.save_weights(path)
 
-        LOG.debug(colors.cyan("riting input shape into disk..."))
+        LOG.debug(colors.cyan("Writing input shape into disk..."))
         with open("{}/{}plays/input_shape.txt".format(fname[:-3], len(self.plays)), "w") as f:
             f.write(":".join(map(str, self.plays[0]._batch_input_shape.as_list())))
 

@@ -192,7 +192,7 @@ def model_nb_plays_generator_with_noise():
     sigma = 2
 
     points = 1000
-    units = 20
+    units = 2
     nb_plays = 20
 
     method = 'sin'
@@ -205,7 +205,7 @@ def model_nb_plays_generator_with_noise():
     run_test = False
 
     activation = 'tanh'
-    activation = None
+    # activation = None
 
     input_dim = 1
     state = 0

@@ -130,3 +130,78 @@ our derivation is:
 * implementation
 
   Consider \(P_{n} = [p_{1}, p_{2}, p_{3}, ..., p_{n}]\), \(G(P_{n}, w^{1}) = [y_{1}, y_{2}, y_{3}, ..., y_{n}]\)
+* Trading
+  Assume, we observe prices \(p_1, p_2, ..., p_N\) for a fixed \(N > 0\). Based on Dima's paper,
+  assume that the price \(p_{n}\) hysteretically depends on the underlying noise \(b_n\), with \(b_n\) being a
+  Brownian motion. Using the notation
+
+  \[\mathcal{B}_n := (b_1, b_2, ..., b_n), \mathcal{P}_n := (p_1, p_2, ..., p_n)\]
+
+  we have
+  \begin{eqnarray}
+  b_{0} = 0, \, b_{n} \thicksim \mathcal{N} (b_{n-1} + \mu_{b}, \sigma_{b}) \\
+  p_{n} = F(\mathcal{B}_n, W_{p})
+  \end{eqnarray}
+
+
+  Based on Dima's paperr again, the underlying noise \(b_n\) can be expressed as a hysteresis operator depending on
+  the observed prices \(p_n\), i.e.,
+  \[b_n=G(\mathcal{P}_n, W_b)\]
+
+
+  **This is very nice as long as F and G are Prandtl-Ishlinskii operators. However, if one explicitly adds N's strategy,
+  G becomes Preisach and F is not Preisach anymore. It is not clear how well it can be approximated by compositions of
+  plays and nonlinear functions**
+
+
+* Direct Learning
+  We learn the parameters \(W_b, \mu_b, \sigma_b\) and the initial state \(p_0\) of the network \(G\) by maximizing
+  the likelihood of \(\mathcal{P}\). Since \(\mathcal{P}\) is the determenistic function of a random variable
+  \(mathcal{B}\), its probability density is given by
+
+  \begin{eqnarray}
+  p(\mathcal{P}) &=& p(p_1, p_2, ..., p_N) \\
+                 &=& p_b(b_1, b_2, ..., b_N) \left|\det \mathcal{J(P)}\right| \\
+                 &=& p_b(G(\mathcal{P}_1, W_b), G(\mathcal{P}_2, W_b), ..., G(\mathcal{P}_N, W_b)) \left|\det \mathcal{J(P)}\right| \\
+  \end{eqnarray}
+
+  where
+  \begin{eqnarray}
+  p_b({\mathcal{B}}) &=& \prod_{n=1}^{N} p_b(b_1, b_2, ..., b_N) \\
+                     &=& \prod_{n=1}^{N} p_b(b_n|b_{n-1}) \\
+                     &=& \prod_{n=1}^{N} \frac{1}{\sqrt{2 \pi} \sigma} \exp\left(-\frac{(b_{n}-b_{n-1}-\mu_{b})^2}{2 \sigma^2}\right)
+  \end{eqnarray}
+  is the probability distribution of \(\mathcal{B}\) and \(\mathcal{J(P)}\) is the Jacobian matrix. Recall that \(G\) has the
+  causality property, hence \(\mathcal{J(P)}\) is a triangular matrix. Therefore, yield
+  \begin{eqnarray}
+  p(\mathcal{P}) &=& p_b(G(\mathcal{P}_1, W_b), G(\mathcal{P}_2, W_b), ..., G(\mathcal{P}_N, W_b)) \left|\det \mathcal{J(P)}\right| \\
+                 &=& \prod_{n=1}^{N} \frac{1}{\sqrt{2 \pi} \sigma} \exp\left(-\frac{(b_{n}-b_{n-1}-\mu_{b})^2}{2 \sigma^2}\right)
+                     \prod_{n=1}^{N} \left| \frac{\partial b_n}{\partial p_n} \right| \\
+                 &=& \prod_{n=1}^{N} \frac{1}{\sqrt{2 \pi} \sigma} \exp\left(-\frac{(b_{n}-b_{n-1}-\mu_{b})^2}{2 \sigma^2}\right) \left|\frac{\partial b_n}{\partial p_n}\right|
+  \end{eqnarray}
+
+  Thus, maximizing the log-likelihood of \(p(\mathcal{P})\) is equivalent to the following:
+  \begin{eqnarray}
+  L = \ln p(\mathcal{P}) &\thicksim& \sum_{n=1}^{N} \left(- \frac{(b_n-b_{n-1}-\mu_{b})^2}{2 \sigma_{b}^2} - \ln \sigma_{b} + \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right) \\
+    &=& - \frac{1}{2} \sum_{n=1}^{N} \left[\left(\frac{b_n - b_{n-1} - \mu_{b}}{\sigma_b} \right)^2 + 2 \ln \sigma_{b} - 2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right] \\
+  \end{eqnarray}
+
+  It's also equivalent to mimizing the loss function as following:
+  \begin{eqnarray}
+  \min L &=& \min \sum_{n=1}^{N} \left[\left(\frac{b_n - b_{n-1} - \mu_{b}}{\sigma_b} \right)^2 - 2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right] \\
+         &=& \min \sum_{n=1}^{N} \left[\left( b_n - b_{n-1} - \mu_{b}\right)^2 - 2 \sigma_{b}^2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right] \\
+  \end{eqnarray}
+* MSE and MLE
+  \begin{eqnarray}
+
+  y &\thicksim& \mathcal{N} \left( y | G(x, w), \sigma^2 \right) \\
+  p(y) &=& \frac{1}{\sqrt{2 \pi} \sigma} \exp \left(-\frac{(y-G(x, w))^2}{\sigma^2} \right) \\
+  p(\mathcal{Y}) &=& \prod_{i} p(y_i) \\
+  \ln p(\mathcal{Y}) &=& \sum_{i} \left( -\frac{1}{2}\ln 2 \pi - \ln \sigma - \frac{(y_i - G(x_i, w)^2}{\sigma^2} \right) \\
+  \end{eqnarray}
+
+  Assume \(z_i = f(y_i)\), we obtain
+  \begin{eqnarray}
+  p(z_i) = p(f(y_i)) \left(\frac{\partial f}{\partial y_i}\right)^{-1} f^{-1}(z_i)  \\
+  \end{eqnarray}
+  \(\max (\mu, \sigma, w)\) s.t. \(p(z_i)\) is maximal \\

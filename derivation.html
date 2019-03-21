@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2019-02-26 二 12:16 -->
+<!-- 2019-03-12 Tue 10:51 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>&lrm;</title>
@@ -250,6 +250,18 @@ for the JavaScript code in this tag.
 </head>
 <body>
 <div id="content">
+<div id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#org8ee014f">1. 1</a></li>
+<li><a href="#org8137883">2. 2</a></li>
+</ul>
+</div>
+</div>
+<div id="outline-container-org8ee014f" class="outline-2">
+<h2 id="org8ee014f"><span class="section-number-2">1</span> 1</h2>
+<div class="outline-text-2" id="text-1">
 <p>
 First we only consider <b>one play</b>
 </p>
@@ -288,22 +300,26 @@ So \(\sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} P_{n} + \theta_{i0}) + \
 Take \(y_{j}\), where \(j \in [1, ..., n]\) for example
 </p>
 
+<p>
+Let \(z_j=\theta_i p_j + \theta_{i0}\) and \(f(z_j) = \tanh(\theta_i p_j + \theta_{i0})\), we obtain
+</p>
 \begin{eqnarray}
-y_{j}  = \sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} p_{j} + \theta_{i0}) + \theta_{i0}
+y_{j}  &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} p_{j} + \theta_{i0}) + \tilde{\theta_{0}}  \\
+       &=& \sum_{i=1}^{S} \tilde{\theta_{i}} f(z_j) + \tilde{\theta_{i0}} \\
 \end{eqnarray}
 
 <p>
-Calculate derivation for \(y_{j}\)
+Calculate derivation for \(y_{j}\),
 </p>
 \begin{eqnarray}
-\frac{\partial y_{j}}{\partial p_{j}} &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \frac{\partial \tanh(\theta_{i} p_{j} + \theta_{i0})}{\partial p_{j}}  \\
+\frac{\partial y_{j}}{\partial p_{j}} &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} \frac{\partial f(z_j)}{\partial z_{j}}  \\
 \end{eqnarray}
 
 <p>
-Now let's consider the mapping between \(p_{j}\) and \(x_{j}\).
+Now let's consider the mapping between \(p_{j}\) and \(x_{j}\). let \(\sigma_{j} = w^{1} x_{j} - p_{j-1}\)
 </p>
 \begin{eqnarray}
-p_{j} = \Phi(w_{1} x_{j} - p_{j-1}) + p_{j-1}
+p_{j} = \Phi(\sigma_{j}) + p_{j-1}
 \end{eqnarray}
 
 <p>
@@ -321,11 +337,11 @@ and
 \end{eqnarray}
 
 <p>
-Using Chain Rule, we obtain
+Using chain rule, we obtain
 </p>
 \begin{eqnarray}
 \frac{\partial y_{j}}{\partial x_{j}} &=& \frac{\partial y_{j}}{\partial p_{j}} \frac{\partial p_{j}}{\partial x_{j}} \\
-                                      &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \frac{\partial \tanh(\theta_{i} p_{j} + \theta_{i0})}{\partial p_{j}} \frac{\partial{\Phi(w^{1} x_{j} - p_{j-1})}}{\partial{x_{j}}}
+                                      &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} w^{1} \frac{\partial f(z_j)}{\partial z_{j}} \frac{\partial{\Phi(\sigma_{j})}}{\partial{\sigma_{j}}}
 \end{eqnarray}
 
 
@@ -335,7 +351,7 @@ To consider <b>multiple plays</b> case, we reformulate the derivation as followi
 
 \begin{eqnarray}
 \frac{\partial {y_{j}^{1}}}{\partial x_{j}} &=& \frac{\partial{y_{j}^{1}}}{\partial{p_{j}^{1}}} \frac{\partial{ p_{j}}^{1}}{\partial x_{j}} \\
-                                      &=& \sum_{i=1}^{S} \tilde{\theta_{i}^{1}} \frac{\partial \tanh(\theta_{i}^{1} p_{j}^{1} + \theta_{i0})}{\partial p_{j}^{1}} \frac{\partial{\Phi(w^{1} x_{j} - p_{j-1}^{1})}}{\partial{x_{j}}} \\
+                                      &=& \sum_{i=1}^{S} \tilde{\theta_{i}^{1}} \theta_{i}^{1} w^{1} \frac{\partial f(z_{j}^{1})}{\partial z_{j}^{1}} \frac{\partial{\Phi(\sigma_{j}^{1})}}{\partial{\sigma_{j}^{1}}}
 \end{eqnarray}
 
 
@@ -343,14 +359,14 @@ To consider <b>multiple plays</b> case, we reformulate the derivation as followi
 Now from the architecture, we know that if we have \(P\) plays,
 </p>
 \begin{eqnarray}
-F = \frac{1}{P} \sum_{i=1}^{P} G^{i}
+F = \frac{1}{P} \sum_{k=1}^{P} G^{k}
 \end{eqnarray}
 <p>
 Where \(F=[f_1, f_2, ..., f_n]\),
 and
 </p>
 \begin{eqnarray}
-f_{j} = \frac{1}{P} \sum_{i=1}^{P} y_{j}^{i}
+f_{j} = \frac{1}{P} \sum_{k=1}^{P} y_{j}^{k}
 \end{eqnarray}
 
 <p>
@@ -360,11 +376,16 @@ our derivation is:
 \begin{eqnarray}
 \frac{\partial f_{j}}{\partial x_{j}} &=& \frac{1}{P} \sum_{k=1}^{P} \frac{\partial {{y_{j}^{k}}}}{\partial {{x_{j}}}} \\
                &=& \frac{1}{P} \sum_{k=1}^{P} \frac{\partial {y_{j}^{k}}}{\partial {p_{j}^{k}}} \frac{\partial {p_{j}^{k}}}{\partial {x_{j}}} \\
-               &=& \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \frac{\partial \tanh(\theta_{i}^{k} p_{j}^{k} + \theta_{i0})}{\partial p_{j}^{k}} \frac{\partial{\Phi(w^{k} x_{j} - p_{j-1}^{k})}}{\partial{x_{j}}} \\
+               &=& \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \theta_{i}^{k} w^{k} \frac{\partial f(z_{j}^{k})}{\partial z_{j}^{k}} \frac{\partial{\Phi(\sigma_{j}^{k})}}{\partial{\sigma_{j}^{k}}} \\
 \end{eqnarray}
 </div>
+</div>
+<div id="outline-container-org8137883" class="outline-2">
+<h2 id="org8137883"><span class="section-number-2">2</span> 2</h2>
+</div>
+</div>
 <div id="postamble" class="status">
-<p class="date">Created: 2019-02-26 二 12:16</p>
+<p class="date">Created: 2019-03-12 Tue 10:51</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>
