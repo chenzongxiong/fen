@@ -695,6 +695,17 @@ class Play(object):
         return self.model.trainable_variables
 
 
+    @property
+    def output(self):
+        # assert len(self.model.outputs) == 1, colors.red("the outputs of play must be 1")
+        # return self.model.outputs[0]
+        return self.model._layers[-1].output
+
+    @property
+    def input(self):
+        return self.model._layers[0].input
+
+
 class MyModel(object):
     def __init__(self, nb_plays=1,
                  units=1,
@@ -771,6 +782,8 @@ class MyModel(object):
         writer = utils.get_tf_summary_writer("./log/mse")
 
         inputs = ops.convert_to_tensor(inputs, tf.float32)
+        __mu__ = (outputs[1:] - outputs[:-1]).mean()
+        __sigma__ = (outputs[1:] - outputs[:-1]).std()
         outputs = ops.convert_to_tensor(outputs, tf.float32)
 
         for play in self.plays:
@@ -780,31 +793,38 @@ class MyModel(object):
         x, y = self.plays[0].reshape(inputs, outputs)
 
         params_list = []
-        model_inputs = []
+        # model_inputs = []
         model_outputs = []
         feed_inputs = []
         feed_targets = []
-        update_inputs = []
+        # update_inputs = []
 
-        for play in self.plays:
+        for idx, play in enumerate(self.plays):
             # inputs = play.model._layers[0].input
             # outputs = play.model._layers[-1].output
-            inputs = play._layers[0].input
-            outputs = play._layers[-1].output
+            # inputs = play._layers[0].input
+            # outputs = play._layers[-1].output
 
-            model_inputs.append(inputs)
-            model_outputs.append(outputs)
-            feed_inputs.append(inputs)
+            # model_inputs.append(inputs)
+            # feed_inputs.append(play._layers[0].input)
+            # model_outputs.append(play._layers[-1].output)
+            feed_inputs.append(play.input)
+            model_outputs.append(play.output)
 
-            for i in range(len(play.model.outputs)):
-                shape = tf.keras.backend.int_shape(play.model.outputs[i])
-                name = 'test{}'.format(i)
-                target = tf.keras.backend.placeholder(
-                    ndim=len(shape),
-                    name=name + '_target',
-                    dtype=tf.keras.backend.dtype(play.model.outputs[i]))
-
-                feed_targets.append(target)
+            # for i in range(len(play.output)):
+            #     shape = tf.keras.backend.int_shape(play.outputs[i])
+            #     name = 'play{}_target'.format(i)
+            #     target = tf.keras.backend.placeholder(
+            #         ndim=len(shape),
+            #         name=name,
+            #         dtype=tf.keras.backend.dtype(play.outputs[i]))
+            shape = tf.keras.backend.int_shape(play.output)
+            name = 'play{}_target'.format(idx)
+            target = tf.keras.backend.placeholder(
+                ndim=len(shape),
+                name=name,
+                dtype=tf.keras.backend.dtype(play.output))
+            feed_targets.append(target)
 
             # update_inputs += play.model.get_updates_for(inputs)
             params_list += play.model.trainable_weights
@@ -815,17 +835,19 @@ class MyModel(object):
             y_pred = model_outputs[0]
 
         loss = tf.keras.backend.mean(tf.math.square(y_pred - y))
+        mu = tf.keras.backend.mean(y_pred[:, 1:, :] - y_pred[:, :-1, :])
+        sigma = tf.keras.backend.std(y_pred[:, 1:, :] - y_pred[:, :-1, :])
         # decay: decay learning rate to half every 100 steps
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, decay=decay)
         with tf.name_scope('training'):
             with tf.name_scope(self.optimizer.__class__.__name__):
                 updates = self.optimizer.get_updates(params=params_list,
                                                      loss=loss)
-            updates += update_inputs
+            # updates += update_inputs
 
             training_inputs = feed_inputs + feed_targets
             train_function = tf.keras.backend.function(training_inputs,
-                                                       [loss],
+                                                       [loss, mu, sigma],
                                                        updates=updates)
 
         _x = [x for _ in range(self._nb_plays)]
@@ -840,12 +862,17 @@ class MyModel(object):
 
         for i in range(epochs):
             for j in range(steps_per_epoch):
-                cost = train_function(ins)[0]
+                cost, predicted_mu, predicted_sigma = train_function(ins)
             self.cost_history.append([i, cost])
             # if i != 0  and i % 50 == 0:     # save weights every 50 epochs
             #     fname = "{}/epochs-{}/weights-mse.h5".format(path, i)
             #     self.save_weights(fname)
-            LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
+            LOG.debug("Epoch: {}, Loss: {}, predicted_mu: {}, predicted_sigma: {}, truth_mu: {}, truth_sigma: {}".format(i,
+                                                                                                                         cost,
+                                                                                                                         predicted_mu,
+                                                                                                                         predicted_sigma,
+                                                                                                                         __mu__,
+                                                                                                                         __sigma__))
 
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
