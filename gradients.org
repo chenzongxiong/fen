@@ -29,12 +29,12 @@ Take \(y_{j}\), where \(j \in [1, ..., n]\) for example
 Let \(z_j=\theta_i p_j + \theta_{i0}\) and \(f(z_j) = \tanh(\theta_i p_j + \theta_{i0})\), we obtain
 \begin{eqnarray}
 y_{j}  &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} p_{j} + \theta_{i0}) + \tilde{\theta_{0}}  \\
-       &=& \sum_{i=1}^{S} \tilde{\theta_{i}} f(z_j) + \tilde{\theta_{i0}} \\
+       &=& \sum_{i=1}^{S} \tilde{\theta_{i}} f(z_j) + \tilde{\theta_{i0}}
 \end{eqnarray}
 
 Calculate derivation for \(y_{j}\),
 \begin{eqnarray}
-\frac{\partial y_{j}}{\partial p_{j}} &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} \frac{\partial f(z_j)}{\partial z_{j}}  \\
+\frac{\partial y_{j}}{\partial p_{j}} &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} \frac{\partial f(z_j)}{\partial z_{j}}
 \end{eqnarray}
 
                                       # &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} \frac{\partial{}}{\partial{}} \\
@@ -97,39 +97,33 @@ our derivation is:
 \begin{eqnarray}
 \frac{\partial f_{j}}{\partial x_{j}} &=& \frac{1}{P} \sum_{k=1}^{P} \frac{\partial {{y_{j}^{k}}}}{\partial {{x_{j}}}} \\
                &=& \frac{1}{P} \sum_{k=1}^{P} \frac{\partial {y_{j}^{k}}}{\partial {p_{j}^{k}}} \frac{\partial {p_{j}^{k}}}{\partial {x_{j}}} \\
-               &=& \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \theta_{i}^{k} w^{k} \frac{\partial f(z_{j}^{k})}{\partial z_{j}^{k}} \frac{\partial{\Phi(\sigma_{j}^{k})}}{\partial{\sigma_{j}^{k}}} \\
+               &=& \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \theta_{i}^{k} w^{k} \frac{\partial f(z_{j}^{k})}{\partial z_{j}^{k}} \frac{\partial{\Phi(\sigma_{j}^{k})}}{\partial{\sigma_{j}^{k}}}
 \end{eqnarray}
                # &=& \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \frac{\partial \tanh(\theta_{i}^{k} p_{j}^{k} + \theta_{i0})}{\partial p_{j}^{k}} \frac{\partial{\Phi(w^{k} x_{j} - p_{j-1}^{k})}}{\partial{x_{j}}} \\
                # &=&                        \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \theta_{i}^{k} (1 - \tanh^{2}(\theta_{i}^{k} p_{j}^{k} + \theta_{i0}^{k})) w^{k}
 
 * RNN gradients
   \begin{eqnarray}
-  \frac{\partial{p_j}}{\partial x_j} &=& \Phi'(\sigma_j) \frac{\partial \sigma_j}{\partial x_j} \\
+  \frac{\partial p_j}{\partial x_j} &=& \Phi'(\sigma_j) \frac{\partial \sigma_j}{\partial x_j} \\
   &=& \Phi'(\sigma_j) w^{1} \\
-
   \\
   \\
-
-  \frac{\partial{p_{j+1}}}{\partial x_j} &=& \frac{\partial (\Phi(\sigma_{j+1}) + p_j)}{\partial x_j} \\
+  \frac{\partial p_{j+1}}{\partial x_j} &=& \frac{\partial (\Phi(\sigma_{j+1}) + p_j)}{\partial x_j} \\
   &=& \Phi'(\sigma_{j+1}) \frac{\partial \sigma_{j+1}}{\partial x_j} + \frac{\partial p_j}{\partial x_j} \\
-  &=& \Phi'(\sigma_{j+1}) \frac{\partial (w^{1}x_{j+1} - p_{j})}{\partial x_j} + \frac{\partial p_j}{\partial x_j} \\
-  &=& (1-\Phi'(\sigma_{j+1})) \Phi'(\sigma_j) w^{1}
-
-
+  &=& \Phi'(\sigma_{j+1}) \frac{\partial (w^{1} x_{j+1} - p_{j})}{\partial x_j} + \frac{\partial p_j}{\partial x_j} \\
+  &=& (1-\Phi'(\sigma_{j+1})) \Phi'(\sigma_j) w^{1} \\
   \\
   \\
-  \frac{\partial{p_{j+2}}}{\partial x_j} &=&  (1-\Phi'(\sigma_{j+2})) (1-\Phi'(\sigma_{j+1})) \Phi'(\sigma_j) w^{1} \\
-
+  \frac{\partial p_{j+2}}{\partial x_j} &=&  (1-\Phi'(\sigma_{j+2})) (1-\Phi'(\sigma_{j+1})) \Phi'(\sigma_j) w^{1} \\
   \\
   \\
-  \frac{\partial{p_{j+i}}}{\partial x_j} &=&  (1-\Phi'(\sigma_{j+i})) ... (1-\Phi'(\sigma_{j+1})) \Phi'(\sigma_j) w^{1} \\
-
-
-
+  \frac{\partial p_{j+i}}{\partial x_j} &=&  (1-\Phi'(\sigma_{j+i})) ... (1-\Phi'(\sigma_{j+1})) \Phi'(\sigma_j) w^{1}
   \end{eqnarray}
-* implementation
 
-  Consider \(P_{n} = [p_{1}, p_{2}, p_{3}, ..., p_{n}]\), \(G(P_{n}, w^{1}) = [y_{1}, y_{2}, y_{3}, ..., y_{n}]\)
+* Implementation
+
+  Consider \(\mathcal{P}_{n} = [p_{1}, p_{2}, p_{3}, ..., p_{n}]\), \(G(\mathcal{P}_{n}, w^{1}) = [y_{1}, y_{2}, y_{3}, ..., y_{n}]\)
+
 * Trading
   Assume, we observe prices \(p_1, p_2, ..., p_N\) for a fixed \(N > 0\). Based on Dima's paper,
   assume that the price \(p_{n}\) hysteretically depends on the underlying noise \(b_n\), with \(b_n\) being a
@@ -162,7 +156,7 @@ our derivation is:
   \begin{eqnarray}
   p(\mathcal{P}) &=& p(p_1, p_2, ..., p_N) \\
                  &=& p_b(b_1, b_2, ..., b_N) \left|\det \mathcal{J(P)}\right| \\
-                 &=& p_b(G(\mathcal{P}_1, W_b), G(\mathcal{P}_2, W_b), ..., G(\mathcal{P}_N, W_b)) \left|\det \mathcal{J(P)}\right| \\
+                 &=& p_b(G(\mathcal{P}_1, W_b), G(\mathcal{P}_2, W_b), ..., G(\mathcal{P}_N, W_b)) \left|\det \mathcal{J(P)}\right|
   \end{eqnarray}
 
   where
@@ -183,25 +177,36 @@ our derivation is:
   Thus, maximizing the log-likelihood of \(p(\mathcal{P})\) is equivalent to the following:
   \begin{eqnarray}
   L = \ln p(\mathcal{P}) &\thicksim& \sum_{n=1}^{N} \left(- \frac{(b_n-b_{n-1}-\mu_{b})^2}{2 \sigma_{b}^2} - \ln \sigma_{b} + \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right) \\
-    &=& - \frac{1}{2} \sum_{n=1}^{N} \left[\left(\frac{b_n - b_{n-1} - \mu_{b}}{\sigma_b} \right)^2 + 2 \ln \sigma_{b} - 2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right] \\
+    &=& - \frac{1}{2} \sum_{n=1}^{N} \left[\left(\frac{b_n - b_{n-1} - \mu_{b}}{\sigma_b} \right)^2 + 2 \ln \sigma_{b} - 2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right]
   \end{eqnarray}
 
-  It's also equivalent to mimizing the loss function as following:
+  It's also equivalent to minimize the loss function as following:
   \begin{eqnarray}
-  \min L &=& \min \sum_{n=1}^{N} \left[\left(\frac{b_n - b_{n-1} - \mu_{b}}{\sigma_b} \right)^2 - 2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right] \\
-         &=& \min \sum_{n=1}^{N} \left[\left( b_n - b_{n-1} - \mu_{b}\right)^2 - 2 \sigma_{b}^2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right] \\
+  \min_{W_b, p_0} L &=& \min_{W_b, p_0} \sum_{n=1}^{N} \left[\left(\frac{b_n - b_{n-1} - \mu_{b}}{\sigma_b} \right)^2 - 2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right] \\
+         &=& \min_{W_b, p_0} \sum_{n=1}^{N} \left[\left( b_n - b_{n-1} - \mu_{b}\right)^2 - 2 \sigma_{b}^2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right]
   \end{eqnarray}
 * MSE and MLE
   \begin{eqnarray}
 
   y &\thicksim& \mathcal{N} \left( y | G(x, w), \sigma^2 \right) \\
   p(y) &=& \frac{1}{\sqrt{2 \pi} \sigma} \exp \left(-\frac{(y-G(x, w))^2}{\sigma^2} \right) \\
-  p(\mathcal{Y}) &=& \prod_{i} p(y_i) \\
-  \ln p(\mathcal{Y}) &=& \sum_{i} \left( -\frac{1}{2}\ln 2 \pi - \ln \sigma - \frac{(y_i - G(x_i, w)^2}{\sigma^2} \right) \\
+  p(\mathcal{Y}) &=& p (y_1, y_2, ..., y_N) \\
+                 &=& \prod_{i} p(y_i) \\
+  \ln p(\mathcal{Y}) &=& \sum_{i} \left( -\frac{1}{2}\ln 2 \pi - \ln \sigma - \frac{(y_i - G(x_i, w)^2}{\sigma^2} \right)
   \end{eqnarray}
 
   Assume \(z_i = f(y_i)\), we obtain
   \begin{eqnarray}
-  p(z_i) = p(f(y_i)) \left(\frac{\partial f}{\partial y_i}\right)^{-1} f^{-1}(z_i)  \\
+  p(z_i) = p(f(y_i)) \left(\frac{\partial f}{\partial y_i}\right)^{-1} f^{-1}(z_i)
   \end{eqnarray}
   \(\max (\mu, \sigma, w)\) s.t. \(p(z_i)\) is maximal \\
+
+* How to determine undetermined direction of random walk ?
+  If external agents buy stocks from the market, then the total number of stocks in market descreases, leading to increasing the prices.
+
+  In other words, the amount of stocks in market descreases if price rises. And the amount of stocks increases if prices go down.
+
+  The root cause of amount chaging in our assumption is the behavior of external agents.
+  We model the behavior of external agents as markov chain(random walk).
+
+  Since we observe a series of prices in advance, we can determine the direction of random walk.

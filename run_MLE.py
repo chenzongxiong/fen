@@ -29,7 +29,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 500
+    epochs = 1000
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -129,13 +129,13 @@ if __name__ == "__main__":
     learning_rate = 0.01
 
     loss_name = 'mse'
-    # loss_name = 'mle'
+    loss_name = 'mle'
 
     method = 'sin'
     # method = 'mixed'
     # method = 'noise'
     interp = 1
-    do_prediction = False
+    do_prediction = True
 
 
     with_noise = True
@@ -150,13 +150,13 @@ if __name__ == "__main__":
     input_dim = 1
     ############################## ground truth #############################
     nb_plays = 20
-    units = 2
+    units = 20
     state = 0
     # activation = 'tanh'
     activation = None
     ############################## predicitons #############################
     __nb_plays__ = 20
-    __units__ = 2
+    __units__ = 20
     __state__ = 0
     # __activation__ = 'tanh'
     # __activation__ = 'relu'

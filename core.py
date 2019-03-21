@@ -1345,22 +1345,46 @@ class MyModel(object):
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
     def predict2(self,  inputs):
-        _inputs = ops.convert_to_tensor(inputs, tf.float32)
+        _inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
         for play in self.plays:
             self._need_compile = False
             if not play.built:
                 play.build(_inputs)
 
-        x = self.plays[0].reshape(inputs)
         outputs = []
         for play in self.plays:
+            x = play.reshape(inputs)
             outputs.append(play.predict(x))
         outputs_ = np.array(outputs)
         prediction = outputs_.mean(axis=0)
         prediction = prediction.reshape(-1)
-        diff = prediction[1:] - prediction[:-1]
-        mean = diff.mean()
-        std = diff.std()
+
+        # keep prices and random walk in the same direction in our assumption
+        diff_pred = prediction[1:] - prediction[:-1]
+        diff_input = inputs[1:] - inputs[:-1]
+        direction_input = (diff_input > 0).astype(np.int32) - (diff_input < 0).astype(np.int32)
+        direction_pred = (diff_pred > 0).astype(np.int32) - (diff_pred < 0).astype(np.int32)
+        direction_input = direction_input.reshape(-1)
+        direction_pred = direction_pred.reshape(-1)
+        # _direction = direction_input.reshape(-1)
+        # for i in range(direction_input.shape[0]):
+        #     if direction_input[i] == 0:
+        #         direction_input[i] = direction_input[i-1]
+
+        # for i in range(direction_pred.shape[0]):
+        #     if direction_pred[i] == 0:
+        #         direction_pred[i] = direction_pred[i-1]
+
+        _direction = direction_input * direction_pred
+        direction = np.concatenate([[1], _direction])
+        for i in range(1, direction.shape[0]):
+            if direction[i] == 0:
+                direction[i] = direction[i-1]
+
+        prediction = prediction * direction
+
+        mean = diff_pred.mean()
+        std = diff_pred.std()
         LOG.debug("mean: {}, std: {}".format(mean, std))
         return prediction, float(mean), float(std)
 
