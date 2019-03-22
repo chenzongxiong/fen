@@ -146,3 +146,19 @@ def build_play(play, inputs):
 def build_p3(p2, j):
     import tensorflow as tf
     return tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1)
+
+
+def slide_window_average(arr, window_size=5, step=1):
+    assert len(arr.shape) == 1, colors.red("slide window only support 1-dim")
+    N = arr.shape[0]
+    stacked_array = np.vstack([ arr[i: 1 + N + i - window_size:step] for i in range(window_size) ])
+    avg = np.concatenate([stacked_array.mean(axis=0), arr[-window_size+1:]])
+    return avg
+
+
+if __name__ == "__main__":
+    import numpy as np
+    arr = np.arange(100)
+    # arr1 = slide_window_average(arr, 1)
+    # arr2 = slide_window_average(arr, 2)
+    arr3 = slide_window_average(arr, 3)

@@ -1157,7 +1157,7 @@ class MyModel(object):
             # _loss = tf.keras.backend.square((diff-self.mean)/self.sigma)/2.0 - tf.keras.backend.log(detJ[:, 1:, :])
             # BUGS: something wrong here
             # _loss = tf.keras.backend.square((diff-self.mean)/self.sigma)/2.0 - tf.keras.backend.log(normalized_J[:, 1:, :])
-            _loss = tf.keras.backend.square(diff/sigma)/2.0 - tf.keras.backend.log(normalized_J[:, 1:, :])
+            _loss = tf.keras.backend.square(diff-mean) - tf.keras.backend.log(normalized_J[:, 1:, :])
             loss = tf.keras.backend.mean(_loss)
 
             with tf.name_scope(self.optimizer.__class__.__name__):
@@ -1382,7 +1382,7 @@ class MyModel(object):
                 direction[i] = direction[i-1]
 
         # prediction = prediction * direction
-
+        prediction = utils.slide_window_average(prediction, window_size=5)
         mean = diff_pred.mean()
         std = diff_pred.std()
         LOG.debug("mean: {}, std: {}".format(mean, std))
