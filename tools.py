@@ -1,6 +1,7 @@
 import utils
 import constants
 import log as logging
+import core
 
 LOG = logging.getLogger(__name__)
 
@@ -61,14 +62,27 @@ def show_loss():
     fig = plt.figure()
     ax = plt.axes(projection='3d')
 
-    z = np.linspace(0, 1, 100)
-    x = z * np.sin(20 * z)
-    y = z * np.cos(20 * z)
+    phi_weight= np.linspace(0, 5, 500)
+    # theta = np.linspace(-10, 10, 2000)
+    # bias = np.linspace(-10, 10, 2000)
+    # tilde_theta = np.linspace(-10, 10, 2000)
+    # tilde_bias = np.linspace(-10, 10, 2000)
+
+    # mymodel = core.MyModel()
+
+    x = phi_weight * np.sin(20 * phi_weight)
+    y = phi_weight * np.cos(20 * phi_weight)
 
     c = x + y
 
-    ax.scatter(x, y, z, c=c)
-
+    # ax.scatter(x, y, phi_weight, c=c)
+    ax.plot(x, y, phi_weight, '-b')
+    # ax.plot(x, y, c, '-b')
+    # ax.plot_surface(x, y, phi_weight,
+    #                 cmap=plt.cm.jet,
+    #                 rstride=1,
+    #                 cstride=1,
+    #                 linewidth=0)
     plt.show()
 
 
