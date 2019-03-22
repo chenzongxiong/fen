@@ -5,6 +5,7 @@ import log as logging
 LOG = logging.getLogger(__name__)
 
 
+
 nb_plays = 20
 # weights_file_key = 'models_diff_weights_saved_weights'
 weights_file_key = 'models_diff_weights_mc_saved_weights'
@@ -47,7 +48,29 @@ weights_fname = constants.DATASET_PATH[weights_file_key].format(method=method,
                                                                 loss=loss_name)
 
 
-for i in range(nb_plays):
-    LOG.debug("==================== PLAY {} ====================".format(i+1))
-    fname = weights_fname[:-3] + '/{}plays/play-{}.h5'.format(nb_plays, i+1)
-    utils.read_saved_weights(fname)
+def show_weights(weights_fname):
+    for i in range(nb_plays):
+        LOG.debug("==================== PLAY {} ====================".format(i+1))
+        fname = weights_fname[:-3] + '/{}plays/play-{}.h5'.format(nb_plays, i+1)
+        utils.read_saved_weights(fname)
+
+def show_loss():
+    from mpl_toolkits.mplot3d import Axes3D
+    import matplotlib.pyplot as plt
+    import numpy as np
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
+
+    z = np.linspace(0, 1, 100)
+    x = z * np.sin(20 * z)
+    y = z * np.cos(20 * z)
+
+    c = x + y
+
+    ax.scatter(x, y, z, c=c)
+
+    plt.show()
+
+
+if __name__ == "__main__":
+    show_loss()

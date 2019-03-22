@@ -36,7 +36,7 @@ def fit(inputs,
     input_dim = 10
     timestep = inputs.shape[0] // input_dim
     steps_per_epoch = input_dim
-    steps_per_epoch = 1
+    # steps_per_epoch = 1
 
     mymodel = MyModel(input_dim=input_dim,
                       timestep=timestep,
@@ -44,7 +44,7 @@ def fit(inputs,
                       activation=activation,
                       nb_plays=nb_plays)
     LOG.debug("Learning rate is {}".format(learning_rate))
-    # mymodel.load_weights(weights_fname)
+    mymodel.load_weights(weights_fname)
     if loss_name == 'mse':
         mymodel.fit(inputs,
                     outputs,
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     # method = 'mixed'
     # method = 'noise'
     interp = 1
-    do_prediction = True
+    do_prediction = False
 
 
     with_noise = True
@@ -150,7 +150,7 @@ if __name__ == "__main__":
     input_dim = 1
     ############################## ground truth #############################
     nb_plays = 20
-    units = 20
+    units = 10000               # special for dataset comes from simulation
     state = 0
     # activation = 'tanh'
     activation = None
@@ -162,7 +162,9 @@ if __name__ == "__main__":
     # __activation__ = 'relu'
     __activation__ = None
     __mu__ = 0
-    __sigma__ = 2
+    __sigma__ = 1
+    # __sigma__ = 5
+    # __sigma__ = 20
 
     if method == 'noise':
         with_noise = True

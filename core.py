@@ -1184,7 +1184,7 @@ class MyModel(object):
 
         writer.add_graph(tf.get_default_graph())
         self.cost_history = []
-        steps_per_epoch = 1
+        # steps_per_epoch = 1
         once = True
         cost = -1
 
@@ -1381,7 +1381,7 @@ class MyModel(object):
             if direction[i] == 0:
                 direction[i] = direction[i-1]
 
-        prediction = prediction * direction
+        # prediction = prediction * direction
 
         mean = diff_pred.mean()
         std = diff_pred.std()
