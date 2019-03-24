@@ -501,11 +501,11 @@ class Play(object):
         if not self.built:
             self.build(inputs)
 
-        if inputs.shape.as_list() == self._batch_input_shape.as_list():
-            x = inputs
-        else:
-            x = self.reshape(inputs)
-
+        # if inputs.shape.as_list() == self._batch_input_shape.as_list():
+        #     x = inputs
+        # else:
+        #     x = self.reshape(inputs)
+        x = inputs
         return self.model.predict(x, steps=steps_per_epoch)
 
     @property
@@ -1392,18 +1392,20 @@ class MyModel(object):
         return prediction, float(mean), float(std)
 
     def trend(self, B, delta=0.01, max_iteration=10000):
-        # exclude b0
+        shape = self.plays[0]._batch_input_shape
+        assert shape[1] * shape[2] == B.shape[0]
+
+        # NOTE: exclude b0
+        # B = B[:100]
         length = B.shape[0]
         prices = np.zeros(B.shape[0], dtype=np.float32)
-        shape = self.plays[0]._batch_input_shape
-
-        assert shape[1] * shape[2] == B.shape[0]
 
         directions = (B[1:]- B[:-1] < 0).astype(np.int32) - (B[1:] - B[:-1] >= 0).astype(np.int32)
         d = [1] if B[0] < 0 else [-1]
         directions = np.concatenate([d, directions]).reshape(-1)
-
+        import time
         def do_prediction(prices, directions, i, k=1):
+            start_tick = time.time()
             if i != 0:
                 p = prices[i-1] + directions[i] * delta * k
             else:
@@ -1414,9 +1416,15 @@ class MyModel(object):
 
             for play in self.plays:
                 # x = play.reshape(prices)
-                x = prices.reshape(shape)
+                x = prices.reshape([1, -1, 10])
+                start = time.time()
                 _outputs.append(play.predict(x))
+                end = time.time()
+                LOG.debug("play {} cost: {} s".format(play._name, end - start))
             prediction = np.array(_outputs).mean(axis=0).reshape(-1)
+            end_tick = time.time()
+
+            LOG.debug("do prediciton cost: {} s".format(end_tick - start_tick))
             return prediction
 
         for i in range(length):
@@ -1429,7 +1437,7 @@ class MyModel(object):
 
                 prediction = do_prediction(prices, directions, i=i, k=k)
                 curr_diff = prediction[i] - B[i]
-                LOG.debug("curr_diff is: {}, prev_diff is: {}, prediction is: {}, ground_truth is: {}, price: {}".format(curr_diff, prev_diff, prediction[i], B[i], prices[i]))
+                LOG.debug(colors.yellow("curr_diff is: {}, prev_diff is: {}, prediction is: {}, ground_truth is: {}, price: {}".format(curr_diff, prev_diff, prediction[i], B[i], prices[i])))
 
                 if np.abs(curr_diff) < 1e-5 or curr_diff * prev_diff < 0:
                     LOG.debug(colors.red("Found prices: {}".format(prices[i])))
