@@ -122,6 +122,33 @@ def predict(inputs,
     return predictions, loss
 
 
+def trend(prices,
+          B,
+          units=1,
+          activation='tanh',
+          nb_plays=1,
+          weights_name='model.h5'):
+    with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
+        line = f.read()
+    shape = list(map(int, line.split(":")))
+
+    assert len(shape) == 3, "shape must be 3 dimensions"
+    input_dim = shape[2]
+    timestep = shape[1]
+    num_samples = inputs.shape[0] // (input_dim * timestep)
+    start = time.time()
+    mymodel = MyModel(input_dim=input_dim,
+                      timestep=timestep,
+                      units=units,
+                      activation=activation,
+                      nb_plays=nb_plays)
+
+    mymodel.load_weights(weights_fname)
+
+    prediction = mymodel.trend(B)
+
+
+
 if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
@@ -135,7 +162,7 @@ if __name__ == "__main__":
     # method = 'mixed'
     # method = 'noise'
     interp = 1
-    do_prediction = True
+    do_prediction = False
 
 
     with_noise = True
@@ -272,12 +299,18 @@ if __name__ == "__main__":
 
     if do_prediction is True:
         LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
-        predictions, loss = predict(inputs=inputs,
-                                    outputs=outputs,
-                                    units=__units__,
-                                    activation=__activation__,
-                                    nb_plays=__nb_plays__,
-                                    weights_name=weights_fname)
+        # predictions, loss = predict(inputs=inputs,
+        #                             outputs=outputs,
+        #                             units=__units__,
+        #                             activation=__activation__,
+        #                             nb_plays=__nb_plays__,
+        #                             weights_name=weights_fname)
+        predictions, loss = trend(prices=inputs,
+                                  B=outputs,
+                                  units=__units__,
+                                  activation=__activation__,
+                                  nb_plays=__nb_plays__,
+                                  weights_name=weights_fname)
         inputs = inputs[:predictions.shape[-1]]
     else:
         predictions, loss = fit(inputs=inputs,

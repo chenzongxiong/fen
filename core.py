@@ -501,7 +501,10 @@ class Play(object):
         if not self.built:
             self.build(inputs)
 
-        x = self.reshape(inputs)
+        if inputs.shape.as_list() == self._batch_input_shape.as_list():
+            x = inputs
+        else:
+            x = self.reshape(inputs)
 
         return self.model.predict(x, steps=steps_per_epoch)
 
@@ -1344,7 +1347,7 @@ class MyModel(object):
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
-    def predict2(self,  inputs):
+    def predict2(self, inputs):
         _inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
         for play in self.plays:
             self._need_compile = False
@@ -1387,6 +1390,61 @@ class MyModel(object):
         std = diff_pred.std()
         LOG.debug("mean: {}, std: {}".format(mean, std))
         return prediction, float(mean), float(std)
+
+    def trend(self, B, delta=0.01, max_iteration=10000):
+        # exclude b0
+        length = B.shape[0]
+        prices = np.zeros(B.shape[0], dtype=np.float32)
+        shape = self.plays[0]._batch_input_shape
+
+        assert shape[1] * shape[2] == B.shape[0]
+
+        directions = (B[1:]- B[:-1] < 0).astype(np.int32) - (B[1:] - B[:-1] >= 0).astype(np.int32)
+        d = [1] if B[0] < 0 else [-1]
+        directions = np.concatenate([d, directions]).reshape(-1)
+
+        def do_prediction(prices, directions, i, k=1):
+            if i != 0:
+                p = prices[i-1] + directions[i] * delta * k
+            else:
+                p = 0 + directions[i] * delta * k
+
+            prices[i] = p
+            _outputs = []
+
+            for play in self.plays:
+                # x = play.reshape(prices)
+                x = prices.reshape(shape)
+                _outputs.append(play.predict(x))
+            prediction = np.array(_outputs).mean(axis=0).reshape(-1)
+            return prediction
+
+        for i in range(length):
+            # first diff ?
+            prediction = do_prediction(prices, directions, i)
+            curr_diff = prediction[i] - B[i]
+
+            for k in range(2, max_iteration):
+                prev_diff = curr_diff
+
+                prediction = do_prediction(prices, directions, i=i, k=k)
+                curr_diff = prediction[i] - B[i]
+                LOG.debug("curr_diff is: {}, prev_diff is: {}, prediction is: {}, ground_truth is: {}, price: {}".format(curr_diff, prev_diff, prediction[i], B[i], prices[i]))
+
+                if np.abs(curr_diff) < 1e-5 or curr_diff * prev_diff < 0:
+                    LOG.debug(colors.red("Found prices: {}".format(prices[i])))
+                    break
+
+        import ipdb; ipdb.set_trace()
+        return prices
+        # outputs = []
+        # for play in self.plays:
+        #     x = play.reshape(inputs)
+        #     outputs.append(play.predict(x))
+        # outputs_ = np.array(outputs)
+        # prediction = outputs_.mean(axis=0)
+        # prediction = prediction.reshape(-1)
+
 
     def save_weights(self, fname):
         suffix = fname.split(".")[-1]
