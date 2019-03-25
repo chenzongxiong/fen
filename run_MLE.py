@@ -165,7 +165,7 @@ if __name__ == "__main__":
     # method = 'mixed'
     # method = 'noise'
     interp = 1
-    do_prediction = True
+    do_prediction = False
 
 
     with_noise = True
