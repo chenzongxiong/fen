@@ -1446,7 +1446,7 @@ class MyModel(object):
                     p = prices[:, j-1, -1] + directions[:, j, i] * delta * k
 
             prices[:, j, i] = p
-            _outputs = []
+            # _outputs = []
 
             # for play in self.plays:
             #     # x = play.reshape(prices)
@@ -1471,8 +1471,9 @@ class MyModel(object):
             if i % shape[2] == 0:
                 j += 1
                 i = 0
-            if j * shape[2] + i  == length:
+            if j * shape[2] + i == length:
                 break
+
             start_tick = time.time()
 
             prediction = do_prediction(j, i)
