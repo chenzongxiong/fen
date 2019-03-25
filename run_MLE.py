@@ -146,7 +146,10 @@ def trend(prices,
     mymodel.load_weights(weights_fname)
 
     prediction = mymodel.trend(B)
-
+    loss = ((prediction - prices) ** 2).mean()
+    loss = float(loss)
+    LOG.debug("loss: {}".format(loss))
+    return prediction, loss
 
 
 if __name__ == "__main__":
