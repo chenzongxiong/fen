@@ -166,7 +166,7 @@ if __name__ == "__main__":
     # method = 'noise'
     interp = 1
     do_prediction = False
-
+    do_trend = False
 
     with_noise = True
     diff_weights = True
@@ -174,13 +174,14 @@ if __name__ == "__main__":
     run_test = False
 
     mu = 0
-    sigma = 2
+    sigma = 1
 
     points = 1000
     input_dim = 1
     ############################## ground truth #############################
     nb_plays = 20
-    units = 10000               # special for dataset comes from simulation
+    # units is 10000 special for dataset comes from simulation
+    units = 10000
     state = 0
     # activation = 'tanh'
     activation = None
@@ -214,6 +215,8 @@ if __name__ == "__main__":
         # weights_file_key = 'models_saved_weights'
         # predictions_file_key = 'models_predictions'
         raise
+
+    weights_file_key = 'models_diff_weights_mc_stock_model_saved_weights'
 
     # XXXX: place weights_fname before run_test
     weights_fname = constants.DATASET_PATH[weights_file_key].format(method=method,
@@ -251,6 +254,13 @@ if __name__ == "__main__":
             else:
                 raise
 
+    # if do_trend is True:
+    input_file_key = 'models_diff_weights_mc_stock_model'
+    loss_file_key = 'models_diff_weights_mc_stock_model_loss_history'
+    predictions_file_key = 'models_diff_weights_mc_stock_model_predictions'
+
+
+
     fname = constants.DATASET_PATH[input_file_key].format(interp=interp,
                                                           method=method,
                                                           activation=activation,
@@ -263,11 +273,15 @@ if __name__ == "__main__":
                                                           input_dim=input_dim)
 
     LOG.debug("Load data from file: {}".format(colors.cyan(fname)))
+    if do_prediction is True and do_trend is True:
+        raise Exception("both do predictions and do_trend are True")
+
     import ipdb; ipdb.set_trace()
 
     inputs, outputs= tdata.DatasetLoader.load_data(fname)
-
+    inputs, outputs = inputs[:points], outputs[:points]
     inputs, outputs = outputs, inputs
+
     loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
                                                                      method=method,
                                                                      activation=activation,
@@ -300,14 +314,7 @@ if __name__ == "__main__":
                                                                           __nb_plays__=__nb_plays__,
                                                                           loss=loss_name)
 
-    if do_prediction is True:
-        LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
-        # predictions, loss = predict(inputs=inputs,
-        #                             outputs=outputs,
-        #                             units=__units__,
-        #                             activation=__activation__,
-        #                             nb_plays=__nb_plays__,
-        #                             weights_name=weights_fname)
+    if do_trend is True:
         predictions, loss = trend(prices=inputs,
                                   B=outputs,
                                   units=__units__,
@@ -315,6 +322,14 @@ if __name__ == "__main__":
                                   nb_plays=__nb_plays__,
                                   weights_name=weights_fname)
         inputs = inputs[:predictions.shape[-1]]
+    elif do_prediction is True:
+        LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
+        predictions, loss = predict(inputs=inputs,
+                                    outputs=outputs,
+                                    units=__units__,
+                                    activation=__activation__,
+                                    nb_plays=__nb_plays__,
+                                    weights_name=weights_fname)
     else:
         predictions, loss = fit(inputs=inputs,
                                 outputs=outputs,

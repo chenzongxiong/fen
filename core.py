@@ -1389,7 +1389,7 @@ class MyModel(object):
             if direction[i] == 0:
                 direction[i] = direction[i-1]
 
-        # prediction = prediction * direction
+        # prediction = -1 * prediction
         prediction = utils.slide_window_average(prediction, window_size=5)
         mean = diff_pred.mean()
         std = diff_pred.std()
