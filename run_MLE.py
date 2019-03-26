@@ -166,7 +166,7 @@ if __name__ == "__main__":
     # method = 'noise'
     interp = 1
     do_prediction = False
-    do_trend = True
+    do_trend = False
 
     with_noise = True
     diff_weights = True
@@ -174,7 +174,7 @@ if __name__ == "__main__":
     run_test = False
 
     mu = 0
-    sigma = 2
+    sigma = 1
 
     points = 1000
     input_dim = 1
