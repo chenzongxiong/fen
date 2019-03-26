@@ -1418,7 +1418,6 @@ class MyModel(object):
             feed_inputs.append(play._layers[0].input)
             model_outputs.append(play._layers[-1].output)
             state_updates.extend(play.state_updates)
-            # _x.append(play.reshape(prices))
             _x.append(prices)
 
         if self._nb_plays > 1:
@@ -1446,16 +1445,6 @@ class MyModel(object):
                     p = prices[:, j-1, -1] + directions[:, j, i] * delta * k
 
             prices[:, j, i] = p
-            # _outputs = []
-
-            # for play in self.plays:
-            #     # x = play.reshape(prices)
-            #     x = prices.reshape([1, -1, 10])
-            #     start = time.time()
-            #     _outputs.append(play.predict(x, verbose=1))
-            #     end = time.time()
-            #     LOG.debug("play {} cost: {} s".format(play._name, end - start))
-            # prediction = np.array(_outputs).mean(axis=0).reshape(-1)
             prediction = predict_function(_x)
             end_tick = time.time()
 
@@ -1495,66 +1484,7 @@ class MyModel(object):
             end_tick = time.time()
             LOG.debug(colors.red("time cost: {}".format(end_tick - start_tick)))
 
-            # prices[:, j, i] = 1
-
-            # import ipdb; ipdb.set_trace()
-            # res = predict_function(_x)
-
-            # if i != 0 and i % shape[2] == 0:
-            #     j += 1
-
-
-        # import ipdb; ipdb.set_trace()
-
-        # def do_prediction(prices, directions, i, k=1):
-        #     start_tick = time.time()
-        #     if i != 0:
-        #         p = prices[i-1] + directions[i] * delta * k
-        #     else:
-        #         p = 0 + directions[i] * delta * k
-
-        #     prices[i] = p
-        #     _outputs = []
-
-        #     for play in self.plays:
-        #         # x = play.reshape(prices)
-        #         x = prices.reshape([1, -1, 10])
-        #         start = time.time()
-        #         _outputs.append(play.predict(x, verbose=1))
-        #         end = time.time()
-        #         LOG.debug("play {} cost: {} s".format(play._name, end - start))
-        #     prediction = np.array(_outputs).mean(axis=0).reshape(-1)
-        #     end_tick = time.time()
-
-        #     LOG.debug("do prediciton cost: {} s".format(end_tick - start_tick))
-        #     return prediction
-
-        # for i in range(length):
-        #     # first diff ?
-        #     prediction = do_prediction(prices, directions, i)
-        #     curr_diff = prediction[i] - B[i]
-
-        #     for k in range(2, max_iteration):
-        #         prev_diff = curr_diff
-
-        #         prediction = do_prediction(prices, directions, i=i, k=k)
-        #         curr_diff = prediction[i] - B[i]
-        #         LOG.debug(colors.yellow("curr_diff is: {}, prev_diff is: {}, prediction is: {}, ground_truth is: {}, price: {}".format(curr_diff, prev_diff, prediction[i], B[i], prices[i])))
-
-        #         if np.abs(curr_diff) < 1e-5 or curr_diff * prev_diff < 0:
-        #             LOG.debug(colors.red("Found prices: {}".format(prices[i])))
-        #             break
-
-        import ipdb; ipdb.set_trace()
         return prices.reshape(-1)
-        # outputs = []
-        # for play in self.plays:
-        #     x = play.reshape(inputs)
-        #     outputs.append(play.predict(x))
-        # outputs_ = np.array(outputs)
-        # prediction = outputs_.mean(axis=0)
-        # prediction = prediction.reshape(-1)
-
 
     def save_weights(self, fname):
         suffix = fname.split(".")[-1]
