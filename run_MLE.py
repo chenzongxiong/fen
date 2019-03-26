@@ -145,7 +145,7 @@ def trend(prices,
 
     mymodel.load_weights(weights_fname)
 
-    prediction = mymodel.trend(B)
+    prediction = mymodel.trend(prices=prices, B=B)
     loss = ((prediction - prices) ** 2).mean()
     loss = float(loss)
     LOG.debug("loss: {}".format(loss))
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     # method = 'noise'
     interp = 1
     do_prediction = False
-    do_trend = False
+    do_trend = True
 
     with_noise = True
     diff_weights = True

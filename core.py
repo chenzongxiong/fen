@@ -50,8 +50,9 @@ def Phi(x, width=1.0):
 
     ZEROS = tf.zeros(x.shape, dtype=tf.float32, name='zeros')
     _width = tf.constant([[width/2.0]], dtype=tf.float32)
-    r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: x - _width, lambda: ZEROS)
-    r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x + _width, lambda: r1)
+
+    r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: x + _width, lambda: ZEROS)
+    r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x - _width, lambda: r1)
     return r2
 
 
@@ -1390,101 +1391,205 @@ class MyModel(object):
                 direction[i] = direction[i-1]
 
         # prediction = -1 * prediction
-        prediction = utils.slide_window_average(prediction, window_size=5)
+        prediction = utils.slide_window_average(prediction, window_size=1)
         mean = diff_pred.mean()
         std = diff_pred.std()
         LOG.debug("mean: {}, std: {}".format(mean, std))
         return prediction, float(mean), float(std)
 
-    def trend(self, B, delta=0.01, max_iteration=10000):
+    # def trend(self, B, delta=0.01, max_iteration=10000):
+    #     shape = self.plays[0]._batch_input_shape.as_list()
+    #     assert shape[1] * shape[2] == B.shape[0]
+
+    #     # NOTE: exclude b0
+    #     # B = B[:100]
+    #     length = B.shape[0]
+    #     prices = np.zeros(B.shape[0], dtype=np.float32).reshape(shape)
+
+    #     directions = (B[1:]- B[:-1] < 0).astype(np.int32) - (B[1:] - B[:-1] >= 0).astype(np.int32)
+    #     d = [1] if B[0] < 0 else [-1]
+    #     directions = np.concatenate([d, directions]).reshape(-1)
+    #     directions = directions.reshape(shape)
+
+    #     _x = []
+    #     feed_inputs = []
+    #     model_outputs = []
+    #     state_updates = []
+    #     for play in self.plays:
+    #         feed_inputs.append(play._layers[0].input)
+    #         model_outputs.append(play._layers[-1].output)
+    #         state_updates.extend(play.state_updates)
+    #         _x.append(prices)
+
+    #     if self._nb_plays > 1:
+    #         y_pred = [tf.keras.layers.Average()(model_outputs)]
+    #     else:
+    #         y_pred = model_outputs
+
+    #     predict_function = tf.keras.backend.function(
+    #         feed_inputs,
+    #         y_pred,
+    #         updates=state_updates,
+    #         name='prediction_function'
+    #     )
+
+    #     # B = B.reshape(shape)
+    #     import time
+    #     def do_prediction(j, i, k=1):
+    #         start_tick = time.time()
+    #         if i != 0:
+    #             p = prices[:, j, i-1] + directions[:, j, i] * delta * k
+    #         elif i == 0:
+    #             if j == 0:
+    #                 p = 0 + directions[:, j, i] * delta * k
+    #             elif j != 0:
+    #                 p = prices[:, j-1, -1] + directions[:, j, i] * delta * k
+
+    #         prices[:, j, i] = p
+    #         prediction = predict_function(_x)
+    #         end_tick = time.time()
+
+    #         LOG.debug("do prediciton cost: {} s".format(end_tick - start_tick))
+    #         return prediction[0]
+
+    #     curr_diff = prev_diff = None
+
+    #     j = -1
+    #     i = -1
+    #     while True:
+    #         i += 1
+    #         if i % shape[2] == 0:
+    #             j += 1
+    #             i = 0
+    #         if j * shape[2] + i == length:
+    #             break
+
+    #         start_tick = time.time()
+
+    #         prediction = do_prediction(j, i)
+    #         curr_diff = prediction[:, j*shape[2]+i, :] - B[j*shape[2]+i]
+    #         for k in range(2, max_iteration):
+    #             prev_diff = curr_diff
+    #             prediction = do_prediction(j, i, k)
+    #             curr_diff = prediction[:, j*shape[2]+i, :] - B[j*shape[2]+i]
+
+    #             LOG.debug(colors.yellow("j: {}, i: {}, curr_diff is: {}, prev_diff is: {}, prediction is: {}, ground_truth is: {}, price: {}".format(j, i,
+    #                                                                                                                                                  curr_diff,
+    #                                                                                                                                                  prev_diff,
+    #                                                                                                                                                  prediction[:, j*shape[2]+i, :],
+    #                                                                                                                                                  B[j*shape[2]+i],
+    #                                                                                                                                                  prices[:, j, i])))
+    #             if np.abs(curr_diff[0, 0]) < 1e-5 or (curr_diff * prev_diff)[0, 0] < 0:
+    #                 break
+
+    #         end_tick = time.time()
+    #         LOG.debug(colors.red("time cost: {}".format(end_tick - start_tick)))
+
+    #     return prices.reshape(-1)
+
+    def trend(self, prices, B, delta=0.001, max_iteration=10000):
+        _ppp = ops.convert_to_tensor(prices[:1000], dtype=tf.float32)
+        _ppp = tf.reshape(_ppp, shape=(1, 100, 10))
+
+        original_prediction = self.predict2(prices[:1000])
         shape = self.plays[0]._batch_input_shape.as_list()
-        assert shape[1] * shape[2] == B.shape[0]
-
-        # NOTE: exclude b0
-        # B = B[:100]
-        length = B.shape[0]
-        prices = np.zeros(B.shape[0], dtype=np.float32).reshape(shape)
-
-        directions = (B[1:]- B[:-1] < 0).astype(np.int32) - (B[1:] - B[:-1] >= 0).astype(np.int32)
-        d = [1] if B[0] < 0 else [-1]
-        directions = np.concatenate([d, directions]).reshape(-1)
-        directions = directions.reshape(shape)
-
-        _x = []
-        feed_inputs = []
-        model_outputs = []
-        state_updates = []
+        # assert shape[1] * shape[2] == prices.shape[0]
+        # output = self.plays[0].model(prices)
+        # prices[1]
+        # weights = dict(
+        #     phi_weight_list=[],
+        #     theta_weight_list=[],
+        #     theta_bias_list=[],
+        #     tilde_theta_weight_list=[],
+        #     tilde_theta_bias_list=[]
+        # )
+        weights_ = [[], [], [], [], []]
         for play in self.plays:
-            feed_inputs.append(play._layers[0].input)
-            model_outputs.append(play._layers[-1].output)
-            state_updates.extend(play.state_updates)
-            _x.append(prices)
+            weights_[0].append(play.layers[0].kernel)
+            weights_[1].append(play.layers[2].kernel)
+            weights_[2].append(play.layers[2].bias)
+            weights_[3].append(play.layers[3].kernel)
+            weights_[4].append(play.layers[3].bias)
 
-        if self._nb_plays > 1:
-            y_pred = [tf.keras.layers.Average()(model_outputs)]
-        else:
-            y_pred = model_outputs
+        weights = sess.run(weights_)
+        # print(weights)
+        for i in range(len(weights)):
+            for j in range(len(weights[i])):
+                weights[i][j] = weights[i][j].reshape(-1)
 
-        predict_function = tf.keras.backend.function(
-            feed_inputs,
-            y_pred,
-            updates=state_updates,
-            name='prediction_function'
-        )
 
-        # B = B.reshape(shape)
-        import time
-        def do_prediction(j, i, k=1):
-            start_tick = time.time()
-            if i != 0:
-                p = prices[:, j, i-1] + directions[:, j, i] * delta * k
-            elif i == 0:
-                if j == 0:
-                    p = 0 + directions[:, j, i] * delta * k
-                elif j != 0:
-                    p = prices[:, j-1, -1] + directions[:, j, i] * delta * k
+        def phi(x, width=1.0):
+            if x > (width/2.0):
+                return (x - width/2.0)[0]
+            elif x < (-width/2.0):
+                return (x + width/2.0)[0]
+            else:
+                return float(0)
 
-            prices[:, j, i] = p
-            prediction = predict_function(_x)
-            end_tick = time.time()
 
-            LOG.debug("do prediciton cost: {} s".format(end_tick - start_tick))
-            return prediction[0]
+        import ipdb; ipdb.set_trace()
 
-        curr_diff = prev_diff = None
+        xx_list = []
+        xy_list = []
+        xz_list = []
+        for i in range(self._nb_plays):
+            xx = self.plays[i].layers[0](_ppp)
+            xx_list.append(xx)
+            xy_ = self.plays[i].layers[1](xx)
+            xy = self.plays[i].layers[2](xy_)
+            xz = self.plays[i].layers[3](xy)
+            xy_list.append(xy)
+            xz_list.append(xz)
 
-        j = -1
-        i = -1
+        xx_list = sess.run(xx_list)
+        xy_list = sess.run(xy_list)
+        xz_list = sess.run(xz_list)
+
+        for i in range(self._nb_plays):
+            xx_list[i] = xx_list[i].reshape(-1)
+
+        individual_Bn_list = [[0] for _ in range(self._nb_plays)]
+        outputs = []
+        k = 0
         while True:
-            i += 1
-            if i % shape[2] == 0:
-                j += 1
-                i = 0
-            if j * shape[2] + i == length:
+            predict_noise_list = []
+            x = prices[k]
+            for i in range(self._nb_plays):
+                p = phi(weights[0][i] * x - individual_Bn_list[i][-1]) + individual_Bn_list[i][-1]
+                individual_Bn_list[i].append(p)
+
+                if abs(xx_list[i][k] -  p) >= 1e-5:
+                    print("xx: {}, p: {}".format(xx_list[i][k], p))
+                    import ipdb; ipdb.set_trace()
+
+                pp = weights[1][i] * p + weights[2][i]
+                if not np.allclose(xy_list[i][:, k, :].reshape(-1),  pp.reshape(-1)):
+                    print("xy: {}, pp: {}".format(xy_list[i][:, k, :], pp))
+                    import ipdb; ipdb.set_trace()
+
+                ppp = (weights[3][i] * pp).sum() + weights[4][i]
+
+                if abs(ppp.reshape(-1)[0] - xz_list[i][:, k, :].reshape(-1)[0]) >= 1e-3:
+                    print("xz: {}, ppp: {}".format(xz_list[i][:, k, :], ppp))
+                    import ipdb; ipdb.set_trace()
+
+                predict_noise_list.append(ppp[0])
+
+            predict_noise = sum(predict_noise_list)/self._nb_plays
+            aa = sum([xz_list[i][:, k, :][0][0] for i in range(self._nb_plays)]) / self._nb_plays
+            LOG.debug("predicted noise is: {}, original predict noise is: {}, aa: {}".format(predict_noise, original_prediction[0][k], aa))
+            outputs.append(predict_noise)
+            k += 1
+            if k == 1000:
                 break
 
-            start_tick = time.time()
-
-            prediction = do_prediction(j, i)
-            curr_diff = prediction[:, j*shape[2]+i, :] - B[j*shape[2]+i]
-            for k in range(2, max_iteration):
-                prev_diff = curr_diff
-                prediction = do_prediction(j, i, k)
-                curr_diff = prediction[:, j*shape[2]+i, :] - B[j*shape[2]+i]
-
-                LOG.debug(colors.yellow("j: {}, i: {}, curr_diff is: {}, prev_diff is: {}, prediction is: {}, ground_truth is: {}, price: {}".format(j, i,
-                                                                                                                                                     curr_diff,
-                                                                                                                                                     prev_diff,
-                                                                                                                                                     prediction[:, j*shape[2]+i, :],
-                                                                                                                                                     B[j*shape[2]+i],
-                                                                                                                                                     prices[:, j, i])))
-                if np.abs(curr_diff[0, 0]) < 1e-5 or (curr_diff * prev_diff)[0, 0] < 0:
-                    break
-
-            end_tick = time.time()
-            LOG.debug(colors.red("time cost: {}".format(end_tick - start_tick)))
-
-        return prices.reshape(-1)
+        LOG.debug("Verifing...")
+        import ipdb; ipdb.set_trace()
+        outputs = np.array(outputs).reshape(-1)
+        if not np.allclose(original_prediction[0].reshape(-1), outputs):
+            import ipdb; ipdb.set_trace()
+        LOG.debug("seems correct now")
+        return outputs
 
     def save_weights(self, fname):
         suffix = fname.split(".")[-1]
@@ -1520,25 +1625,6 @@ class MyModel(object):
             path = "{}/{}.{}".format(dirname, play._name, suffix)
             play.model.load_weights(path, by_name=False)
             LOG.debug(colors.red("Set Weights for {}".format(play._name)))
-
-
-def gradient_phi_cell(P):
-    _P = tf.reshape(P, shape=(P.shape[0].value, -1))
-    _diff = _P[:, 1:] - _P[:, :-1]
-
-    x0 = tf.slice(_P, [0, 0], [1, 1])
-    diff = tf.concat([x0, _diff], axis=1)
-
-    p1 = tf.cast(tf.abs(diff) >= 1e-7, dtype=tf.float32)
-    p2 = 1.0 - p1
-    p3_list = []
-    for j in range(1, _P.shape[1].value):
-        p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
-    _p3 = tf.stack(p3_list, axis=1) + 1
-    p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
-
-    result = tf.multiply(p1, p3)
-    return tf.reshape(result, shape=P.shape.as_list()[1:])
 
 
 
