@@ -1522,11 +1522,10 @@ class MyModel(object):
         k = 0
 
         def do_guess(k, step=1, guess_flag=True):
-            # if guess_flag is True:
-            #     guess = prices[k-1] + direction * step * delta
-            # else:
             predict_noise_list = []
-            if True:
+            if guess_flag is True:
+                guess = prices[k-1] + direction * step * delta
+            else:
                 guess = prices[k]
 
             for i in range(self._nb_plays):
@@ -1536,36 +1535,91 @@ class MyModel(object):
                 predict_noise_list.append(ppp[0])
 
             predict_noise = sum(predict_noise_list)/self._nb_plays
-            if abs(predict_noise - original_prediction[0][k]) > 1e-5:
-                import ipdb; ipdb.set_trace()
+            # if abs(predict_noise - original_prediction[0][k]) > 1e-5:
+            #     import ipdb; ipdb.set_trace()
 
             return guess, predict_noise
 
+        curr_diff = prev_diff = None
+        mu = 0
+        sigma = 1
+        guess_prices = []
         while True:
             step = 1
-            bk = original_prediction[0][k]
+            # bk_gt = original_prediction[0][k]
+            bk = np.random.normal(loc=mu, scale=sigma) + B[k-1]
+            if bk > B[k-1]:
+                direction = 1
+            elif bk < B[k-1]:
+                direction = -1
+            else:
+                direction = 0
+
+            book_prev_diff_list = []
+
+
+            guess, guess_noise = do_guess(k, 1)
+            curr_diff = guess_noise - bk
 
             while True:
-                step += 1
-                guess, predict_noise = do_guess(k, step, guess_flag=False)
+                # LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
+                #     step,
+                #     prices[k],
+                #     guess,
+                #     guess_noise,
+                #     bk,
+                #     original_prediction[0][k],
+                #     curr_diff,
+                #     prev_diff))
 
-                LOG.debug("predicted noise is: {}, original predict noise is: {}".format(predict_noise, bk))
-
-                if abs(predict_noise - bk) < 1e-5:
+                if abs(curr_diff) < 1e-3:
                     for i in range(self._nb_plays):
                         p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
                         individual_p_list[i].append(p)
 
-                    outputs.append(predict_noise)
+                    outputs.append(guess_noise)
+                    guess_prices.append(guess)
                     break
+
+                prev_diff = curr_diff
+                book_prev_diff_list.append(prev_diff)
+
+                step += 1
+                guess, guess_noise = do_guess(k, step, guess_flag=True)
+                curr_diff = guess_noise - bk
+
+                if len(book_prev_diff_list) >= 100 and direction * (curr_diff - book_prev_diff_list[0]) > 0:
+                    direction = -direction
+                    book_prev_diff_list = []
+                if curr_diff * prev_diff < 0:
+                    # LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
+                    #     step,
+                    #     prices[k],
+                    #     guess,
+                    #     guess_noise,
+                    #     bk,
+                    #     original_prediction[0][k],
+                    #     curr_diff,
+                    #     prev_diff))
+
+                    for i in range(self._nb_plays):
+                        p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
+                        individual_p_list[i].append(p)
+                    guess_prices.append(guess)
+                    outputs.append(guess_noise)
+                    break
+                # if step % 1000 == 0:
+                #     import ipdb; ipdb.set_trace()
+
             k += 1
+            LOG.debug(colors.red("K: {}".format(k)))
             if k == 2000:
                 break
 
 
         LOG.debug("Verifing...")
         outputs = np.array(outputs).reshape(-1)
-        # import ipdb; ipdb.set_trace()
+        import ipdb; ipdb.set_trace()
         if not np.allclose(original_prediction[0].reshape(-1), outputs):
             import ipdb; ipdb.set_trace()
         LOG.debug("seems correct now")
