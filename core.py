@@ -1488,10 +1488,11 @@ class MyModel(object):
     #     return prices.reshape(-1)
 
     def trend(self, prices, B, delta=0.001, max_iteration=10000):
-        _ppp = ops.convert_to_tensor(prices[:1000], dtype=tf.float32)
-        _ppp = tf.reshape(_ppp, shape=(1, 100, 10))
+        prices = prices[:100]
+        _ppp = ops.convert_to_tensor(prices, dtype=tf.float32)
+        _ppp = tf.reshape(_ppp, shape=(1, 10, 10))
 
-        original_prediction = self.predict2(prices[:1000])
+        original_prediction = self.predict2(prices)
         shape = self.plays[0]._batch_input_shape.as_list()
         # assert shape[1] * shape[2] == prices.shape[0]
         # output = self.plays[0].model(prices)
@@ -1580,7 +1581,7 @@ class MyModel(object):
             LOG.debug("predicted noise is: {}, original predict noise is: {}, aa: {}".format(predict_noise, original_prediction[0][k], aa))
             outputs.append(predict_noise)
             k += 1
-            if k == 1000:
+            if k == 100:
                 break
 
         LOG.debug("Verifing...")
@@ -1616,7 +1617,7 @@ class MyModel(object):
             line = f.read()
 
         shape = list(map(int, line.split(":")))
-
+        shape = [1, 10, 10]
         for play in self.plays:
             if not play.built:
                 play._batch_input_shape = tf.TensorShape(shape)

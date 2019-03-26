@@ -150,6 +150,9 @@ def build_p3(p2, j):
 
 def slide_window_average(arr, window_size=5, step=1):
     assert len(arr.shape) == 1, colors.red("slide window only support 1-dim")
+    if window_size == 1:
+        return arr
+
     N = arr.shape[0]
     stacked_array = np.vstack([ arr[i: 1 + N + i - window_size:step] for i in range(window_size) ])
     avg = np.concatenate([stacked_array.mean(axis=0), arr[-window_size+1:]])
