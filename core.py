@@ -42,9 +42,9 @@ tf.keras.backend.set_epsilon(1e-7)
 
 def Phi(x, width=1.0):
     '''
-    Phi(x) = x         , if x > 0
-           = x + width , if x < - width
-           = 0         , otherwise
+    Phi(x) = x - width/2        , if x > width/2
+           = x + width/2        , if x < - width/2
+           = 0                  , otherwise
     '''
     assert x.shape[0].value == 1 and x.shape[1].value == 1, "x must be a scalar"
 
@@ -54,6 +54,7 @@ def Phi(x, width=1.0):
     r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: x + _width, lambda: ZEROS)
     r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x - _width, lambda: r1)
     return r2
+    # return tf.maximum(x-width/2, 0) + tf.minimum(x+width/2.0, 0)
 
 
 class PhiCell(Layer):
@@ -959,32 +960,32 @@ class MyModel(object):
         # import ipdb; ipdb.set_trace()
         #################### DO GRADIENT BY HAND HERE ####################
         def gradient_phi_cell(P):
-            # _P = tf.reshape(P, shape=(P.shape[0].value, -1))
-            # _diff = _P[:, 1:] - _P[:, :-1]
+            _P = tf.reshape(P, shape=(P.shape[0].value, -1))
+            _diff = _P[:, 1:] - _P[:, :-1]
 
-            # x0 = tf.slice(_P, [0, 0], [1, 1])
-            # diff = tf.concat([x0, _diff], axis=1)
+            x0 = tf.slice(_P, [0, 0], [1, 1])
+            diff = tf.concat([x0, _diff], axis=1)
 
-            # p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
-            # p2 = 1.0 - p1
-            # p3_list = []
-            # # TODO: multiple process here
+            p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
+            p2 = 1.0 - p1
+            p3_list = []
+            # TODO: multiple process here
 
-            # for j in range(1, _P.shape[1].value):
-            #     p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
+            for j in range(1, _P.shape[1].value):
+                p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
 
-            # _p3 = tf.stack(p3_list, axis=1) + 1
-            # p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
+            _p3 = tf.stack(p3_list, axis=1) + 1
+            p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
 
-            # result = tf.multiply(p1, p3)
-            # return tf.reshape(result, shape=P.shape.as_list())
+            result = tf.multiply(p1, p3)
+            return tf.reshape(result, shape=P.shape.as_list())
 
-            reshaped_P = tf.reshape(P, shape=(P.shape[0].value, -1))
-            diff = reshaped_P[:, 1:] - reshaped_P[:, :-1]
-            x0 = tf.slice(reshaped_P, [0, 0], [1, 1])
-            diff_ = tf.concat([x0, diff], axis=1)
-            result = tf.cast(tf.abs(diff_) >= 1e-7, dtype=tf.float32)
-            return tf.reshape(result, shape=P.shape)
+            # reshaped_P = tf.reshape(P, shape=(P.shape[0].value, -1))
+            # diff = reshaped_P[:, 1:] - reshaped_P[:, :-1]
+            # x0 = tf.slice(reshaped_P, [0, 0], [1, 1])
+            # diff_ = tf.concat([x0, diff], axis=1)
+            # result = tf.cast(tf.abs(diff_) >= 1e-7, dtype=tf.float32)
+            # return tf.reshape(result, shape=P.shape)
 
         def gradient_nonlinear_layer(fZ, activation=None):
             LOG.debug("gradient nonlinear activation {}".format(activation))
