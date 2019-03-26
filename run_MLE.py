@@ -174,7 +174,7 @@ if __name__ == "__main__":
     run_test = False
 
     mu = 0
-    sigma = 1
+    sigma = 2
 
     points = 1000
     input_dim = 1
