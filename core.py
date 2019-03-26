@@ -1488,8 +1488,6 @@ class MyModel(object):
     #     return prices.reshape(-1)
 
     def trend(self, prices, B, delta=0.001, max_iteration=10000):
-        # prices = prices[:2000]
-        import ipdb;ipdb.set_trace()
         _ppp = ops.convert_to_tensor(prices, dtype=tf.float32)
         _ppp = tf.reshape(_ppp, shape=(1, 200, 10))
 
@@ -1505,7 +1503,6 @@ class MyModel(object):
             weights_[4].append(play.layers[3].bias)
 
         weights = sess.run(weights_)
-        # print(weights)
         for i in range(len(weights)):
             for j in range(len(weights[i])):
                 weights[i][j] = weights[i][j].reshape(-1)
@@ -1519,70 +1516,56 @@ class MyModel(object):
             else:
                 return float(0)
 
+        individual_p_list = [[0] for _ in range(self._nb_plays)]
 
-        # import ipdb; ipdb.set_trace()
-
-        # xx_list = []
-        # xy_list = []
-        # xz_list = []
-        # for i in range(self._nb_plays):
-        #     xx = self.plays[i].layers[0](_ppp)
-        #     xy_ = self.plays[i].layers[1](xx)
-        #     xx_list.append(xy_)
-
-        #     xy = self.plays[i].layers[2](xy_)
-        #     xz = self.plays[i].layers[3](xy)
-        #     xy_list.append(xy)
-        #     xz_list.append(xz)
-
-        # xx_list = sess.run(xx_list)
-        # xy_list = sess.run(xy_list)
-        # xz_list = sess.run(xz_list)
-
-        # for i in range(self._nb_plays):
-        #     xx_list[i] = xx_list[i].reshape(-1)
-
-        individual_Bn_list = [[0] for _ in range(self._nb_plays)]
         outputs = []
         k = 0
-        while True:
+
+        def do_guess(k, step=1, guess_flag=True):
+            # if guess_flag is True:
+            #     guess = prices[k-1] + direction * step * delta
+            # else:
             predict_noise_list = []
-            x = prices[k]
+            if True:
+                guess = prices[k]
+
             for i in range(self._nb_plays):
-                p = phi(weights[0][i] * x - individual_Bn_list[i][-1]) + individual_Bn_list[i][-1]
-
-                # if abs(xx_list[i][k] -  p) >= 1e-5:
-                #     print("xx: {}, p: {}".format(xx_list[i][k], p))
-                #     import ipdb; ipdb.set_trace()
-
+                p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
                 pp = weights[1][i] * p + weights[2][i]
-                # if not np.allclose(xy_list[i][:, k, :].reshape(-1),  pp.reshape(-1)):
-                #     print("xy: {}, pp: {}".format(xy_list[i][:, k, :], pp))
-                #     import ipdb; ipdb.set_trace()
-
                 ppp = (weights[3][i] * pp).sum() + weights[4][i]
-
-                # if abs(ppp.reshape(-1)[0] - xz_list[i][:, k, :].reshape(-1)[0]) >= 1e-3:
-                #     print("xz: {}, ppp: {}".format(xz_list[i][:, k, :], ppp))
-                #     import ipdb; ipdb.set_trace()
                 predict_noise_list.append(ppp[0])
 
-                individual_Bn_list[i].append(p)
-
             predict_noise = sum(predict_noise_list)/self._nb_plays
-            # aa = sum([xz_list[i][:, k, :][0][0] for i in range(self._nb_plays)]) / self._nb_plays
-            LOG.debug("predicted noise is: {}, original predict noise is: {}".format(predict_noise, original_prediction[0][k]))
             if abs(predict_noise - original_prediction[0][k]) > 1e-5:
                 import ipdb; ipdb.set_trace()
 
-            outputs.append(predict_noise)
+            return guess, predict_noise
+
+        while True:
+            step = 1
+            bk = original_prediction[0][k]
+
+            while True:
+                step += 1
+                guess, predict_noise = do_guess(k, step, guess_flag=False)
+
+                LOG.debug("predicted noise is: {}, original predict noise is: {}".format(predict_noise, bk))
+
+                if abs(predict_noise - bk) < 1e-5:
+                    for i in range(self._nb_plays):
+                        p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
+                        individual_p_list[i].append(p)
+
+                    outputs.append(predict_noise)
+                    break
             k += 1
             if k == 2000:
                 break
 
+
         LOG.debug("Verifing...")
-        import ipdb; ipdb.set_trace()
         outputs = np.array(outputs).reshape(-1)
+        # import ipdb; ipdb.set_trace()
         if not np.allclose(original_prediction[0].reshape(-1), outputs):
             import ipdb; ipdb.set_trace()
         LOG.debug("seems correct now")
