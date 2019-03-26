@@ -1391,7 +1391,7 @@ class MyModel(object):
                 direction[i] = direction[i-1]
 
         # prediction = -1 * prediction
-        prediction = utils.slide_window_average(prediction, window_size=1)
+        # prediction = utils.slide_window_average(prediction, window_size=1)
         mean = diff_pred.mean()
         std = diff_pred.std()
         LOG.debug("mean: {}, std: {}".format(mean, std))
@@ -1487,22 +1487,13 @@ class MyModel(object):
 
     #     return prices.reshape(-1)
 
-    def trend(self, prices, B, delta=0.001, max_iteration=10000):
-        _ppp = ops.convert_to_tensor(prices[:1000], dtype=tf.float32)
-        _ppp = tf.reshape(_ppp, shape=(1, 100, 10))
-
-        original_prediction = self.predict2(prices[:1000])
+    def trend(self, prices, B, mu=0, sigma=1, delta=0.0001, max_iteration=10000):
+        _B = B
         shape = self.plays[0]._batch_input_shape.as_list()
-        # assert shape[1] * shape[2] == prices.shape[0]
-        # output = self.plays[0].model(prices)
-        # prices[1]
-        # weights = dict(
-        #     phi_weight_list=[],
-        #     theta_weight_list=[],
-        #     theta_bias_list=[],
-        #     tilde_theta_weight_list=[],
-        #     tilde_theta_bias_list=[]
-        # )
+        B1, _, _ = self.predict2(prices[:1000])
+        B2, _, _ = self.predict2(prices[1000:])
+        B = np.concatenate([B1.reshape(-1), B2.reshape(-1)]).reshape(-1)
+
         weights_ = [[], [], [], [], []]
         for play in self.plays:
             weights_[0].append(play.layers[0].kernel)
@@ -1512,7 +1503,7 @@ class MyModel(object):
             weights_[4].append(play.layers[3].bias)
 
         weights = sess.run(weights_)
-        # print(weights)
+
         for i in range(len(weights)):
             for j in range(len(weights[i])):
                 weights[i][j] = weights[i][j].reshape(-1)
@@ -1526,70 +1517,94 @@ class MyModel(object):
             else:
                 return float(0)
 
+        past_list = ops.convert_to_tensor(prices[:1000], dtype=tf.float32)
+        past_list = tf.reshape(past_list, shape=(1, 100, 10))
+        p_list_ = []
+
+        for i in range(self._nb_plays):
+            p_list_.append(self.plays[i].layers[0](past_list))
+
+        p_list = sess.run(p_list_)
+
+        individual_p_list = [[p_list[i].reshape(-1)[-1]] for i in range(self._nb_plays)]
+        outputs = []
+        k = 1000
 
         import ipdb; ipdb.set_trace()
 
-        xx_list = []
-        xy_list = []
-        xz_list = []
-        for i in range(self._nb_plays):
-            xx = self.plays[i].layers[0](_ppp)
-            xx_list.append(xx)
-            xy_ = self.plays[i].layers[1](xx)
-            xy = self.plays[i].layers[2](xy_)
-            xz = self.plays[i].layers[3](xy)
-            xy_list.append(xy)
-            xz_list.append(xz)
-
-        xx_list = sess.run(xx_list)
-        xy_list = sess.run(xy_list)
-        xz_list = sess.run(xz_list)
-
-        for i in range(self._nb_plays):
-            xx_list[i] = xx_list[i].reshape(-1)
-
-        individual_Bn_list = [[0] for _ in range(self._nb_plays)]
-        outputs = []
-        k = 0
-        while True:
-            predict_noise_list = []
-            x = prices[k]
+        def do_guess(k, step=1):
+            guess = prices[k-1] + direction * step * delta
             for i in range(self._nb_plays):
-                p = phi(weights[0][i] * x - individual_Bn_list[i][-1]) + individual_Bn_list[i][-1]
-                individual_Bn_list[i].append(p)
-
-                if abs(xx_list[i][k] -  p) >= 1e-5:
-                    print("xx: {}, p: {}".format(xx_list[i][k], p))
-                    import ipdb; ipdb.set_trace()
+                p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
 
                 pp = weights[1][i] * p + weights[2][i]
-                if not np.allclose(xy_list[i][:, k, :].reshape(-1),  pp.reshape(-1)):
-                    print("xy: {}, pp: {}".format(xy_list[i][:, k, :], pp))
-                    import ipdb; ipdb.set_trace()
-
                 ppp = (weights[3][i] * pp).sum() + weights[4][i]
-
-                if abs(ppp.reshape(-1)[0] - xz_list[i][:, k, :].reshape(-1)[0]) >= 1e-3:
-                    print("xz: {}, ppp: {}".format(xz_list[i][:, k, :], ppp))
-                    import ipdb; ipdb.set_trace()
-
                 predict_noise_list.append(ppp[0])
 
             predict_noise = sum(predict_noise_list)/self._nb_plays
-            aa = sum([xz_list[i][:, k, :][0][0] for i in range(self._nb_plays)]) / self._nb_plays
-            LOG.debug("predicted noise is: {}, original predict noise is: {}, aa: {}".format(predict_noise, original_prediction[0][k], aa))
-            outputs.append(predict_noise)
+            return guess, predict_noise
+
+        predict_price = []
+        once = True
+        predict_noise_list = []
+
+        while True:
+            bk = np.random.normal(loc=mu, scale=sigma, size=1) + B[k-1]
+            if B[k-1] > bk:
+                direction = 1
+            elif B[k-1] < bk:
+                direction = -1
+            else:
+                direction = 0
+
+            curr_diff = prev_diff = None
+            guess, predict_noise = do_guess(k, 1)
+            curr_diff = predict_noise - bk
+            step = 1
+
+            while True:
+                step += 1
+                prev_diff = curr_diff
+
+                guess, predict_noise = do_guess(k, step)
+                curr_diff = predict_noise - bk
+
+                LOG.debug(colors.yellow(" curr_diff is: {}, prev_diff is: {}, prediction is: {}, ground_truth is: {}, price: {}, price_gt: {}".format(
+                    curr_diff[0],
+                    prev_diff[0],
+                    predict_noise,
+                    bk[0],
+                    guess,
+                    prices[k])))
+
+                # if once is False:
+                #     import ipdb; ipdb.set_trace()
+
+                if abs(curr_diff) < 1e-5 or curr_diff * prev_diff < 0:
+                    import ipdb; ipdb.set_trace()
+                    # once = False
+                    for i in range(self._nb_plays):
+                        p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
+                        individual_p_list[i].append(p)
+                    outputs.append(predict_noise)
+                    predict_price.append(guess)
+                    break
+                if step % 100 == 0:
+                    import ipdb; ipdb.set_trace()
+
             k += 1
-            if k == 1000:
+            if k == 2000:
                 break
 
-        LOG.debug("Verifing...")
+        # LOG.debug("Verifing...")
         import ipdb; ipdb.set_trace()
         outputs = np.array(outputs).reshape(-1)
-        if not np.allclose(original_prediction[0].reshape(-1), outputs):
-            import ipdb; ipdb.set_trace()
-        LOG.debug("seems correct now")
-        return outputs
+        predict_price = np.array(predict_price).reshape(-1)
+        # if not np.allclose(original_prediction[0].reshape(-1), outputs):
+        #     import ipdb; ipdb.set_trace()
+        # LOG.debug("seems correct now")
+        # return outputs
+        return predict_price
 
     def save_weights(self, fname):
         suffix = fname.split(".")[-1]

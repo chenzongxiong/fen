@@ -174,7 +174,7 @@ if __name__ == "__main__":
     run_test = False
 
     mu = 0
-    sigma = 2
+    sigma = 1
 
     points = 1000
     input_dim = 1
@@ -279,7 +279,8 @@ if __name__ == "__main__":
     import ipdb; ipdb.set_trace()
 
     inputs, outputs= tdata.DatasetLoader.load_data(fname)
-    inputs, outputs = inputs[:points], outputs[:points]
+    if do_trend is False:
+        inputs, outputs = inputs[:points], outputs[:points]
     inputs, outputs = outputs, inputs
 
     loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
