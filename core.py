@@ -49,7 +49,7 @@ def Phi(x, width=1.0):
     assert x.shape[0].value == 1 and x.shape[1].value == 1, "x must be a scalar"
 
     ZEROS = tf.zeros(x.shape, dtype=tf.float32, name='zeros')
-    _width = tf.constant([[width/2.0]], dtype=tf.float32)
+    _width = tf.constant([[1/2.0]], dtype=tf.float32)
 
     r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: x + _width, lambda: ZEROS)
     r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x - _width, lambda: r1)
@@ -191,10 +191,10 @@ class Operator(RNN):
     def call(self, inputs, initial_state=None):
         LOG.debug("Operator.inputs.shape: {}".format(inputs.shape))
         output = super(Operator, self).call(inputs, initial_state=initial_state)
-        assert inputs.shape.ndims == 3, colors.red("ERROR: Input from Operator must be 3 dimensions")
-        shape = inputs.shape.as_list()
-
-        return tf.reshape(output, shape=(shape[0], -1, 1))
+        # assert inputs.shape.ndims == 3, colors.red("ERROR: Input from Operator must be 3 dimensions")
+        # shape = inputs.shape.as_list()
+        return output
+        # return tf.reshape(output, shape=(shape[0], -1, 1))
 
     @property
     def kernel(self):
@@ -1488,22 +1488,14 @@ class MyModel(object):
     #     return prices.reshape(-1)
 
     def trend(self, prices, B, delta=0.001, max_iteration=10000):
-        prices = prices[:100]
+        # prices = prices[:2000]
+        import ipdb;ipdb.set_trace()
         _ppp = ops.convert_to_tensor(prices, dtype=tf.float32)
-        _ppp = tf.reshape(_ppp, shape=(1, 10, 10))
+        _ppp = tf.reshape(_ppp, shape=(1, 200, 10))
 
         original_prediction = self.predict2(prices)
         shape = self.plays[0]._batch_input_shape.as_list()
-        # assert shape[1] * shape[2] == prices.shape[0]
-        # output = self.plays[0].model(prices)
-        # prices[1]
-        # weights = dict(
-        #     phi_weight_list=[],
-        #     theta_weight_list=[],
-        #     theta_bias_list=[],
-        #     tilde_theta_weight_list=[],
-        #     tilde_theta_bias_list=[]
-        # )
+
         weights_ = [[], [], [], [], []]
         for play in self.plays:
             weights_[0].append(play.layers[0].kernel)
@@ -1520,34 +1512,35 @@ class MyModel(object):
 
 
         def phi(x, width=1.0):
-            if x > (width/2.0):
-                return (x - width/2.0)[0]
-            elif x < (-width/2.0):
-                return (x + width/2.0)[0]
+            if x[0] > (width/2.0):
+                return (x[0] - width/2.0)
+            elif x[0] < (-width/2.0):
+                return (x[0] + width/2.0)
             else:
                 return float(0)
 
 
-        import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
 
-        xx_list = []
-        xy_list = []
-        xz_list = []
-        for i in range(self._nb_plays):
-            xx = self.plays[i].layers[0](_ppp)
-            xx_list.append(xx)
-            xy_ = self.plays[i].layers[1](xx)
-            xy = self.plays[i].layers[2](xy_)
-            xz = self.plays[i].layers[3](xy)
-            xy_list.append(xy)
-            xz_list.append(xz)
+        # xx_list = []
+        # xy_list = []
+        # xz_list = []
+        # for i in range(self._nb_plays):
+        #     xx = self.plays[i].layers[0](_ppp)
+        #     xy_ = self.plays[i].layers[1](xx)
+        #     xx_list.append(xy_)
 
-        xx_list = sess.run(xx_list)
-        xy_list = sess.run(xy_list)
-        xz_list = sess.run(xz_list)
+        #     xy = self.plays[i].layers[2](xy_)
+        #     xz = self.plays[i].layers[3](xy)
+        #     xy_list.append(xy)
+        #     xz_list.append(xz)
 
-        for i in range(self._nb_plays):
-            xx_list[i] = xx_list[i].reshape(-1)
+        # xx_list = sess.run(xx_list)
+        # xy_list = sess.run(xy_list)
+        # xz_list = sess.run(xz_list)
+
+        # for i in range(self._nb_plays):
+        #     xx_list[i] = xx_list[i].reshape(-1)
 
         individual_Bn_list = [[0] for _ in range(self._nb_plays)]
         outputs = []
@@ -1557,31 +1550,34 @@ class MyModel(object):
             x = prices[k]
             for i in range(self._nb_plays):
                 p = phi(weights[0][i] * x - individual_Bn_list[i][-1]) + individual_Bn_list[i][-1]
-                individual_Bn_list[i].append(p)
 
-                if abs(xx_list[i][k] -  p) >= 1e-5:
-                    print("xx: {}, p: {}".format(xx_list[i][k], p))
-                    import ipdb; ipdb.set_trace()
+                # if abs(xx_list[i][k] -  p) >= 1e-5:
+                #     print("xx: {}, p: {}".format(xx_list[i][k], p))
+                #     import ipdb; ipdb.set_trace()
 
                 pp = weights[1][i] * p + weights[2][i]
-                if not np.allclose(xy_list[i][:, k, :].reshape(-1),  pp.reshape(-1)):
-                    print("xy: {}, pp: {}".format(xy_list[i][:, k, :], pp))
-                    import ipdb; ipdb.set_trace()
+                # if not np.allclose(xy_list[i][:, k, :].reshape(-1),  pp.reshape(-1)):
+                #     print("xy: {}, pp: {}".format(xy_list[i][:, k, :], pp))
+                #     import ipdb; ipdb.set_trace()
 
                 ppp = (weights[3][i] * pp).sum() + weights[4][i]
 
-                if abs(ppp.reshape(-1)[0] - xz_list[i][:, k, :].reshape(-1)[0]) >= 1e-3:
-                    print("xz: {}, ppp: {}".format(xz_list[i][:, k, :], ppp))
-                    import ipdb; ipdb.set_trace()
-
+                # if abs(ppp.reshape(-1)[0] - xz_list[i][:, k, :].reshape(-1)[0]) >= 1e-3:
+                #     print("xz: {}, ppp: {}".format(xz_list[i][:, k, :], ppp))
+                #     import ipdb; ipdb.set_trace()
                 predict_noise_list.append(ppp[0])
 
+                individual_Bn_list[i].append(p)
+
             predict_noise = sum(predict_noise_list)/self._nb_plays
-            aa = sum([xz_list[i][:, k, :][0][0] for i in range(self._nb_plays)]) / self._nb_plays
-            LOG.debug("predicted noise is: {}, original predict noise is: {}, aa: {}".format(predict_noise, original_prediction[0][k], aa))
+            # aa = sum([xz_list[i][:, k, :][0][0] for i in range(self._nb_plays)]) / self._nb_plays
+            LOG.debug("predicted noise is: {}, original predict noise is: {}".format(predict_noise, original_prediction[0][k]))
+            if abs(predict_noise - original_prediction[0][k]) > 1e-5:
+                import ipdb; ipdb.set_trace()
+
             outputs.append(predict_noise)
             k += 1
-            if k == 100:
+            if k == 2000:
                 break
 
         LOG.debug("Verifing...")
@@ -1617,7 +1613,7 @@ class MyModel(object):
             line = f.read()
 
         shape = list(map(int, line.split(":")))
-        shape = [1, 10, 10]
+        shape = [1, 200, 10]
         for play in self.plays:
             if not play.built:
                 play._batch_input_shape = tf.TensorShape(shape)
