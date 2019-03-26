@@ -44,7 +44,7 @@ def fit(inputs,
                       activation=activation,
                       nb_plays=nb_plays)
     LOG.debug("Learning rate is {}".format(learning_rate))
-    mymodel.load_weights(weights_fname)
+    # mymodel.load_weights(weights_fname)
     if loss_name == 'mse':
         mymodel.fit(inputs,
                     outputs,
