@@ -1507,7 +1507,6 @@ class MyModel(object):
             for j in range(len(weights[i])):
                 weights[i][j] = weights[i][j].reshape(-1)
 
-
         def phi(x, width=1.0):
             if x[0] > (width/2.0):
                 return (x[0] - width/2.0)
@@ -1519,7 +1518,7 @@ class MyModel(object):
         individual_p_list = [[0] for _ in range(self._nb_plays)]
 
         outputs = []
-        k = 0
+        k = 1000
 
         def do_guess(k, step=1, guess_flag=True):
             predict_noise_list = []
@@ -1535,8 +1534,6 @@ class MyModel(object):
                 predict_noise_list.append(ppp[0])
 
             predict_noise = sum(predict_noise_list)/self._nb_plays
-            # if abs(predict_noise - original_prediction[0][k]) > 1e-5:
-            #     import ipdb; ipdb.set_trace()
 
             return guess, predict_noise
 
@@ -1544,19 +1541,19 @@ class MyModel(object):
         mu = 0
         sigma = 1
         guess_prices = []
+
         while True:
             step = 1
             # bk_gt = original_prediction[0][k]
-            bk = np.random.normal(loc=mu, scale=sigma) + B[k-1]
-            if bk > B[k-1]:
+            bk = np.random.normal(loc=mu, scale=sigma) + original_prediction[0][k-1]
+            if bk > original_prediction[0][k-1]:
                 direction = 1
-            elif bk < B[k-1]:
+            elif bk < original_prediction[0][k-1]:
                 direction = -1
             else:
                 direction = 0
 
             book_prev_diff_list = []
-
 
             guess, guess_noise = do_guess(k, 1)
             curr_diff = guess_noise - bk
@@ -1573,6 +1570,16 @@ class MyModel(object):
                 #     prev_diff))
 
                 if abs(curr_diff) < 1e-3:
+                    LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
+                        step,
+                        prices[k],
+                        guess,
+                        guess_noise,
+                        bk,
+                        original_prediction[0][k],
+                        curr_diff,
+                        prev_diff))
+
                     for i in range(self._nb_plays):
                         p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
                         individual_p_list[i].append(p)
@@ -1592,15 +1599,15 @@ class MyModel(object):
                     direction = -direction
                     book_prev_diff_list = []
                 if curr_diff * prev_diff < 0:
-                    # LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
-                    #     step,
-                    #     prices[k],
-                    #     guess,
-                    #     guess_noise,
-                    #     bk,
-                    #     original_prediction[0][k],
-                    #     curr_diff,
-                    #     prev_diff))
+                    LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
+                        step,
+                        prices[k],
+                        guess,
+                        guess_noise,
+                        bk,
+                        original_prediction[0][k],
+                        curr_diff,
+                        prev_diff))
 
                     for i in range(self._nb_plays):
                         p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
@@ -1616,14 +1623,15 @@ class MyModel(object):
             if k == 2000:
                 break
 
-
         LOG.debug("Verifing...")
         outputs = np.array(outputs).reshape(-1)
-        import ipdb; ipdb.set_trace()
-        if not np.allclose(original_prediction[0].reshape(-1), outputs):
-            import ipdb; ipdb.set_trace()
-        LOG.debug("seems correct now")
-        return outputs
+        guess_prices = np.array(guess_prices).reshape(-1)
+        # import ipdb; ipdb.set_trace()
+        # if not np.allclose(original_prediction[0].reshape(-1), outputs):
+        #     import ipdb; ipdb.set_trace()
+        # LOG.debug("seems correct now")
+        # return outputs
+        return guess_prices
 
     def save_weights(self, fname):
         suffix = fname.split(".")[-1]
