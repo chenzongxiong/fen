@@ -998,50 +998,21 @@ class MyModel(object):
                 raise Exception("activation: {} not support".format(activation))
 
         ################# FINISH GRADIENT BY HAND HERE ##################
-        # x = self.plays[0].reshape(inputs)
-        # NOTE(zxchen): don't move
+        # NOTE(zxchen): never move the following two lines
         _x = [play.reshape(inputs) for play in self.plays]
         _x_feed_dict = {"input_{}:0".format(k+1) : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
-        # import ipdb; ipdb.set_trace()
-        # self.mean = tf.Variable(mean, name="mean", dtype=tf.float32)
-        # self.sigma = tf.Variable(sigma, name="sigma", dtype=tf.float32)
 
         self.mean = tf.constant(mean, name="mean", dtype=tf.float32)
         self.sigma = tf.constant(sigma, name="sigma", dtype=tf.float32)
 
         params_list = []
-        # model_inputs = []
         feed_inputs = []
         model_outputs = []
-
         feed_targets = []
-        # update_inputs = []
-
-        # target_mean = tf.keras.backend.placeholder(ndim=0, name="mu_target", dtype=tf.float32)
-        # target_sigma = tf.keras.backend.placeholder(ndim=0, name="sigma_target", dtype=tf.float32)
-
-        # feed_targets = [target_mean, target_mean]
 
         for play in self.plays:
-            # inputs = play.model._layers[0].input
-            # outputs = play.model._layers[-1].output
-            # model_inputs.append(inputs)
-            # model_outputs.append(outputs)
-
             feed_inputs.append(play._layers[0].input)
             model_outputs.append(play._layers[-1].output)
-
-            # feed_inputs.append(inputs)
-
-            # for i in range(len(play.model.outputs)):
-            #     shape = tf.keras.backend.int_shape(play.model.outputs[i])
-            #     name = 'test{}'.format(i)
-            #     target = tf.keras.backend.placeholder(
-            #         ndim=len(shape),
-            #         name=name + '_target',
-            #         dtype=tf.keras.backend.dtype(play.model.outputs[i]))
-
-            #     feed_targets.append(target)
 
             # update_inputs += play.model.get_updates_for(inputs)
             params_list += play.trainable_weights
@@ -1087,41 +1058,14 @@ class MyModel(object):
 
                 ######## HANDLE Layer's weights #########
                 # import ipdb; ipdb.set_trace()
-                start_tick = time.time()
                 _gradient_tilde_theta = tf.transpose(tilde_theta, perm=[1, 0])  # shape: 1 by units
-                end_tick = time.time()
-                LOG.debug("Play #{} _gradient_tilde_theta cost: {} s".format(idx, end_tick-start_tick))
-
-                start_tick = time.time()
                 _theta = tf.tile(theta, multiples=[operator_output.shape[1].value, 1])  # timestep by units
-                end_tick = time.time()
-                LOG.debug("Play #{} _theta cost: {} s".format(idx, end_tick-start_tick))
-
-                start_tick = time.time()
-                # gradient nonlinear layer, shape: timestep by units
                 _gradient_theta = tf.multiply(_theta, gradient_nonlinear_layer(nonlinear_output, self._activation))
-                end_tick = time.time()
-                LOG.debug("Play #{} _gradient_theta cost: {} s".format(idx, end_tick-start_tick))
-
-                start_tick = time.time()
                 gradient_nonlinear = tf.matmul(_gradient_theta, tilde_theta)  # shape: timestep by 1
-                end_tick = time.time()
-                LOG.debug("Play #{} gradient_nonlinear cost: {} s".format(idx, end_tick-start_tick))
-
-                start_tick = time.time()
                 _gradient_phi = gradient_phi_cell(play.layers[1].output)  # shape: timestep by 1
-                end_tick = time.time()
-                LOG.debug("Play #{} _gradient_phi cost: {} s".format(idx, end_tick-start_tick))
-
-                start_tick = time.time()
                 gradient_phi = tf.multiply(_gradient_phi, phi_weight)  # shape: timestep by 1
-                end_tick = time.time()
-                LOG.debug("Play #{} gradient_phi cost: {} s".format(idx, end_tick-start_tick))
-
-                start_tick = time.time()
                 gradient_J = tf.multiply(gradient_phi, gradient_nonlinear)  # shape: timestep by 1
-                end_tick = time.time()
-                LOG.debug("Play #{} gradient_J cost: {} s".format(idx, end_tick-start_tick))
+
                 #############################################
                 # import ipdb; ipdb.set_trace()
                 auto_gradient_nonlinear = tf.keras.backend.gradients(play.layers[3].output, play.layers[2].input)
@@ -1366,121 +1310,12 @@ class MyModel(object):
         # keep prices and random walk in the same direction in our assumption
         diff_pred = prediction[1:] - prediction[:-1]
         diff_input = inputs[1:] - inputs[:-1]
-        direction_input = (diff_input > 0).astype(np.int32) - (diff_input < 0).astype(np.int32)
-        direction_pred = (diff_pred > 0).astype(np.int32) - (diff_pred < 0).astype(np.int32)
-        direction_input = direction_input.reshape(-1)
-        direction_pred = direction_pred.reshape(-1)
-        # _direction = direction_input.reshape(-1)
-        # for i in range(direction_input.shape[0]):
-        #     if direction_input[i] == 0:
-        #         direction_input[i] = direction_input[i-1]
 
-        # for i in range(direction_pred.shape[0]):
-        #     if direction_pred[i] == 0:
-        #         direction_pred[i] = direction_pred[i-1]
-
-        _direction = direction_input * direction_pred
-        direction = np.concatenate([[1], _direction])
-        for i in range(1, direction.shape[0]):
-            if direction[i] == 0:
-                direction[i] = direction[i-1]
-
-        # prediction = -1 * prediction
         prediction = utils.slide_window_average(prediction, window_size=1)
         mean = diff_pred.mean()
         std = diff_pred.std()
         LOG.debug("mean: {}, std: {}".format(mean, std))
         return prediction, float(mean), float(std)
-
-    # def trend(self, B, delta=0.01, max_iteration=10000):
-    #     shape = self.plays[0]._batch_input_shape.as_list()
-    #     assert shape[1] * shape[2] == B.shape[0]
-
-    #     # NOTE: exclude b0
-    #     # B = B[:100]
-    #     length = B.shape[0]
-    #     prices = np.zeros(B.shape[0], dtype=np.float32).reshape(shape)
-
-    #     directions = (B[1:]- B[:-1] < 0).astype(np.int32) - (B[1:] - B[:-1] >= 0).astype(np.int32)
-    #     d = [1] if B[0] < 0 else [-1]
-    #     directions = np.concatenate([d, directions]).reshape(-1)
-    #     directions = directions.reshape(shape)
-
-    #     _x = []
-    #     feed_inputs = []
-    #     model_outputs = []
-    #     state_updates = []
-    #     for play in self.plays:
-    #         feed_inputs.append(play._layers[0].input)
-    #         model_outputs.append(play._layers[-1].output)
-    #         state_updates.extend(play.state_updates)
-    #         _x.append(prices)
-
-    #     if self._nb_plays > 1:
-    #         y_pred = [tf.keras.layers.Average()(model_outputs)]
-    #     else:
-    #         y_pred = model_outputs
-
-    #     predict_function = tf.keras.backend.function(
-    #         feed_inputs,
-    #         y_pred,
-    #         updates=state_updates,
-    #         name='prediction_function'
-    #     )
-
-    #     # B = B.reshape(shape)
-    #     import time
-    #     def do_prediction(j, i, k=1):
-    #         start_tick = time.time()
-    #         if i != 0:
-    #             p = prices[:, j, i-1] + directions[:, j, i] * delta * k
-    #         elif i == 0:
-    #             if j == 0:
-    #                 p = 0 + directions[:, j, i] * delta * k
-    #             elif j != 0:
-    #                 p = prices[:, j-1, -1] + directions[:, j, i] * delta * k
-
-    #         prices[:, j, i] = p
-    #         prediction = predict_function(_x)
-    #         end_tick = time.time()
-
-    #         LOG.debug("do prediciton cost: {} s".format(end_tick - start_tick))
-    #         return prediction[0]
-
-    #     curr_diff = prev_diff = None
-
-    #     j = -1
-    #     i = -1
-    #     while True:
-    #         i += 1
-    #         if i % shape[2] == 0:
-    #             j += 1
-    #             i = 0
-    #         if j * shape[2] + i == length:
-    #             break
-
-    #         start_tick = time.time()
-
-    #         prediction = do_prediction(j, i)
-    #         curr_diff = prediction[:, j*shape[2]+i, :] - B[j*shape[2]+i]
-    #         for k in range(2, max_iteration):
-    #             prev_diff = curr_diff
-    #             prediction = do_prediction(j, i, k)
-    #             curr_diff = prediction[:, j*shape[2]+i, :] - B[j*shape[2]+i]
-
-    #             LOG.debug(colors.yellow("j: {}, i: {}, curr_diff is: {}, prev_diff is: {}, prediction is: {}, ground_truth is: {}, price: {}".format(j, i,
-    #                                                                                                                                                  curr_diff,
-    #                                                                                                                                                  prev_diff,
-    #                                                                                                                                                  prediction[:, j*shape[2]+i, :],
-    #                                                                                                                                                  B[j*shape[2]+i],
-    #                                                                                                                                                  prices[:, j, i])))
-    #             if np.abs(curr_diff[0, 0]) < 1e-5 or (curr_diff * prev_diff)[0, 0] < 0:
-    #                 break
-
-    #         end_tick = time.time()
-    #         LOG.debug(colors.red("time cost: {}".format(end_tick - start_tick)))
-
-    #     return prices.reshape(-1)
 
     def trend(self, prices, B, delta=0.001, max_iteration=10000):
         _ppp = ops.convert_to_tensor(prices, dtype=tf.float32)
