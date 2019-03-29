@@ -317,14 +317,16 @@ if __name__ == "__main__":
                                                                           loss=loss_name)
 
     if do_trend is True:
+        import ipdb; ipdb.set_trace()
+        a, b = tdata.DatasetLoader.load_data(predicted_fname)
+
         predictions, loss = trend(prices=inputs,
                                   B=outputs,
                                   units=__units__,
                                   activation=__activation__,
                                   nb_plays=__nb_plays__,
                                   weights_name=weights_fname)
-        # inputs = inputs[:predictions.shape[-1]]
-        inputs = inputs[1000:]
+        inputs = inputs[1000:1000+predictions.shape[-1]]
     elif do_prediction is True:
         LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
         predictions, loss = predict(inputs=inputs,

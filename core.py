@@ -42,8 +42,8 @@ tf.keras.backend.set_epsilon(1e-7)
 
 def Phi(x, width=1.0):
     '''
-    Phi(x) = x         , if x > 0
-           = x + width , if x < - width
+    Phi(x) = x - width/2 , if x > width/2
+           = x + width/2 , if x < - width/2
            = 0         , otherwise
     '''
     assert x.shape[0].value == 1 and x.shape[1].value == 1, "x must be a scalar"
@@ -199,11 +199,6 @@ class Operator(RNN):
     @property
     def kernel(self):
         return self.cell.kernel
-
-
-    # @property
-    # def last_kernel(self):
-    #     return self.cell.last_kernel
 
 
 class MyDense(Layer):
@@ -1520,7 +1515,7 @@ class MyModel(object):
         outputs = []
         k = 1000
 
-        def do_guess(k, step=1, guess_flag=True):
+        def do_guess(k, step=1, direction=1, guess_flag=True):
             predict_noise_list = []
             if guess_flag is True:
                 guess = prices[k-1] + direction * step * delta
@@ -1537,90 +1532,159 @@ class MyModel(object):
 
             return guess, predict_noise
 
+
+        guess_prices_list = [[] for _ in range(2000)]
+
+        def repeat(k, iterations=1):
+            # guess_prices_list.append([])
+            for i in range(iterations):
+                curr_diff = prev_diff = None
+                step = 1
+                bk = np.random.normal(loc=mu, scale=sigma) + original_prediction[0][k-1]
+                if bk > original_prediction[0][k-1]:
+                    direction = 1
+                elif bk < original_prediction[0][k-1]:
+                    direction = -1
+                else:
+                    direction = 0
+
+                book_prev_diff_list = []
+
+                guess, guess_noise = do_guess(k, 1, direction)
+                curr_diff = guess_noise - bk
+
+                while True:
+                    if abs(curr_diff) < 1e-3:
+                        LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
+                            step,
+                            prices[k],
+                            guess,
+                            guess_noise,
+                            bk,
+                            original_prediction[0][k],
+                            curr_diff,
+                            prev_diff))
+
+                        for i in range(self._nb_plays):
+                            p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
+                            individual_p_list[i].append(p)
+
+                        guess_prices_list[k].append(guess)
+                        break
+
+                    prev_diff = curr_diff
+                    book_prev_diff_list.append(prev_diff)
+
+                    step += 1
+                    guess, guess_noise = do_guess(k, step, direction, guess_flag=True)
+                    curr_diff = guess_noise - bk
+
+                    if len(book_prev_diff_list) >= 100 and direction * (curr_diff - book_prev_diff_list[0]) > 0:
+                        direction = -direction
+                        book_prev_diff_list = []
+                    if curr_diff * prev_diff < 0:
+                        LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
+                            step,
+                            prices[k],
+                            guess,
+                            guess_noise,
+                            bk,
+                            original_prediction[0][k],
+                            curr_diff,
+                            prev_diff))
+
+                        for i in range(self._nb_plays):
+                            p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
+                            individual_p_list[i].append(p)
+                        guess_prices_list[k].append(guess)
+                        break
+
+            # import ipdb; ipdb.set_trace()
+            guess_prices.append(sum(guess_prices_list[k])/iterations)
+
+
         curr_diff = prev_diff = None
         mu = 0
-        sigma = 1
+        sigma = 2
         guess_prices = []
 
         while True:
-            step = 1
             # bk_gt = original_prediction[0][k]
-            bk = np.random.normal(loc=mu, scale=sigma) + original_prediction[0][k-1]
-            if bk > original_prediction[0][k-1]:
-                direction = 1
-            elif bk < original_prediction[0][k-1]:
-                direction = -1
-            else:
-                direction = 0
+            # bk = np.random.normal(loc=mu, scale=sigma) + original_prediction[0][k-1]
+            # if bk > original_prediction[0][k-1]:
+            #     direction = 1
+            # elif bk < original_prediction[0][k-1]:
+            #     direction = -1
+            # else:
+            #     direction = 0
 
-            book_prev_diff_list = []
+            # book_prev_diff_list = []
 
-            guess, guess_noise = do_guess(k, 1)
-            curr_diff = guess_noise - bk
+            # guess, guess_noise = do_guess(k, 1)
+            # curr_diff = guess_noise - bk
 
-            while True:
-                # LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
-                #     step,
-                #     prices[k],
-                #     guess,
-                #     guess_noise,
-                #     bk,
-                #     original_prediction[0][k],
-                #     curr_diff,
-                #     prev_diff))
+            # while True:
+            #     # LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
+            #     #     step,
+            #     #     prices[k],
+            #     #     guess,
+            #     #     guess_noise,
+            #     #     bk,
+            #     #     original_prediction[0][k],
+            #     #     curr_diff,
+            #     #     prev_diff))
 
-                if abs(curr_diff) < 1e-3:
-                    LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
-                        step,
-                        prices[k],
-                        guess,
-                        guess_noise,
-                        bk,
-                        original_prediction[0][k],
-                        curr_diff,
-                        prev_diff))
+            #     if abs(curr_diff) < 1e-3:
+            #         LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
+            #             step,
+            #             prices[k],
+            #             guess,
+            #             guess_noise,
+            #             bk,
+            #             original_prediction[0][k],
+            #             curr_diff,
+            #             prev_diff))
 
-                    for i in range(self._nb_plays):
-                        p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
-                        individual_p_list[i].append(p)
+            #         for i in range(self._nb_plays):
+            #             p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
+            #             individual_p_list[i].append(p)
 
-                    outputs.append(guess_noise)
-                    guess_prices.append(guess)
-                    break
+            #         outputs.append(guess_noise)
+            #         guess_prices.append(guess)
+            #         break
 
-                prev_diff = curr_diff
-                book_prev_diff_list.append(prev_diff)
+            #     prev_diff = curr_diff
+            #     book_prev_diff_list.append(prev_diff)
 
-                step += 1
-                guess, guess_noise = do_guess(k, step, guess_flag=True)
-                curr_diff = guess_noise - bk
+            #     step += 1
+            #     guess, guess_noise = do_guess(k, step, guess_flag=True)
+            #     curr_diff = guess_noise - bk
 
-                if len(book_prev_diff_list) >= 100 and direction * (curr_diff - book_prev_diff_list[0]) > 0:
-                    direction = -direction
-                    book_prev_diff_list = []
-                if curr_diff * prev_diff < 0:
-                    LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
-                        step,
-                        prices[k],
-                        guess,
-                        guess_noise,
-                        bk,
-                        original_prediction[0][k],
-                        curr_diff,
-                        prev_diff))
+            #     if len(book_prev_diff_list) >= 100 and direction * (curr_diff - book_prev_diff_list[0]) > 0:
+            #         direction = -direction
+            #         book_prev_diff_list = []
+            #     if curr_diff * prev_diff < 0:
+            #         LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
+            #             step,
+            #             prices[k],
+            #             guess,
+            #             guess_noise,
+            #             bk,
+            #             original_prediction[0][k],
+            #             curr_diff,
+            #             prev_diff))
 
-                    for i in range(self._nb_plays):
-                        p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
-                        individual_p_list[i].append(p)
-                    guess_prices.append(guess)
-                    outputs.append(guess_noise)
-                    break
-                # if step % 1000 == 0:
-                #     import ipdb; ipdb.set_trace()
-
+            #         for i in range(self._nb_plays):
+            #             p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
+            #             individual_p_list[i].append(p)
+            #         guess_prices.append(guess)
+            #         outputs.append(guess_noise)
+            #         break
+            # import ipdb; ipdb.set_trace()
+            repeat(k, 100)
             k += 1
             LOG.debug(colors.red("K: {}".format(k)))
-            if k == 2000:
+            if k == 1100:
                 break
 
         LOG.debug("Verifing...")
@@ -1630,7 +1694,24 @@ class MyModel(object):
         # if not np.allclose(original_prediction[0].reshape(-1), outputs):
         #     import ipdb; ipdb.set_trace()
         # LOG.debug("seems correct now")
-        # return outputs
+        # loss1 = ((guess_prices - prices[999:1099]) ** 2)
+        # loss2 = np.abs(guess_prices - prices[999:1099])
+        loss1 =  ((guess_prices - prices[1000:1100]) ** 2)
+        loss2 = np.abs(guess_prices - prices[1000:1100])
+        loss3 = (prices[1000:1100] - prices[999:1099]) ** 2
+        loss4 = np.abs(prices[1000:1100] - prices[999:1099])
+
+        LOG.debug("root square loss: {}".format((loss1 ** (0.5))))
+        LOG.debug("abs error: {}".format(loss2))
+        LOG.debug("root square loss: {}".format((loss3 ** (0.5))))
+        LOG.debug("abs error: {}".format(loss4))
+
+        LOG.debug("root mean square loss1: {}".format((loss1.sum())**(0.5)))
+        LOG.debug("root mean square loss2: {}".format((loss3.sum())**(0.5)))
+
+        LOG.debug("mean abs loss1: {}".format((loss2.sum())))
+        LOG.debug("mean abs loss2: {}".format((loss4.sum())))
+
         return guess_prices
 
     def save_weights(self, fname):
