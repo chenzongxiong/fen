@@ -131,7 +131,6 @@ class TestCases(unittest.TestCase):
 
     def test_gradient_phicell(self):
         input_1 = ops.convert_to_tensor(self.inputs.reshape([1, -1, 1]), dtype=tf.float32)
-        # # cell = core.PhiCell(debug=True)
         operator = core.Operator(debug=True)
         output_1 = operator(input_1)
         gradient_by_tf = tf.gradients(output_1, input_1)[0]
@@ -141,6 +140,60 @@ class TestCases(unittest.TestCase):
         J = core.jacobian(output_1, input_1)
         self.assertTrue(np.allclose(np.diag(J).reshape(-1), result_by_hand.reshape(-1)))
         self.assertTrue(np.allclose(J.sum(axis=0).reshape(-1), result_by_tf.reshape(-1)))
+
+    def test_gradient_mydense_None(self):
+        units = 10
+        activation = None
+        input_1 = ops.convert_to_tensor(self.inputs.reshape([1, -1, 1]), dtype=tf.float32)
+        mydense = core.MyDense(units=units,
+                               activation=activation,
+                               use_bias=True,
+                               debug=False)
+
+        output_1 = mydense(input_1)
+        gradient_by_tf = tf.gradients(output_1, input_1)[0]
+        gradient_by_hand = core.gradient_nonlinear_layer(output_1, mydense.kernel, activation=activation)
+
+        utils.init_tf_variables()
+        result_by_tf, result_by_hand = session.run([gradient_by_tf, gradient_by_hand])
+        self.assertTrue(np.allclose(result_by_tf.reshape(-1), result_by_hand.reshape(-1), atol=1e-5))
+
+    def test_gradient_mydense_tanh(self):
+        units = 10
+        activation = 'tanh'
+        input_1 = ops.convert_to_tensor(self.inputs.reshape([1, -1, 1]), dtype=tf.float32)
+        mydense = core.MyDense(units=units,
+                               activation=activation,
+                               use_bias=True,
+                               debug=False)
+
+        output_1 = mydense(input_1)
+        gradient_by_tf = tf.gradients(output_1, input_1)[0]
+        gradient_by_hand = core.gradient_nonlinear_layer(output_1, mydense.kernel, activation=activation)
+
+        utils.init_tf_variables()
+        result_by_tf, result_by_hand = session.run([gradient_by_tf, gradient_by_hand])
+        self.assertTrue(np.allclose(result_by_tf.reshape(-1), result_by_hand.reshape(-1), atol=1e-5))
+
+    def test_gradient_mydense_relu(self):
+        units = 10
+        activation = 'relu'
+        input_1 = ops.convert_to_tensor(self.inputs.reshape([1, -1, 1]), dtype=tf.float32)
+        mydense = core.MyDense(units=units,
+                               activation=activation,
+                               use_bias=True,
+                               debug=False)
+
+        output_1 = mydense(input_1)
+        gradient_by_tf = tf.gradients(output_1, input_1)[0]
+        gradient_by_hand = core.gradient_nonlinear_layer(output_1, mydense.kernel, activation=activation)
+
+        utils.init_tf_variables()
+        result_by_tf, result_by_hand = session.run([gradient_by_tf, gradient_by_hand])
+        self.assertTrue(np.allclose(result_by_tf.reshape(-1), result_by_hand.reshape(-1), atol=1e-5))
+
+    # def test_gradient_mysimpledense(self):
+    #     pass
 
 
 if __name__ == '__main__':
