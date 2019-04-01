@@ -29,11 +29,11 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 1000
+    epochs = 10000
     # steps_per_epoch = batch_size
 
     start = time.time()
-    input_dim = 10
+    input_dim = 1
     timestep = inputs.shape[0] // input_dim
     steps_per_epoch = input_dim
     # steps_per_epoch = 1
@@ -42,7 +42,8 @@ def fit(inputs,
                       timestep=timestep,
                       units=units,
                       activation=activation,
-                      nb_plays=nb_plays)
+                      nb_plays=nb_plays,
+                      learning_rate=learning_rate)
     LOG.debug("Learning rate is {}".format(learning_rate))
     # mymodel.load_weights(weights_fname)
     if loss_name == 'mse':
@@ -61,8 +62,8 @@ def fit(inputs,
                      epochs=epochs,
                      verbose=1,
                      steps_per_epoch=steps_per_epoch,
-                     loss_file_name=loss_file_name,
-                     learning_rate=learning_rate)
+                     loss_file_name=loss_file_name)
+
     else:
         raise Exception("loss {} not support".format(loss_name))
     end = time.time()
@@ -190,9 +191,9 @@ if __name__ == "__main__":
     __nb_plays__ = 20
     __units__ = 20
     __state__ = 0
-    # __activation__ = 'tanh'
+    __activation__ = 'tanh'
     # __activation__ = 'relu'
-    __activation__ = None
+    # __activation__ = None
     __mu__ = 0
     __sigma__ = 1
     # __sigma__ = 5
