@@ -88,14 +88,6 @@ class PhiCell(Layer):
         self.unroll = False
 
     def build(self, input_shape):
-        # self.last_kernel = self.add_weight(
-        #     "last_weight",
-        #     shape=(1, 1),
-        #     initializer=self.kernel_initializer,
-        #     regularizer=self.kernel_regularizer,
-        #     constraint=self.kernel_constraint,
-        #     dtype=tf.float32,
-        #     trainable=False)
 
         if input_shape[-1] <= 20:
             self.unroll = True
@@ -133,15 +125,13 @@ class PhiCell(Layer):
 
         ############### IMPL from Scratch #####################
         # outputs_ = tf.multiply(self._inputs, self.kernel)
-
-        # # NOTE: unroll method, can we use RNN method ?
         # outputs = [self._state]
         # for i in range(outputs_.shape[-1].value):
         #     output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1]), self._width), outputs[-1])
         #     outputs.append(output)
 
         # outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
-
+        # import ipdb; ipdb.set_trace()
         # state = outputs[-1]
         # outputs = tf.reshape(outputs, shape=self._inputs.shape)
 
@@ -302,15 +292,6 @@ class MySimpleDense(Dense):
 
     def build(self, input_shape):
         assert self.units == 1
-        # self.last_kernel = self.add_weight(
-        #     "last_kernel",
-        #     shape=(input_shape[-1].value, 1),
-        #     initializer=self.kernel_initializer,
-        #     regularizer=self.kernel_regularizer,
-        #     constraint=self.kernel_constraint,
-        #     dtype=tf.float32,
-        #     trainable=False)
-
         if self._debug is True:
             LOG.debug("init mysimpledense kernel/bias as pre-defined")
             # _init_kernel = np.array([1 * (i + 1) for i in range(input_shape[-1].value)])
