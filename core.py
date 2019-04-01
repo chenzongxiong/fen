@@ -54,7 +54,7 @@ def Phi(x, width=1.0):
     return r2
 
 
-def gradient_phi_cell(P):
+def gradient_operator(P, weights=None):
     # _P = tf.reshape(P, shape=(P.shape[0].value, -1))
     # _diff = _P[:, 1:] - _P[:, :-1]
 
@@ -80,7 +80,7 @@ def gradient_phi_cell(P):
     x0 = tf.slice(reshaped_P, [0, 0], [1, 1])
     diff_ = tf.concat([x0, diff], axis=1)
     result = tf.cast(tf.abs(diff_) >= 1e-7, dtype=tf.float32)
-    return tf.reshape(result, shape=P.shape)
+    return tf.reshape(result * weights, shape=P.shape)
 
 
 def jacobian(outputs, inputs):
@@ -91,11 +91,11 @@ def jacobian(outputs, inputs):
         grad_func = tf.gradients(outputs[0, m, 0], inputs)[0]
         jacobian_matrix.append(tf.reshape(grad_func, shape=(M, )))
 
-    jacobian_matrix = sess.run(jacobian_matrix)
-    return np.array(jacobian_matrix)
+    # jacobian_matrix = sess.run(jacobian_matrix)
+    return ops.convert_to_tensor(jacobian_matrix, dtype=tf.float32)
 
 
-def gradient_nonlinear_layer(fZ, weights=None, activation=None):
+def gradient_nonlinear_layer(fZ, weights=None, activation=None, reduce_sum=True):
     LOG.debug("gradient nonlinear activation {}".format(activation))
     # ignore sample
     _fZ = tf.reshape(fZ, shape=fZ.shape.as_list()[1:])
@@ -111,8 +111,60 @@ def gradient_nonlinear_layer(fZ, weights=None, activation=None):
     else:
         raise Exception("activation: {} not support".format(activation))
 
-    gradient = tf.reduce_sum(partial_gradient * weights, axis=-1)
-    return tf.reshape(gradient, shape=(fZ.shape.as_list()[:-1] + [1]))
+    if reduce_sum is True:
+        gradient = tf.reduce_sum(partial_gradient * weights, axis=-1, keepdims=True)
+    else:
+        gradient = partial_gradient * weights
+
+    return tf.reshape(gradient, shape=(fZ.shape.as_list()[:-1] + [gradient.shape[-1].value]))
+
+
+def gradient_linear_layer(weights, multiples=1, expand_dims=True):
+    if expand_dims is True:
+        return tf.expand_dims(tf.tile(tf.transpose(weights, perm=[1, 0]), multiples=[multiples, 1]), axis=0)
+    else:
+        return tf.tile(tf.transpose(weights, perm=[1, 0]), multiples=[multiples, 1])
+
+
+def gradient_operator_nonlinear_layers(P,
+                                       fZ,
+                                       operator_weights,
+                                       nonlinear_weights,
+                                       activation,
+                                       debug=False,
+                                       inputs=None,
+                                       reduce_sum=True):
+    if debug is True and inputs is not None:
+        LOG.debug(colors.red("Only use under unittest, not for real situation"))
+        J = jacobian(P, inputs)
+        g1 = tf.reshape(tf.reduce_sum(J, axis=0), shape=inputs.shape)
+        calc_g = gradient_operator(P, operator_weights)
+        utils.init_tf_variables()
+        J_result, calc_g_result = session.run([J, calc_g])
+        assert np.allclose(np.diag(J_result), calc_g_result.reshape(-1)), colors.red("ERROR: gradient operator- and nonlinear- layers")
+    else:
+        g1 = gradient_operator(P, operator_weights)
+    g2 = gradient_nonlinear_layer(fZ, nonlinear_weights, activation, reduce_sum=reduce_sum)
+    return g1*g2
+
+
+def gradient_all_layers(P,
+                        fZ,
+                        operator_weights,
+                        nonlinear_weights,
+                        linear_weights,
+                        activation,
+                        debug=False,
+                        inputs=None):
+    g1 = gradient_operator_nonlinear_layers(P, fZ,
+                                            operator_weights,
+                                            nonlinear_weights,
+                                            activation=activation,
+                                            debug=debug,
+                                            inputs=inputs,
+                                            reduce_sum=False)
+
+    return tf.expand_dims(tf.matmul(g1[0], linear_weights), axis=0)
 
 
 class PhiCell(Layer):
@@ -969,7 +1021,7 @@ class MyModel(object):
 
         # import ipdb; ipdb.set_trace()
         #################### DO GRADIENT BY HAND HERE ####################
-        # def gradient_phi_cell(P):
+        # def gradient_operator(P):
         #     # _P = tf.reshape(P, shape=(P.shape[0].value, -1))
         #     # _diff = _P[:, 1:] - _P[:, :-1]
 
@@ -1053,7 +1105,7 @@ class MyModel(object):
                 _theta = tf.tile(theta, multiples=[operator_output.shape[1].value, 1])  # timestep by units
                 _gradient_theta = tf.multiply(_theta, gradient_nonlinear_layer(nonlinear_output, self._activation))
                 gradient_nonlinear = tf.matmul(_gradient_theta, tilde_theta)  # shape: timestep by 1
-                _gradient_phi = gradient_phi_cell(play.layers[1].output)  # shape: timestep by 1
+                _gradient_phi = gradient_operator(play.layers[1].output)  # shape: timestep by 1
                 gradient_phi = tf.multiply(_gradient_phi, phi_weight)  # shape: timestep by 1
                 gradient_J = tf.multiply(gradient_phi, gradient_nonlinear)  # shape: timestep by 1
 
@@ -1734,7 +1786,7 @@ if __name__ == "__main__":
     y_res = sess.run(y)
     LOG.debug("y: {}".format(y_res))
 
-    g_by_hand = gradient_phi_cell(y)
+    g_by_hand = gradient_operator(y)
 
 
     LOG.debug("g: {}".format(sess.run(g)))
