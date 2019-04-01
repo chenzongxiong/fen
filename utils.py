@@ -115,9 +115,24 @@ def get_tf_summary_writer(fpath):
     return writer
 
 
-def get_session():
+_SESSION = None
+
+def get_session(debug=False, interactive=False):
     import tensorflow as tf
-    return tf.keras.backend.get_session()
+    from tensorflow.python import debug as tf_debug
+    global _SESSION
+    if _SESSION is not None:
+        return _SESSION
+
+    if debug is True:
+        _SESSION = tf.keras.backend.set_session(
+            tf_debug.TensorBoardDebugWrapperSession(tf.Session(), "localhost:1234"))
+    elif interactive is True:
+        _SESSION = tf.InteractiveSession()
+    else:
+        _SESSION = tf.keras.backend.get_session()
+
+    return _SESSION
 
 
 def init_tf_variables():

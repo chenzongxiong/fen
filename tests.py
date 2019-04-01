@@ -4,9 +4,9 @@ import utils
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import ops
+from tensorflow.python.ops.parallel_for.gradients import jacobian
 
-
-session = utils.get_session()
+session = utils.get_session(interactive=True)
 
 
 class TestCases(unittest.TestCase):
@@ -121,6 +121,26 @@ class TestCases(unittest.TestCase):
         bias = np.array([_init_bias])
         truth = np.matmul(self.inputs.reshape([1, -1, 2]), kernel) + bias
         self.assertTrue(np.allclose(result_1, truth, atol=1e-5))
+
+    def test_average_layer(self):
+        input_1 = ops.convert_to_tensor(self.inputs.reshape([1, -1, 1]), dtype=tf.float32)
+        average = tf.keras.layers.Average()([input_1, input_1])
+        utils.init_tf_variables()
+        result = session.run(average)
+        self.assertTrue(np.allclose(result.reshape(-1), self.inputs.reshape(-1), atol=1e-5))
+
+    def test_gradient_phicell(self):
+        input_1 = ops.convert_to_tensor(self.inputs.reshape([1, -1, 1]), dtype=tf.float32)
+        # # cell = core.PhiCell(debug=True)
+        operator = core.Operator(debug=True)
+        output_1 = operator(input_1)
+        gradient_by_tf = tf.gradients(output_1, input_1)[0]
+        gradient_by_hand = core.gradient_phi_cell(output_1)
+        utils.init_tf_variables()
+        result_by_tf, result_by_hand = session.run([gradient_by_tf, gradient_by_hand])
+        J = core.jacobian(output_1, input_1)
+        self.assertTrue(np.allclose(np.diag(J).reshape(-1), result_by_hand.reshape(-1)))
+        self.assertTrue(np.allclose(J.sum(axis=0).reshape(-1), result_by_tf.reshape(-1)))
 
 
 if __name__ == '__main__':

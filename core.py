@@ -1,6 +1,5 @@
 import os
 import tensorflow as tf
-# tf.enable_eager_execution()
 from tensorflow.python import debug as tf_debug
 from tensorflow.python.keras.engine.base_layer import Layer
 from tensorflow.python.keras.layers.recurrent import RNN
@@ -54,6 +53,54 @@ def Phi(x, width=1.0):
     r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: x + _width, lambda: ZEROS)
     r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x - _width, lambda: r1)
     return r2
+
+
+# def gradient_phi(x):
+#     _width = tf.constant(1/2.0, dtype=tf.float32)
+#     r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: 1.0, lambda: 0.0)
+#     r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: 1.0, lambda: r1)
+#     return r2
+
+
+def gradient_phi_cell(P):
+    # _P = tf.reshape(P, shape=(P.shape[0].value, -1))
+    # _diff = _P[:, 1:] - _P[:, :-1]
+
+    # x0 = tf.slice(_P, [0, 0], [1, 1])
+    # diff = tf.concat([x0, _diff], axis=1)
+
+    # p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
+    # p2 = 1.0 - p1
+    # p3_list = []
+    # # TODO: multiple process here
+
+    # for j in range(1, _P.shape[1].value):
+    #     p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
+
+    # _p3 = tf.stack(p3_list, axis=1) + 1
+    # p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
+
+    # result = tf.multiply(p1, p3)
+    # return tf.reshape(result, shape=P.shape.as_list())
+
+    reshaped_P = tf.reshape(P, shape=(P.shape[0].value, -1))
+    diff = reshaped_P[:, 1:] - reshaped_P[:, :-1]
+    x0 = tf.slice(reshaped_P, [0, 0], [1, 1])
+    diff_ = tf.concat([x0, diff], axis=1)
+    result = tf.cast(tf.abs(diff_) >= 1e-7, dtype=tf.float32)
+    return tf.reshape(result, shape=P.shape)
+
+
+def jacobian(outputs, inputs):
+    jacobian_matrix = []
+    M = outputs.shape[1].value
+    for m in range(M):
+        # We iterate over the M elements of the output vector
+        grad_func = tf.gradients(outputs[0, m, 0], inputs)[0]
+        jacobian_matrix.append(tf.reshape(grad_func, shape=(M, )))
+
+    jacobian_matrix = sess.run(jacobian_matrix)
+    return np.array(jacobian_matrix)
 
 
 class PhiCell(Layer):
@@ -740,7 +787,7 @@ class MyModel(object):
             assert play._need_compile == False, colors.red("Play inside MyModel mustn't be compiled")
             self.plays.append(play)
 
-        self.optimizer = optimizers.get(optimizer) if optimizer is not None else None
+        # self.optimizer = optimizers.get(optimizer) if optimizer is not None else None
 
     def fit(self,
             inputs,
@@ -900,11 +947,12 @@ class MyModel(object):
              learning_rate=0.001,
              decay=0.):
 
-        _inputs = inputs
         writer = utils.get_tf_summary_writer("./log/mle")
+
+        _inputs = inputs
         inputs = ops.convert_to_tensor(inputs, tf.float32)
         if outputs is not None:
-            LOG.debug("Random walk: mu: {}, sigma: {}".format(outputs.mean(), outputs.std()))
+            # glob ground-truth mu and sigma of outputs
             __mu__ = (outputs[1:] - outputs[:-1]).mean()
             __sigma__ = (outputs[1:] - outputs[:-1]).std()
             outputs = ops.convert_to_tensor(outputs, tf.float32)
@@ -971,26 +1019,18 @@ class MyModel(object):
         _x = [play.reshape(inputs) for play in self.plays]
         _x_feed_dict = {"input_{}:0".format(k+1) : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
 
-        self.mean = tf.constant(mean, name="mean", dtype=tf.float32)
-        self.sigma = tf.constant(sigma, name="sigma", dtype=tf.float32)
-
         params_list = []
         feed_inputs = []
         model_outputs = []
         feed_targets = []
 
         for play in self.plays:
-            feed_inputs.append(play._layers[0].input)
-            model_outputs.append(play._layers[-1].output)
-
+            feed_inputs.append(play.input)
+            model_outputs.append(play.output)
             # update_inputs += play.model.get_updates_for(inputs)
             params_list += play.trainable_weights
 
-        if self._nb_plays > 1:
-            y_pred = tf.keras.layers.Average()(model_outputs)
-        else:
-            y_pred = model_outputs[0]
-
+        y = tf.keras.layers.Average()(model_ouputs)
         ##################### Prepare output of nonlinear #############################
 
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate,
@@ -1002,7 +1042,7 @@ class MyModel(object):
             J_list = []
             _by_hand_list = []
             _by_tf_list = []
-            last_nonlinear_outputs = []
+
             # import ipdb; ipdb.set_trace()
             ################### CALC J by hand #######################
             for idx in range(self._nb_plays):
@@ -1011,12 +1051,10 @@ class MyModel(object):
                 ###### Extract Layer's outputs ######
                 reshaped_operator_layer = play.layers[1]
                 operator_output = reshaped_operator_layer.output
-
                 nonlinear_output = play.layers[2].output
 
                 ######## Extract Layer's weights #######
-                trainable_weights = play.trainable_weights
-
+                # trainable_weights = play.trainable_weights
                 # phi_weight = play.model.layers[0].cell.last_kernel
                 # theta = play.model.layers[2].last_kernel
                 # tilde_theta = play.model.layers[3].last_kernel
@@ -1101,7 +1139,6 @@ class MyModel(object):
 
         writer.add_graph(tf.get_default_graph())
         self.cost_history = []
-        # steps_per_epoch = 1
         once = True
         cost = -1
 
