@@ -1,4 +1,6 @@
 import os
+import time
+
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
 from tensorflow.python.keras.engine.base_layer import Layer
@@ -27,9 +29,6 @@ import pickle
 
 LOG = logging.getLogger(__name__)
 
-# tf.keras.backend.set_session(
-#     tf_debug.TensorBoardDebugWrapperSession(tf.Session(), "localhost:1234"))
-
 sess = utils.get_session()
 session = utils.get_session()
 SESS = utils.get_session()
@@ -54,12 +53,6 @@ def Phi(x, width=1.0):
     r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x - _width, lambda: r1)
     return r2
 
-
-# def gradient_phi(x):
-#     _width = tf.constant(1/2.0, dtype=tf.float32)
-#     r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: 1.0, lambda: 0.0)
-#     r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: 1.0, lambda: r1)
-#     return r2
 
 
 def gradient_phi_cell(P):
@@ -178,7 +171,6 @@ class PhiCell(Layer):
         #     outputs.append(output)
 
         # outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
-        # import ipdb; ipdb.set_trace()
         # state = outputs[-1]
         # outputs = tf.reshape(outputs, shape=self._inputs.shape)
 
@@ -201,7 +193,6 @@ class PhiCell(Layer):
 
         assert self._state.shape.ndims == 2, colors.red("PhiCell states must be 2 dimensions")
         states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
-
         last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
         return outputs_, list(states_x)
 
@@ -758,14 +749,7 @@ class MyModel(object):
         _width = 0.1
         width = 1
         for nb_play in range(nb_plays):
-            # weight =  _weight / (i)
-            # weight = 1.0
             if diff_weights is True:
-                # weight =  2 * _weight / (i)
-                # weight = i * _weight
-                # xxxx: good weights
-                # weight = 2 * _weight / i
-                # weight = _weight * i / 10
                 weight = 0.5 / (_width * i) # width range from (0.1, ... 0.1 * nb_plays)
             else:
                 weight = 1.0
@@ -786,8 +770,6 @@ class MyModel(object):
                         input_dim=input_dim)
             assert play._need_compile == False, colors.red("Play inside MyModel mustn't be compiled")
             self.plays.append(play)
-
-        # self.optimizer = optimizers.get(optimizer) if optimizer is not None else None
 
     def fit(self,
             inputs,
@@ -898,8 +880,6 @@ class MyModel(object):
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
     def predict(self, inputs, individual=False):
-
-        import time
         inputs = ops.convert_to_tensor(inputs, tf.float32)
 
         for play in self.plays:
