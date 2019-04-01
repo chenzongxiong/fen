@@ -5,8 +5,27 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import ops
 from tensorflow.python.ops.parallel_for.gradients import jacobian
+import pickle
+import pickletools
 
 session = utils.get_session(interactive=True)
+
+
+class Foo():
+    def __init__(self):
+        self.foo = 0
+
+    def bar(self, x):
+        print("bar {}".format(x))
+
+    def baz(self):
+        print("baz")
+
+    def __getstate__(self):
+        # return self.__dict__
+        return {'foo': 3, 'bax': 4, 'func': self.bar}
+    # def __setstate(self, state):
+    #     import ipdb; ipdb.set_trace()
 
 
 class TestCases(unittest.TestCase):
@@ -171,6 +190,12 @@ class TestCases(unittest.TestCase):
         self._test_gradient_all_helper(activation=None)
         self._test_gradient_all_helper(activation='tanh')
         self._test_gradient_all_helper(activation='relu')
+        self._test_gradient_all_helper(activation=None, input_dim=2)
+        self._test_gradient_all_helper(activation='tanh', input_dim=2)
+        self._test_gradient_all_helper(activation='relu', input_dim=2)
+        self._test_gradient_all_helper(activation=None, input_dim=10)
+        self._test_gradient_all_helper(activation='tanh', input_dim=10)
+        self._test_gradient_all_helper(activation='relu', input_dim=10)
 
     def _test_gradient_mydense_helper(self, activation):
         units = 10
@@ -213,10 +238,10 @@ class TestCases(unittest.TestCase):
         result_by_tf, result_by_hand = session.run([gradient_by_tf, gradient_by_hand])
         self.assertTrue(np.allclose(result_by_tf, result_by_hand))
 
-    def _test_gradient_all_helper(self, activation):
+    def _test_gradient_all_helper(self, activation, input_dim=1):
         units = 5
         debug = False
-        input_1 = ops.convert_to_tensor(self.inputs.reshape([1, -1, 1]), dtype=tf.float32)
+        input_1 = ops.convert_to_tensor(self.inputs.reshape([1, -1, input_dim]), dtype=tf.float32)
         operator = core.Operator(debug=debug)
         output_1 = operator(input_1)
         mydense = core.MyDense(units=units,
@@ -230,7 +255,7 @@ class TestCases(unittest.TestCase):
                                            activation=None,
                                            debug=debug)
         output_3 = mysimpledense(output_2)
-        gradient_by_tf = tf.gradients(output_3, input_1)[0]
+        gradient_by_tf = tf.reshape(tf.gradients(output_3, input_1)[0], shape=output_1.shape)
         gradient_by_hand = core.gradient_all_layers(output_1,
                                                     output_2,
                                                     operator.kernel,
@@ -242,6 +267,13 @@ class TestCases(unittest.TestCase):
         utils.init_tf_variables()
         result_by_tf, result_by_hand = session.run([gradient_by_tf, gradient_by_hand])
         self.assertTrue(np.allclose(result_by_tf, result_by_hand))
+
+    # def test_pickle(self):
+    #     foo = Foo()
+    #     p_foo = pickle.dumps(foo)
+    #     print(pickletools.dis(p_foo))
+    #     a = pickle.loads(p_foo)
+    #     a.bar("world")
 
 
 if __name__ == '__main__':

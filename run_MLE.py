@@ -55,7 +55,7 @@ def fit(inputs,
                     learning_rate=learning_rate)
     elif loss_name == 'mle':
         mymodel.fit2(inputs=inputs,
-                     mean=mu,
+                     mu=mu,
                      sigma=sigma,
                      outputs=outputs,
                      epochs=epochs,

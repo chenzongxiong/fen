@@ -23,8 +23,12 @@ import colors
 import constants
 import trading_data as tdata
 import log as logging
-import pool
+# import pool
 import pickle
+# import dill
+# from pathos.multiprocessing import ProcessingPool
+from multiprocessing import Pool as ProcessingPool
+pool = ProcessingPool(4)
 
 
 LOG = logging.getLogger(__name__)
@@ -135,6 +139,7 @@ def gradient_operator_nonlinear_layers(P,
                                        debug=False,
                                        inputs=None,
                                        reduce_sum=True):
+
     if debug is True and inputs is not None:
         LOG.debug(colors.red("Only use under unittest, not for real situation"))
         J = jacobian(P, inputs)
@@ -142,9 +147,14 @@ def gradient_operator_nonlinear_layers(P,
         calc_g = gradient_operator(P, operator_weights)
         utils.init_tf_variables()
         J_result, calc_g_result = session.run([J, calc_g])
-        assert np.allclose(np.diag(J_result), calc_g_result.reshape(-1)), colors.red("ERROR: gradient operator- and nonlinear- layers")
+
+        if not np.allclose(np.diag(J_result), calc_g_result.reshape(-1)):
+            colors.red("ERROR: gradient operator- and nonlinear- layers")
+            import ipdb; ipdb.set_trace()
     else:
         g1 = gradient_operator(P, operator_weights)
+
+    g1 = tf.reshape(g1, shape=P.shape)
     g2 = gradient_nonlinear_layer(fZ, nonlinear_weights, activation, reduce_sum=reduce_sum)
     return g1*g2
 
@@ -164,9 +174,8 @@ def gradient_all_layers(P,
                                             debug=debug,
                                             inputs=inputs,
                                             reduce_sum=False)
-
-    return tf.expand_dims(tf.matmul(g1[0], linear_weights), axis=0)
-
+    g2 = tf.expand_dims(tf.matmul(g1[0], linear_weights), axis=0)
+    return g2
 
 class PhiCell(Layer):
     def __init__(self,
@@ -497,8 +506,8 @@ class Play(object):
         self.model.add(Operator(weight=getattr(self, "_weight", 1.0),
                                 width=getattr(self, "_width", 1.0),
                                 debug=getattr(self, "_debug", False)))
-        # TODO/NOTE: remove in future
-        self.model.add(tf.keras.layers.Reshape(target_shape=(length, 1)))
+        # # TODO/NOTE: remove in future
+        # self.model.add(tf.keras.layers.Reshape(target_shape=(length, 1)))
 
         if self._network_type == constants.NetworkType.PLAY:
             self.model.add(MyDense(self.units,
@@ -793,6 +802,21 @@ class Play(object):
     def state_updates(self):
         return self.model.state_updates
 
+    @property
+    def operator_layer(self):
+        return self.layers[0]
+    @property
+    def nonlinear_layer(self):
+        return self.layers[1]
+    @property
+    def linear_layer(self):
+        return self.layers[2]
+
+    # Def __getstate__(self):
+    #     return dict(
+    #         build=self.build
+    #     )
+
 
 class MyModel(object):
     def __init__(self, nb_plays=1,
@@ -989,7 +1013,7 @@ class MyModel(object):
 
     def fit2(self,
              inputs,
-             mean,
+             mu,
              sigma,
              outputs=None,
              epochs=100,
@@ -1013,17 +1037,7 @@ class MyModel(object):
         for play in self.plays:
             if not play.built:
                 play.build(inputs)
-        # from pool import _pool as pool
-        # # import ipdb; ipdb.set_trace()
-        # args_list = [(play, inputs) for play in self.plays]
-        # self.plays = pool.starmap(utils.build_play, args_list)
-        # pool.join()
-        # pool.close()
 
-        # import ipdb; ipdb.set_trace()
-        #################### DO GRADIENT BY HAND HERE ####################
-
-        ################# FINISH GRADIENT BY HAND HERE ##################
         # NOTE(zxchen): never move the following two lines
         _x = [play.reshape(inputs) for play in self.plays]
         _x_feed_dict = {"input_{}:0".format(k+1) : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
@@ -1036,66 +1050,39 @@ class MyModel(object):
         for play in self.plays:
             feed_inputs.append(play.input)
             model_outputs.append(play.output)
+            # TODO: figure out the function of get_updates_for
             # update_inputs += play.model.get_updates_for(inputs)
             params_list += play.trainable_weights
 
-        y = tf.keras.layers.Average()(model_ouputs)
-        ##################### Prepare output of nonlinear #############################
+        ##################### Average outputs #############################
+        y_pred = tf.keras.layers.Average()(model_outputs)
 
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate,
                                                   beta_1=0.9,
                                                   beta_2=0.999,
                                                   decay=decay)
-
         with tf.name_scope('training'):
             J_list = []
             _by_hand_list = []
             _by_tf_list = []
 
-            # import ipdb; ipdb.set_trace()
-            ################### CALC J by hand #######################
-            for idx in range(self._nb_plays):
-                play = self.plays[idx]
+            J_list = [gradient_all_layers(play.operator_layer.output,
+                                          play.nonlinear_layer.output,
+                                          play.operator_layer.kernel,
+                                          play.nonlinear_layer.kernel,
+                                          play.linear_layer.kernel,
+                                          activation=self._activation) for play in self.plays]
 
-                ###### Extract Layer's outputs ######
-                reshaped_operator_layer = play.layers[1]
-                operator_output = reshaped_operator_layer.output
-                nonlinear_output = play.layers[2].output
-
-                ######## Extract Layer's weights #######
-                # trainable_weights = play.trainable_weights
-                # phi_weight = play.model.layers[0].cell.last_kernel
-                # theta = play.model.layers[2].last_kernel
-                # tilde_theta = play.model.layers[3].last_kernel
-
-                phi_weight = play.layers[0].cell.kernel  # shape: 1 by 1
-                theta = play.layers[2].kernel            # shape: 1 by units
-                tilde_theta = play.layers[3].kernel      # shape: units by 1
-
-                ######## HANDLE Layer's weights #########
-                # import ipdb; ipdb.set_trace()
-                _gradient_tilde_theta = tf.transpose(tilde_theta, perm=[1, 0])  # shape: 1 by units
-                _theta = tf.tile(theta, multiples=[operator_output.shape[1].value, 1])  # timestep by units
-                _gradient_theta = tf.multiply(_theta, gradient_nonlinear_layer(nonlinear_output, self._activation))
-                gradient_nonlinear = tf.matmul(_gradient_theta, tilde_theta)  # shape: timestep by 1
-                _gradient_phi = gradient_operator(play.layers[1].output)  # shape: timestep by 1
-                gradient_phi = tf.multiply(_gradient_phi, phi_weight)  # shape: timestep by 1
-                gradient_J = tf.multiply(gradient_phi, gradient_nonlinear)  # shape: timestep by 1
-
-                #############################################
-                # import ipdb; ipdb.set_trace()
-                auto_gradient_nonlinear = tf.keras.backend.gradients(play.layers[3].output, play.layers[2].input)
-                auto_gradient_phi = tf.keras.backend.gradients(play.layers[0].output, play.layers[0].input)
-                auto_gradient_J = tf.keras.backend.gradients(play.layers[3].output, play.layers[0].input)
-
-                # import ipdb; ipdb.set_trace()
-                ###############################################
-                _by_hand_list.append([gradient_nonlinear, gradient_phi, gradient_J])
-                _by_tf_list.append([auto_gradient_nonlinear[0], auto_gradient_phi[0], auto_gradient_J[0]])
-                J_list.append(gradient_J)
+            # J_list_debug = [gradient_all_layers(play.operator_layer.output,
+            #                                     play.nonlinear_layer.output,
+            #                                     play.operator_layer.kernel,
+            #                                     play.nonlinear_layer.kernel,
+            #                                     play.linear_layer.kernel,
+            #                                     activation=self._activation,
+            #                                     debug=True,
+            #                                     inputs=_x[i]) for i, play in enumerate(self.plays)]
 
             diff = y_pred[:, 1:, :] - y_pred[:, :-1, :]
-            # import ipdb;ipdb.set_trace()
 
             mse_loss1 = tf.keras.backend.mean(tf.square(y_pred - tf.reshape(outputs, shape=y_pred.shape)))
             mse_loss2 = tf.keras.backend.mean(tf.square(y_pred + tf.reshape(outputs, shape=y_pred.shape)))
@@ -1109,75 +1096,44 @@ class MyModel(object):
             for i in range(self._nb_plays):
                 J[i] = tf.reshape(J[i], shape=(1, -1, 1))
 
-            J = tf.reduce_mean(tf.concat(J, axis=-1), axis=-1,keepdims=True) / self._nb_plays
+            J_by_tf = tf.reduce_mean(tf.concat(J, axis=-1), axis=-1,keepdims=True) / self._nb_plays
             ###################### Calculate J by hand ###############################
             # (T * 1)
             J_by_hand = tf.reduce_mean(tf.concat(J_list, axis=-1), axis=-1, keepdims=True) / self._nb_plays
+            # J_by_hand_debug = tf.reduce_mean(tf.concat(J_list_debug, axis=-1), axis=-1, keepdims=True) / self._nb_plays
             normalized_J = tf.clip_by_value(tf.abs(J_by_hand), clip_value_min=1e-7, clip_value_max=1e9)
             ################################################################################
 
             # TODO: support derivation for p0
 
-            # _loss = tf.keras.backend.square((diff-self.mean)/self.sigma)/2.0 - tf.keras.backend.log(detJ[:, 1:, :])
+            # _loss = tf.keras.backend.square((diff-self.mu)/self.sigma)/2.0 - tf.keras.backend.log(detJ[:, 1:, :])
             # BUGS: something wrong here
-            # _loss = tf.keras.backend.square((diff-self.mean)/self.sigma)/2.0 - tf.keras.backend.log(normalized_J[:, 1:, :])
-            _loss = tf.keras.backend.square(diff-mean) - tf.keras.backend.log(normalized_J[:, 1:, :])
+            # _loss = tf.keras.backend.square((diff-self.mu)/self.sigma)/2.0 - tf.keras.backend.log(normalized_J[:, 1:, :])
+            _loss = tf.keras.backend.square(diff - mu) - tf.keras.backend.log(normalized_J[:, 1:, :])
             loss = tf.keras.backend.mean(_loss)
 
             with tf.name_scope(self.optimizer.__class__.__name__):
                 updates = self.optimizer.get_updates(params=params_list,
                                                      loss=loss)
 
-            # updated_weights = updates[2::3]
-            # import ipdb; ipdb.set_trace()
-
             # training_inputs = feed_inputs + feed_targets
             training_inputs = feed_inputs
             train_function = tf.keras.backend.function(training_inputs,
                                                        # [loss, _by_hand_list, _by_tf_list, updated_weights, J, J_by_hand],
-                                                       [loss, J, J_by_hand, mse_loss1, mse_loss2, diff],
+                                                       [loss, J_by_tf, J_by_hand, mse_loss1, mse_loss2, diff],
                                                        # [loss],
                                                        updates=updates)
 
         # _y = [y for _ in range(self._nb_plays)]
         # import ipdb; ipdb.set_trace()
-        # _y = [self.mean, self.sigma]
+        # _y = [self.mu, self.sigma]
         # ins = _x + _y
         ins = _x
         utils.init_tf_variables()
 
         writer.add_graph(tf.get_default_graph())
         self.cost_history = []
-        once = True
         cost = -1
-
-        # updated_weights_res = sess.run(updated_weights, feed_dict=_x_feed_dict)
-
-        # k = 0
-        # batch_assign_tuples = []
-        # for play in self.plays:
-        #     batch_assign_tuples.append(
-        #         (
-        #             play.layers[0].last_kernel,
-        #             # tf.keras.backend.get_value(play.layers[0].kernel)
-        #             updated_weights_res[k*5+0]
-        #         )
-        #     )
-        #     batch_assign_tuples.append(
-        #         (
-        #             play.layers[2].last_kernel,
-        #             updated_weights_res[k*5+1]
-        #             # tf.keras.backend.get_value(play.layers[2].kernel)
-        #         )
-        #     )
-        #     batch_assign_tuples.append(
-        #         (
-        #             play.layers[3].last_kernel,
-        #             updated_weights_res[k*5+3]
-        #             # tf.keras.backend.get_value(play.layers[3].kernel)
-        #         )
-        #     )
-
 
         for i in range(epochs):
             for j in range(steps_per_epoch):
@@ -1231,8 +1187,8 @@ class MyModel(object):
                 # tf.keras.backend.batch_set_value(batch_assign_tuples)
                 # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
 
-                # cost, by_hand_list, by_tf_list, updated_weights_res, J_res, J_by_hand_res = train_function(ins)
-                cost, J_res, J_by_hand_res, mse_cost1, mse_cost2, diff_res = train_function(ins)
+                # cost, by_hand_list, by_tf_list, updated_weights_res, J_by_tf_res, J_by_hand_res = train_function(ins)
+                cost, J_by_tf_res, J_by_hand_res, mse_cost1, mse_cost2, diff_res = train_function(ins)
                 # cost = train_function(ins)[0]
 
                 # m = 0
@@ -1245,7 +1201,7 @@ class MyModel(object):
                 #     argmax = np.argmax(delta)
                 #     print("_a[0][{}]: {}".format(argmax, _a[0].reshape(-1)[argmax]))
                 #     print("_b[0][{}]: {}".format(argmax, _b[0].reshape(-1)[argmax]))
-                #     print("delta, mean: {}, max: {}".format(delta.mean(), delta.max()))
+                #     print("delta, mu: {}, max: {}".format(delta.mu(), delta.max()))
 
                 #     if delta.max() >= 0.1:
                 #         print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX theta max XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
@@ -1274,12 +1230,12 @@ class MyModel(object):
 
                 #     m += 1
 
-                # # print(colors.yellow("J_res: {}".format(J_res)))
+                # # print(colors.yellow("J_by_tf_res: {}".format(J_by_tf_res)))
                 # # print(colors.yellow("J_by_handres: {}".format(J_by_hand_res)))
                 # # import ipdb; ipdb.set_trace()
-                delta_J = np.abs(J_res.reshape(-1) - J_by_hand_res.reshape(-1))
-                print(colors.yellow("diff mean: {}, max: {}".format(delta_J.mean(), np.max(delta_J))))
-                if not np.allclose(J_by_hand_res.reshape(-1), J_res.reshape(-1), rtol=1e-2, equal_nan=True, atol=1e-3):
+                delta_J = np.abs(J_by_tf_res.reshape(-1) - J_by_hand_res.reshape(-1))
+                print(colors.yellow("diff mu: {}, max: {}".format(delta_J.mu(), np.max(delta_J))))
+                if not np.allclose(J_by_hand_res.reshape(-1), J_by_tf_res.reshape(-1), rtol=1e-2, equal_nan=True, atol=1e-3):
                     print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
                     once = False
 
@@ -1287,7 +1243,7 @@ class MyModel(object):
                 # if not once:
                 #     import ipdb; ipdb.set_trace()
 
-                # for J1, J2 in zip(J_res, J_list_res):
+                # for J1, J2 in zip(J_by_tf_res, J_list_res):
                 #     if not np.allclose(J1, J2, rtol=1e-5, atol=1e-3):
                 #     # if True:
                 #         print("J1: {}".format(J1))
@@ -1300,7 +1256,7 @@ class MyModel(object):
                 # print("J_list: {}".format(J_list_res))
                 # print("intral_res_list: {}".format(intral_res_liss))
                 # print("aa_list: {}".format(aa_list_res))
-            LOG.debug("Epoch: {}, Loss: {}, MSE Loss1: {}, MSE Loss2: {}, diff_res.mu: {}, diff_res.sigma: {}, mu: {}, sigma: {}".format(i, cost, mse_cost1, mse_cost2, diff_res.mean(), diff_res.std(), __mu__, __sigma__))
+            LOG.debug("Epoch: {}, Loss: {}, MSE Loss1: {}, MSE Loss2: {}, diff_res.mu: {}, diff_res.sigma: {}, mu: {}, sigma: {}".format(i, cost, mse_cost1, mse_cost2, diff_res.mu(), diff_res.std(), __mu__, __sigma__))
             self.cost_history.append([i, cost])
 
 
