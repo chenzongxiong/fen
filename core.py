@@ -138,7 +138,8 @@ def gradient_operator_nonlinear_layers(P,
                                        activation,
                                        debug=False,
                                        inputs=None,
-                                       reduce_sum=True):
+                                       reduce_sum=True,
+                                       feed_dict={}):
 
     if debug is True and inputs is not None:
         LOG.debug(colors.red("Only use under unittest, not for real situation"))
@@ -146,8 +147,7 @@ def gradient_operator_nonlinear_layers(P,
         g1 = tf.reshape(tf.reduce_sum(J, axis=0), shape=inputs.shape)
         calc_g = gradient_operator(P, operator_weights)
         utils.init_tf_variables()
-        J_result, calc_g_result = session.run([J, calc_g])
-
+        J_result, calc_g_result = session.run([J, calc_g], feed_dict=feed_dict)
         if not np.allclose(np.diag(J_result), calc_g_result.reshape(-1)):
             colors.red("ERROR: gradient operator- and nonlinear- layers")
             import ipdb; ipdb.set_trace()
@@ -166,14 +166,16 @@ def gradient_all_layers(P,
                         linear_weights,
                         activation,
                         debug=False,
-                        inputs=None):
+                        inputs=None,
+                        feed_dict={}):
     g1 = gradient_operator_nonlinear_layers(P, fZ,
                                             operator_weights,
                                             nonlinear_weights,
                                             activation=activation,
                                             debug=debug,
                                             inputs=inputs,
-                                            reduce_sum=False)
+                                            reduce_sum=False,
+                                            feed_dict=feed_dict)
     g2 = tf.expand_dims(tf.matmul(g1[0], linear_weights), axis=0)
     return g2
 
@@ -812,11 +814,6 @@ class Play(object):
     def linear_layer(self):
         return self.layers[2]
 
-    # Def __getstate__(self):
-    #     return dict(
-    #         build=self.build
-    #     )
-
 
 class MyModel(object):
     def __init__(self, nb_plays=1,
@@ -830,7 +827,8 @@ class MyModel(object):
                  timestep=1,
                  input_dim=1,
                  diff_weights=False,
-                 network_type=constants.NetworkType.PLAY
+                 network_type=constants.NetworkType.PLAY,
+                 learning_rate=0.001
                  ):
         # fix random seed to 123
         seed = 123
@@ -866,6 +864,8 @@ class MyModel(object):
                         input_dim=input_dim)
             assert play._need_compile == False, colors.red("Play inside MyModel mustn't be compiled")
             self.plays.append(play)
+
+        self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
 
     def fit(self,
             inputs,
@@ -1011,6 +1011,84 @@ class MyModel(object):
             LOG.debug("Play #{}, weight: {}".format(i, play.weight))
             i += 1
 
+    def compile(self, inputs, mu, sigma, **kwargs):
+        unittest = kwargs.pop('unittest', False)
+        _inputs = inputs
+        inputs = ops.convert_to_tensor(inputs, tf.float32)
+        for play in self.plays:
+            if not play.built:
+                play.build(inputs)
+
+        self.params_list = []
+        self.feed_inputs = []
+        self.model_outputs = []
+        self.feed_targets = []
+
+        for play in self.plays:
+            self.feed_inputs.append(play.input)
+            self.model_outputs.append(play.output)
+            # TODO: figure out the function of get_updates_for
+            # update_inputs += play.model.get_updates_for(inputs)
+            self.params_list += play.trainable_weights
+
+        # TODO: not feed with self._x, can't be a bug HERE
+        self._x = [play.reshape(inputs) for play in self.plays]
+        self._x_feed_dict = {"input_{}:0".format(k+1) : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
+
+        ##################### Average outputs #############################
+        if self._nb_plays > 1:
+            self.y_pred = tf.keras.layers.Average()(self.model_outputs)
+        else:
+            self.y_pred = self.model_outputs[0]
+
+        with tf.name_scope('training'):
+            if unittest is False:
+                ###################### Calculate J by hand ###############################
+                J_list = [gradient_all_layers(play.operator_layer.output,
+                                              play.nonlinear_layer.output,
+                                              play.operator_layer.kernel,
+                                              play.nonlinear_layer.kernel,
+                                              play.linear_layer.kernel,
+                                              activation=self._activation) for play in self.plays]
+            else:
+                ###################### Calculate J by hand ###############################
+                J_list = [gradient_all_layers(play.operator_layer.output,
+                                              play.nonlinear_layer.output,
+                                              play.operator_layer.kernel,
+                                              play.nonlinear_layer.kernel,
+                                              play.linear_layer.kernel,
+                                              activation=self._activation,
+                                              debug=True,
+                                              inputs=self.feed_inputs[i],
+                                              feed_dict=self._x_feed_dict) for i, play in enumerate(self.plays)]
+                self.J_list_by_hand = J_list
+                ####################### Calculate J by Tensorflow ###############################
+                J_by_tf = tf.keras.backend.gradients(self.y_pred, self.feed_inputs)
+                self.J_by_tf = tf.reduce_mean(tf.concat(J_by_tf, axis=-1), axis=-1, keepdims=True)
+                self.J_list_by_tf = tf.keras.backend.gradients(self.model_outputs, self.feed_inputs)
+
+            diff = self.y_pred[:, 1:, :] - self.y_pred[:, :-1, :]
+
+            # for i in range(self._nb_plays):
+            #     model_outputs[i] = tf.reshape(model_outputs[i], shape=feed_inputs[i].shape)
+
+            # self.y_pred = tf.reshape(self.y_pred, shape=feed_inputs[0].shape)
+
+            # J = tf.keras.backend.gradients(model_outputs, feed_inputs)
+            # for i in range(self._nb_plays):
+            #     J[i] = tf.reshape(J[i], shape=(1, -1, 1))
+
+            # J_by_tf = tf.reduce_mean(tf.concat(J, axis=-1), axis=-1, keepdims=True) / self._nb_plays
+
+            # (T * 1)
+            self.J_by_hand = tf.reduce_mean(tf.concat(J_list, axis=-1), axis=-1, keepdims=True) / self._nb_plays
+            normalized_J = tf.clip_by_value(tf.abs(self.J_by_hand), clip_value_min=1e-7, clip_value_max=1e9)
+            ################################################################################
+            # TODO: support derivation for p0
+            # TODO: make loss customize from outside
+            _loss = tf.keras.backend.square((diff - mu)/sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
+            self.loss = tf.keras.backend.mean(_loss)
+
     def fit2(self,
              inputs,
              mu,
@@ -1025,110 +1103,29 @@ class MyModel(object):
 
         writer = utils.get_tf_summary_writer("./log/mle")
 
-        _inputs = inputs
-        inputs = ops.convert_to_tensor(inputs, tf.float32)
         if outputs is not None:
             # glob ground-truth mu and sigma of outputs
             __mu__ = (outputs[1:] - outputs[:-1]).mean()
             __sigma__ = (outputs[1:] - outputs[:-1]).std()
             outputs = ops.convert_to_tensor(outputs, tf.float32)
 
-        import time
-        for play in self.plays:
-            if not play.built:
-                play.build(inputs)
-
-        # NOTE(zxchen): never move the following two lines
-        _x = [play.reshape(inputs) for play in self.plays]
-        _x_feed_dict = {"input_{}:0".format(k+1) : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
-
-        params_list = []
-        feed_inputs = []
-        model_outputs = []
-        feed_targets = []
-
-        for play in self.plays:
-            feed_inputs.append(play.input)
-            model_outputs.append(play.output)
-            # TODO: figure out the function of get_updates_for
-            # update_inputs += play.model.get_updates_for(inputs)
-            params_list += play.trainable_weights
-
-        ##################### Average outputs #############################
-        y_pred = tf.keras.layers.Average()(model_outputs)
-
-        self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate,
-                                                  beta_1=0.9,
-                                                  beta_2=0.999,
-                                                  decay=decay)
-        with tf.name_scope('training'):
-            J_list = []
-            _by_hand_list = []
-            _by_tf_list = []
-
-            J_list = [gradient_all_layers(play.operator_layer.output,
-                                          play.nonlinear_layer.output,
-                                          play.operator_layer.kernel,
-                                          play.nonlinear_layer.kernel,
-                                          play.linear_layer.kernel,
-                                          activation=self._activation) for play in self.plays]
-
-            # J_list_debug = [gradient_all_layers(play.operator_layer.output,
-            #                                     play.nonlinear_layer.output,
-            #                                     play.operator_layer.kernel,
-            #                                     play.nonlinear_layer.kernel,
-            #                                     play.linear_layer.kernel,
-            #                                     activation=self._activation,
-            #                                     debug=True,
-            #                                     inputs=_x[i]) for i, play in enumerate(self.plays)]
-
-            diff = y_pred[:, 1:, :] - y_pred[:, :-1, :]
-
-            mse_loss1 = tf.keras.backend.mean(tf.square(y_pred - tf.reshape(outputs, shape=y_pred.shape)))
-            mse_loss2 = tf.keras.backend.mean(tf.square(y_pred + tf.reshape(outputs, shape=y_pred.shape)))
-            ###################### Calculate J by Tensorflow ###############################
-            for i in range(self._nb_plays):
-                model_outputs[i] = tf.reshape(model_outputs[i], shape=feed_inputs[i].shape)
-
-            y_pred = tf.reshape(y_pred, shape=feed_inputs[0].shape)
-
-            J = tf.keras.backend.gradients(model_outputs, feed_inputs)
-            for i in range(self._nb_plays):
-                J[i] = tf.reshape(J[i], shape=(1, -1, 1))
-
-            J_by_tf = tf.reduce_mean(tf.concat(J, axis=-1), axis=-1,keepdims=True) / self._nb_plays
-            ###################### Calculate J by hand ###############################
-            # (T * 1)
-            J_by_hand = tf.reduce_mean(tf.concat(J_list, axis=-1), axis=-1, keepdims=True) / self._nb_plays
-            # J_by_hand_debug = tf.reduce_mean(tf.concat(J_list_debug, axis=-1), axis=-1, keepdims=True) / self._nb_plays
-            normalized_J = tf.clip_by_value(tf.abs(J_by_hand), clip_value_min=1e-7, clip_value_max=1e9)
-            ################################################################################
-
-            # TODO: support derivation for p0
-
-            # _loss = tf.keras.backend.square((diff-self.mu)/self.sigma)/2.0 - tf.keras.backend.log(detJ[:, 1:, :])
-            # BUGS: something wrong here
-            # _loss = tf.keras.backend.square((diff-self.mu)/self.sigma)/2.0 - tf.keras.backend.log(normalized_J[:, 1:, :])
-            _loss = tf.keras.backend.square(diff - mu) - tf.keras.backend.log(normalized_J[:, 1:, :])
-            loss = tf.keras.backend.mean(_loss)
-
-            with tf.name_scope(self.optimizer.__class__.__name__):
-                updates = self.optimizer.get_updates(params=params_list,
-                                                     loss=loss)
+        self.compile(inputs, mu, sigma)
+        mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))
+        mse_loss2 = tf.keras.backend.mean(tf.square(self.y_pred + tf.reshape(outputs, shape=self.y_pred.shape)))
+        diff = self.y_pred[:, 1:, :] - self.y_pred[:, :-1, :]
+        with tf.name_scope(self.optimizer.__class__.__name__):
+            updates = self.optimizer.get_updates(params=self.params_list,
+                                                 loss=self.loss)
 
             # training_inputs = feed_inputs + feed_targets
-            training_inputs = feed_inputs
+            training_inputs = self.feed_inputs
             train_function = tf.keras.backend.function(training_inputs,
                                                        # [loss, _by_hand_list, _by_tf_list, updated_weights, J, J_by_hand],
-                                                       [loss, J_by_tf, J_by_hand, mse_loss1, mse_loss2, diff],
-                                                       # [loss],
+                                                       [self.loss, mse_loss1, mse_loss2, diff],
+                                                       # [self.loss],
                                                        updates=updates)
 
-        # _y = [y for _ in range(self._nb_plays)]
-        # import ipdb; ipdb.set_trace()
-        # _y = [self.mu, self.sigma]
-        # ins = _x + _y
-        ins = _x
+        ins = self._x
         utils.init_tf_variables()
 
         writer.add_graph(tf.get_default_graph())
@@ -1137,128 +1134,17 @@ class MyModel(object):
 
         for i in range(epochs):
             for j in range(steps_per_epoch):
-                # import ipdb; ipdb.set_trace()
+                cost, mse_cost1, mse_cost2, diff_res = train_function(ins)
 
-                # k = 0
-                # batch_assign_tuples = []
-                # print(colors.yellow("############################################################################################"))
-                # for play in self.plays:
-                #     old_phi_weight = tf.keras.backend.get_value(play.model.layers[0].last_kernel)
-                #     old_theta = tf.keras.backend.get_value(play.model.layers[2].last_kernel)
-                #     old_tilde_theta = tf.keras.backend.get_value(play.model.layers[3].last_kernel)
-                #     curr_phi_weight = tf.keras.backend.get_value(play.model.layers[0].kernel)
-                #     curr_theta = tf.keras.backend.get_value(play.model.layers[2].kernel)
-                #     curr_tilde_theta = tf.keras.backend.get_value(play.model.layers[3].kernel)
-
-                #     old_theta = old_theta.reshape(-1)
-                #     old_tilde_theta = old_tilde_theta.reshape(-1)
-                #     curr_theta = curr_theta.reshape(-1)
-                #     curr_tilde_theta = curr_tilde_theta.reshape(-1)
-                #     print("{} Before assign phiweight: {}".format(colors.red("Play #{}".format(k)), old_phi_weight))
-                #     print("{} After assign phi_weight: {}".format(colors.red("Play #{}".format(k)), curr_phi_weight))
-                #     print("{} Before assign theta: {}".format(colors.red("Play #{}".format(k)), old_theta))
-                #     print("{} After assign theta: {}".format(colors.red("Play #{}".format(k)), curr_theta))
-                #     print("{} Before assign tilde theta: {}".format(colors.red("Play #{}".format(k)), old_tilde_theta))
-                #     print("{} After  assign tilde theta: {}".format(colors.red("Play #{}".format(k)), curr_tilde_theta))
-                #     print("{} Before  results: {}".format(colors.red("Play #{}".format(k)), (old_tilde_theta * old_theta).sum()))
-                #     print("{} After  results: {}".format(colors.red("Play #{}".format(k)), (curr_tilde_theta * curr_theta).sum()))
-                #     print("------------------------------------------------------------------------------------------")
-
-                #     batch_assign_tuples.append(
-                #         (
-                #             play.model.layers[0].cell.last_kernel,
-                #             tf.keras.backend.get_value(play.model.layers[0].cell.kernel)
-                #         )
-                #     )
-                #     batch_assign_tuples.append(
-                #         (
-                #             play.model.layers[2].last_kernel,
-                #             tf.keras.backend.get_value(play.model.layers[2].kernel)
-                #         )
-                #     )
-                #     batch_assign_tuples.append(
-                #         (
-                #             play.model.layers[3].last_kernel,
-                #             tf.keras.backend.get_value(play.model.layers[3].kernel)
-                #         )
-                #     )
-                #     k += 1
-
-                # tf.keras.backend.batch_set_value(batch_assign_tuples)
-                # print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%")
-
-                # cost, by_hand_list, by_tf_list, updated_weights_res, J_by_tf_res, J_by_hand_res = train_function(ins)
-                cost, J_by_tf_res, J_by_hand_res, mse_cost1, mse_cost2, diff_res = train_function(ins)
-                # cost = train_function(ins)[0]
-
-                # m = 0
-                # # import ipdb; ipdb.set_trace()
-                # for _a, _b in zip(by_hand_list, by_tf_list):
-                #     print("--------------------------------------------------------------------------------")
-                #     print("{}".format(colors.red("index is: {}".format(m))))
-
-                #     delta = np.abs(_b[0].reshape(-1) - _a[0].reshape(-1))
-                #     argmax = np.argmax(delta)
-                #     print("_a[0][{}]: {}".format(argmax, _a[0].reshape(-1)[argmax]))
-                #     print("_b[0][{}]: {}".format(argmax, _b[0].reshape(-1)[argmax]))
-                #     print("delta, mu: {}, max: {}".format(delta.mu(), delta.max()))
-
-                #     if delta.max() >= 0.1:
-                #         print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX theta max XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
-                #         once = False
-                #     if not np.allclose(_a[0], _b[0], rtol=1e-5, atol=1e-8):
-                #         print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX theta  allclose XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
-                #         once = False
-
-                #     # print("by_hand[1]: ", _a[1].reshape(-1).tolist())
-                #     # print("by_tf[1]: ", _b[1].reshape(-1).tolist())
-                #     delta1 = np.abs(_b[1].reshape(-1)-_a[1].reshape(-1))
-                #     print(colors.red("delta1, max {}".format(delta1.max())))
-                #     if not np.allclose(_a[1].reshape(-1), _b[1].reshape(-1), rtol=1e-5, atol=1e-8):
-                #         print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXX      Phi      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
-                #         once = False
-
-                #     # print("by_hand[2]: ", _a[2].reshape(-1).tolist())
-                #     # print("by_tf[2]: ", _b[2].reshape(-1).tolist())
-
-                #     # delta2 = np.abs(_b[2].reshape(_a[2].shape)-_a[2]).max()
-                #     # print(colors.red("delta2, max {}".format(delta2)))
-                #     # print(colors.red("XXXXXXXXXXXXXXXXX   DELTA2: {}".format(delta2.reshape(-1).tolist())))
-                #     # if not np.allclose(_a[2], _b[2].reshape(_a[2].shape), rtol=1e-2, atol=1e-7):
-                #     #     print(colors.red("XXXXXXXXXXXXXXXXXX   Gradient   XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
-                #     #     once = False
-
-                #     m += 1
-
-                # # print(colors.yellow("J_by_tf_res: {}".format(J_by_tf_res)))
-                # # print(colors.yellow("J_by_handres: {}".format(J_by_hand_res)))
-                # # import ipdb; ipdb.set_trace()
-                delta_J = np.abs(J_by_tf_res.reshape(-1) - J_by_hand_res.reshape(-1))
-                print(colors.yellow("diff mu: {}, max: {}".format(delta_J.mu(), np.max(delta_J))))
-                if not np.allclose(J_by_hand_res.reshape(-1), J_by_tf_res.reshape(-1), rtol=1e-2, equal_nan=True, atol=1e-3):
-                    print(colors.red("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"))
-                    once = False
-
-                print(colors.yellow("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"))
-                # if not once:
-                #     import ipdb; ipdb.set_trace()
-
-                # for J1, J2 in zip(J_by_tf_res, J_list_res):
-                #     if not np.allclose(J1, J2, rtol=1e-5, atol=1e-3):
-                #     # if True:
-                #         print("J1: {}".format(J1))
-                #         print("J2: {}".format(J2))
-                #         print("Diff: {}".format(np.abs(J1-J2)))
-                #         import ipdb; ipdb.set_trace()
-
-                        # raise Exception("Not the same....")
-                # print("detJ: {}".format(detJ_res))
-                # print("J_list: {}".format(J_list_res))
-                # print("intral_res_list: {}".format(intral_res_liss))
-                # print("aa_list: {}".format(aa_list_res))
-            LOG.debug("Epoch: {}, Loss: {}, MSE Loss1: {}, MSE Loss2: {}, diff_res.mu: {}, diff_res.sigma: {}, mu: {}, sigma: {}".format(i, cost, mse_cost1, mse_cost2, diff_res.mu(), diff_res.std(), __mu__, __sigma__))
+            LOG.debug("Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}".format(i,
+                                                                                                                                                             float(cost),
+                                                                                                                                                             float(mse_cost1),
+                                                                                                                                                             float(mse_cost2),
+                                                                                                                                                             float(diff_res.mean()),
+                                                                                                                                                             float(diff_res.std()),
+                                                                                                                                                             float(__mu__),
+                                                                                                                                                             float(__sigma__)))
             self.cost_history.append([i, cost])
-
 
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)

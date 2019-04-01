@@ -15,6 +15,7 @@ LOG = logging.getLogger(__name__)
 # test seed
 # np.random.seed(345)
 # LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is 345"))
+os.environ['OMP_NUM_THREADS'] = str(0)
 
 
 def update(i, *fargs):
@@ -120,6 +121,7 @@ _SESSION = None
 def get_session(debug=False, interactive=False):
     import tensorflow as tf
     from tensorflow.python import debug as tf_debug
+
     global _SESSION
     if _SESSION is not None:
         return _SESSION
