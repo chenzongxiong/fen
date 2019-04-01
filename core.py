@@ -1042,6 +1042,8 @@ class MyModel(object):
             self.y_pred = self.model_outputs[0]
 
         with tf.name_scope('training'):
+            diff = self.y_pred[:, 1:, :] - self.y_pred[:, :-1, :]
+
             if unittest is False:
                 ###################### Calculate J by hand ###############################
                 J_list = [gradient_all_layers(play.operator_layer.output,
@@ -1063,22 +1065,14 @@ class MyModel(object):
                                               feed_dict=self._x_feed_dict) for i, play in enumerate(self.plays)]
                 self.J_list_by_hand = J_list
                 ####################### Calculate J by Tensorflow ###############################
-                J_by_tf = tf.keras.backend.gradients(self.y_pred, self.feed_inputs)
+                y_pred = tf.reshape(self.y_pred, shape=self.feed_inputs[0].shape)
+                J_by_tf = tf.keras.backend.gradients(y_pred, self.feed_inputs)
+                J_by_tf = [tf.reshape(J_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
                 self.J_by_tf = tf.reduce_mean(tf.concat(J_by_tf, axis=-1), axis=-1, keepdims=True)
-                self.J_list_by_tf = tf.keras.backend.gradients(self.model_outputs, self.feed_inputs)
 
-            diff = self.y_pred[:, 1:, :] - self.y_pred[:, :-1, :]
-
-            # for i in range(self._nb_plays):
-            #     model_outputs[i] = tf.reshape(model_outputs[i], shape=feed_inputs[i].shape)
-
-            # self.y_pred = tf.reshape(self.y_pred, shape=feed_inputs[0].shape)
-
-            # J = tf.keras.backend.gradients(model_outputs, feed_inputs)
-            # for i in range(self._nb_plays):
-            #     J[i] = tf.reshape(J[i], shape=(1, -1, 1))
-
-            # J_by_tf = tf.reduce_mean(tf.concat(J, axis=-1), axis=-1, keepdims=True) / self._nb_plays
+                model_outputs = [tf.reshape(self.model_outputs[i], shape=self.feed_inputs[i].shape) for i in range(self._nb_plays)]
+                J_list_by_tf = tf.keras.backend.gradients(model_outputs, self.feed_inputs)
+                self.J_list_by_tf = [tf.reshape(J_list_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
 
             # (T * 1)
             self.J_by_hand = tf.reduce_mean(tf.concat(J_list, axis=-1), axis=-1, keepdims=True) / self._nb_plays
