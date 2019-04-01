@@ -707,7 +707,6 @@ class MyModel(object):
         self._nb_plays = nb_plays
         self._activation = activation
         self._input_dim = input_dim
-        i = 1
         _weight = 1.0
         _width = 0.1
         width = 1
@@ -724,7 +723,7 @@ class MyModel(object):
             else:
                 weight = 1.0
 
-            LOG.debug("MyModel geneartes {} with Weight: {}".format(colors.red("Play #{}".format(i)), weight))
+            LOG.debug("MyModel geneartes {} with Weight: {}".format(colors.red("Play #{}".format(nb_play+1)), weight))
 
             play = Play(units=units,
                         batch_size=batch_size,
@@ -735,17 +734,13 @@ class MyModel(object):
                         loss=None,
                         optimizer=None,
                         network_type=network_type,
-                        name="play-{}".format(i),
+                        name="play-{}".format(nb_play),
                         timestep=timestep,
                         input_dim=input_dim)
-            assert play._need_compile == False, colors.red("Play inside MyModel mustn't need compiled")
+            assert play._need_compile == False, colors.red("Play inside MyModel mustn't be compiled")
             self.plays.append(play)
 
-            i += 1
-        if optimizer is not None:
-            self.optimzer = optimizers.get(optimizer)
-        else:
-            self.optimizer = None
+        self.optimizer = optimizers.get(optimizer) if optimizer is not None else None
 
     def fit(self,
             inputs,
