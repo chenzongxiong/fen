@@ -44,7 +44,7 @@ def fit(inputs,
                       activation=activation,
                       nb_plays=nb_plays)
     LOG.debug("Learning rate is {}".format(learning_rate))
-    mymodel.load_weights(weights_fname)
+    # mymodel.load_weights(weights_fname)
     if loss_name == 'mse':
         mymodel.fit(inputs,
                     outputs,
@@ -167,7 +167,7 @@ if __name__ == "__main__":
     # method = 'noise'
     interp = 1
     do_prediction = False
-    do_trend = True
+    do_trend = False
 
     with_noise = True
     diff_weights = True
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     run_test = False
 
     mu = 0
-    sigma = 2
+    sigma = 1
 
     points = 1000
     input_dim = 1

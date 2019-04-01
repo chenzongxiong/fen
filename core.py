@@ -52,6 +52,7 @@ def Phi(x, width=1.0):
     r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: x + _width, lambda: ZEROS)
     r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x - _width, lambda: r1)
     return r2
+    # return tf.maximum(x-width/2, 0) + tf.minimum(x+width/2.0, 0)
 
 
 def gradient_operator(P, weights=None):
@@ -1021,34 +1022,6 @@ class MyModel(object):
 
         # import ipdb; ipdb.set_trace()
         #################### DO GRADIENT BY HAND HERE ####################
-        # def gradient_operator(P):
-        #     # _P = tf.reshape(P, shape=(P.shape[0].value, -1))
-        #     # _diff = _P[:, 1:] - _P[:, :-1]
-
-        #     # x0 = tf.slice(_P, [0, 0], [1, 1])
-        #     # diff = tf.concat([x0, _diff], axis=1)
-
-        #     # p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
-        #     # p2 = 1.0 - p1
-        #     # p3_list = []
-        #     # # TODO: multiple process here
-
-        #     # for j in range(1, _P.shape[1].value):
-        #     #     p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
-
-        #     # _p3 = tf.stack(p3_list, axis=1) + 1
-        #     # p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
-
-        #     # result = tf.multiply(p1, p3)
-        #     # return tf.reshape(result, shape=P.shape.as_list())
-
-        #     reshaped_P = tf.reshape(P, shape=(P.shape[0].value, -1))
-        #     diff = reshaped_P[:, 1:] - reshaped_P[:, :-1]
-        #     x0 = tf.slice(reshaped_P, [0, 0], [1, 1])
-        #     diff_ = tf.concat([x0, diff], axis=1)
-        #     result = tf.cast(tf.abs(diff_) >= 1e-7, dtype=tf.float32)
-        #     return tf.reshape(result, shape=P.shape)
-
 
         ################# FINISH GRADIENT BY HAND HERE ##################
         # NOTE(zxchen): never move the following two lines
@@ -1352,8 +1325,8 @@ class MyModel(object):
         # keep prices and random walk in the same direction in our assumption
         diff_pred = prediction[1:] - prediction[:-1]
         diff_input = inputs[1:] - inputs[:-1]
-
         prediction = utils.slide_window_average(prediction, window_size=1)
+
         mean = diff_pred.mean()
         std = diff_pred.std()
         LOG.debug("mean: {}, std: {}".format(mean, std))
@@ -1375,6 +1348,7 @@ class MyModel(object):
             weights_[4].append(play.layers[3].bias)
 
         weights = sess.run(weights_)
+
         for i in range(len(weights)):
             for j in range(len(weights[i])):
                 weights[i][j] = weights[i][j].reshape(-1)
@@ -1590,6 +1564,7 @@ class MyModel(object):
         LOG.debug("mean abs loss2: {}".format((loss4.sum())))
 
         return guess_prices
+
 
     def save_weights(self, fname):
         suffix = fname.split(".")[-1]
