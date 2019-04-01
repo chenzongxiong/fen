@@ -181,10 +181,10 @@ class Operator(RNN):
     def call(self, inputs, initial_state=None):
         LOG.debug("Operator.inputs.shape: {}".format(inputs.shape))
         output = super(Operator, self).call(inputs, initial_state=initial_state)
-        # assert inputs.shape.ndims == 3, colors.red("ERROR: Input from Operator must be 3 dimensions")
-        # shape = inputs.shape.as_list()
-        return output
-        # return tf.reshape(output, shape=(shape[0], -1, 1))
+        assert inputs.shape.ndims == 3, colors.red("ERROR: Input from Operator must be 3 dimensions")
+        shape = inputs.shape.as_list()
+        return tf.reshape(output, shape=(shape[0], -1, 1))
+        # return output
 
     @property
     def kernel(self):
@@ -205,6 +205,9 @@ class MyDense(Layer):
                  bias_constraint=None,
                  **kwargs):
         self._debug = kwargs.pop("debug", False)
+        if '_init_kernel' in kwargs:
+            self._init_kernel = kwargs.pop("_init_kernel")
+        self._init_bias = kwargs.pop("_init_bias", 0)
 
         super(MyDense, self).__init__(**kwargs)
         self.units = units
@@ -221,27 +224,19 @@ class MyDense(Layer):
         self.use_bias = use_bias
 
     def build(self, input_shape):
-        # self.last_kernel = self.add_weight(
-        #     "last_theta",
-        #     shape=(1, self.units),
-        #     initializer=self.kernel_initializer,
-        #     regularizer=self.kernel_regularizer,
-        #     constraint=self.kernel_constraint,
-        #     dtype=tf.float32,
-        #     trainable=False)
-
         if self._debug:
             LOG.debug("init mydense kernel/bias as pre-defined")
-            # _init_kernel = np.array([[1/2 * (i + 1) for i in range(self.units)]])
-            # _init_kernel = np.array([[1 for i in range(self.units)]])
-            _init_kernel = np.random.uniform(low=0.0, high=1.5, size=self.units)
+            if hasattr(self, '_init_kernel'):
+                _init_kernel = np.array([[self._init_kernel for i in range(self.units)]])
+            else:
+                _init_kernel = np.random.uniform(low=0.0, high=1.5, size=self.units)
             _init_kernel = _init_kernel.reshape([1, -1])
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
             self.kernel = tf.Variable(_init_kernel, name="theta", dtype=tf.float32)
-            # self._trainable_weights.append(self.kernel)
 
             if self.use_bias is True:
-                _init_bias = 0
+                # _init_bias = 0
+                _init_bias = self._init_bias
                 LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
 
                 self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
@@ -286,6 +281,9 @@ class MyDense(Layer):
 class MySimpleDense(Dense):
     def __init__(self, **kwargs):
         self._debug = kwargs.pop("debug", False)
+        self._init_bias = kwargs.pop("_init_bias", 0)
+        if '_init_kernel' in kwargs:
+            self._init_kernel = kwargs.pop("_init_kernel")
 
         kwargs['activation'] = None
         super(MySimpleDense, self).__init__(**kwargs)
@@ -294,16 +292,17 @@ class MySimpleDense(Dense):
         assert self.units == 1
         if self._debug is True:
             LOG.debug("init mysimpledense kernel/bias as pre-defined")
-            # _init_kernel = np.array([1 * (i + 1) for i in range(input_shape[-1].value)])
-            # _init_kernel = np.array([1 for i in range(input_shape[-1].value)])
-            _init_kernel = np.random.uniform(low=0.0, high=1.5, size=input_shape[-1].value)
+            if hasattr(self, '_init_kernel'):
+                _init_kernel = np.array([self._init_kernel for i in range(input_shape[-1].value)])
+            else:
+                _init_kernel = np.random.uniform(low=0.0, high=1.5, size=input_shape[-1].value)
             _init_kernel = _init_kernel.reshape(-1, 1)
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
 
             self.kernel = tf.Variable(_init_kernel, name="kernel", dtype=tf.float32)
 
             if self.use_bias:
-                _init_bias = (0,)
+                _init_bias = (self._init_bias,)
                 LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
                 self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
         else:
@@ -332,7 +331,6 @@ class Play(object):
                  timestep=1,
                  input_dim=1):
 
-        # if debug:
         self._weight = weight
         self._width = width
         self._debug = debug
@@ -363,11 +361,6 @@ class Play(object):
 
             if _inputs.shape.ndims == 1:
                 length = _inputs.shape[-1].value
-                # timesteps = length // self.batch_size
-                # if timesteps * self.batch_size != length:
-                #     raise Exception("The batch size cannot be divided by the length of input sequence.")
-                # self._batch_input_shape = tf.TensorShape([1, timesteps, self.batch_size])
-
                 if length % (self._play_input_dim * self._play_timestep) != 0:
                     LOG.error("length is: {}, input_dim: {}, play_timestep: {}".format(length,
                                                                                        self._play_input_dim,
