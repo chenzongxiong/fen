@@ -1,6 +1,7 @@
 import os
+import time
+
 import tensorflow as tf
-# tf.enable_eager_execution()
 from tensorflow.python import debug as tf_debug
 from tensorflow.python.keras.engine.base_layer import Layer
 from tensorflow.python.keras.layers.recurrent import RNN
@@ -28,9 +29,6 @@ import pickle
 
 LOG = logging.getLogger(__name__)
 
-# tf.keras.backend.set_session(
-#     tf_debug.TensorBoardDebugWrapperSession(tf.Session(), "localhost:1234"))
-
 sess = utils.get_session()
 session = utils.get_session()
 SESS = utils.get_session()
@@ -42,19 +40,132 @@ tf.keras.backend.set_epsilon(1e-7)
 
 def Phi(x, width=1.0):
     '''
-    Phi(x) = x - width/2        , if x > width/2
-           = x + width/2        , if x < - width/2
-           = 0                  , otherwise
+    Phi(x) = x - width/2 , if x > width/2
+           = x + width/2 , if x < - width/2
+           = 0         , otherwise
     '''
     assert x.shape[0].value == 1 and x.shape[1].value == 1, "x must be a scalar"
 
     ZEROS = tf.zeros(x.shape, dtype=tf.float32, name='zeros')
-    _width = tf.constant([[width/2.0]], dtype=tf.float32)
+    _width = tf.constant([[1/2.0]], dtype=tf.float32)
 
     r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: x + _width, lambda: ZEROS)
     r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x - _width, lambda: r1)
     return r2
     # return tf.maximum(x-width/2, 0) + tf.minimum(x+width/2.0, 0)
+
+
+def gradient_operator(P, weights=None):
+    # _P = tf.reshape(P, shape=(P.shape[0].value, -1))
+    # _diff = _P[:, 1:] - _P[:, :-1]
+
+    # x0 = tf.slice(_P, [0, 0], [1, 1])
+    # diff = tf.concat([x0, _diff], axis=1)
+
+    # p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
+    # p2 = 1.0 - p1
+    # p3_list = []
+    # # TODO: multiple process here
+
+    # for j in range(1, _P.shape[1].value):
+    #     p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
+
+    # _p3 = tf.stack(p3_list, axis=1) + 1
+    # p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
+
+    # result = tf.multiply(p1, p3)
+    # return tf.reshape(result, shape=P.shape.as_list())
+
+    reshaped_P = tf.reshape(P, shape=(P.shape[0].value, -1))
+    diff = reshaped_P[:, 1:] - reshaped_P[:, :-1]
+    x0 = tf.slice(reshaped_P, [0, 0], [1, 1])
+    diff_ = tf.concat([x0, diff], axis=1)
+    result = tf.cast(tf.abs(diff_) >= 1e-7, dtype=tf.float32)
+    return tf.reshape(result * weights, shape=P.shape)
+
+
+def jacobian(outputs, inputs):
+    jacobian_matrix = []
+    M = outputs.shape[1].value
+    for m in range(M):
+        # We iterate over the M elements of the output vector
+        grad_func = tf.gradients(outputs[0, m, 0], inputs)[0]
+        jacobian_matrix.append(tf.reshape(grad_func, shape=(M, )))
+
+    # jacobian_matrix = sess.run(jacobian_matrix)
+    return ops.convert_to_tensor(jacobian_matrix, dtype=tf.float32)
+
+
+def gradient_nonlinear_layer(fZ, weights=None, activation=None, reduce_sum=True):
+    LOG.debug("gradient nonlinear activation {}".format(activation))
+    # ignore sample
+    _fZ = tf.reshape(fZ, shape=fZ.shape.as_list()[1:])
+    if activation is None:
+        partial_gradient = tf.keras.backend.ones(shape=_fZ.shape)
+    elif activation == 'tanh':
+        ### might be a bug here
+        ### we need to ensure the right epoch of fZ
+        partial_gradient = (1.0 + _fZ) * (1.0 - _fZ)
+    elif activation == 'relu':
+        _fZ = tf.reshape(fZ, shape=fZ.shape.as_list()[1:])
+        partial_gradient = tf.cast(_fZ >= 1e-8, dtype=tf.float32)
+    else:
+        raise Exception("activation: {} not support".format(activation))
+
+    if reduce_sum is True:
+        gradient = tf.reduce_sum(partial_gradient * weights, axis=-1, keepdims=True)
+    else:
+        gradient = partial_gradient * weights
+
+    return tf.reshape(gradient, shape=(fZ.shape.as_list()[:-1] + [gradient.shape[-1].value]))
+
+
+def gradient_linear_layer(weights, multiples=1, expand_dims=True):
+    if expand_dims is True:
+        return tf.expand_dims(tf.tile(tf.transpose(weights, perm=[1, 0]), multiples=[multiples, 1]), axis=0)
+    else:
+        return tf.tile(tf.transpose(weights, perm=[1, 0]), multiples=[multiples, 1])
+
+
+def gradient_operator_nonlinear_layers(P,
+                                       fZ,
+                                       operator_weights,
+                                       nonlinear_weights,
+                                       activation,
+                                       debug=False,
+                                       inputs=None,
+                                       reduce_sum=True):
+    if debug is True and inputs is not None:
+        LOG.debug(colors.red("Only use under unittest, not for real situation"))
+        J = jacobian(P, inputs)
+        g1 = tf.reshape(tf.reduce_sum(J, axis=0), shape=inputs.shape)
+        calc_g = gradient_operator(P, operator_weights)
+        utils.init_tf_variables()
+        J_result, calc_g_result = session.run([J, calc_g])
+        assert np.allclose(np.diag(J_result), calc_g_result.reshape(-1)), colors.red("ERROR: gradient operator- and nonlinear- layers")
+    else:
+        g1 = gradient_operator(P, operator_weights)
+    g2 = gradient_nonlinear_layer(fZ, nonlinear_weights, activation, reduce_sum=reduce_sum)
+    return g1*g2
+
+
+def gradient_all_layers(P,
+                        fZ,
+                        operator_weights,
+                        nonlinear_weights,
+                        linear_weights,
+                        activation,
+                        debug=False,
+                        inputs=None):
+    g1 = gradient_operator_nonlinear_layers(P, fZ,
+                                            operator_weights,
+                                            nonlinear_weights,
+                                            activation=activation,
+                                            debug=debug,
+                                            inputs=inputs,
+                                            reduce_sum=False)
+
+    return tf.expand_dims(tf.matmul(g1[0], linear_weights), axis=0)
 
 
 class PhiCell(Layer):
@@ -89,14 +200,6 @@ class PhiCell(Layer):
         self.unroll = False
 
     def build(self, input_shape):
-        # self.last_kernel = self.add_weight(
-        #     "last_weight",
-        #     shape=(1, 1),
-        #     initializer=self.kernel_initializer,
-        #     regularizer=self.kernel_regularizer,
-        #     constraint=self.kernel_constraint,
-        #     dtype=tf.float32,
-        #     trainable=False)
 
         if input_shape[-1] <= 20:
             self.unroll = True
@@ -134,15 +237,12 @@ class PhiCell(Layer):
 
         ############### IMPL from Scratch #####################
         # outputs_ = tf.multiply(self._inputs, self.kernel)
-
-        # # NOTE: unroll method, can we use RNN method ?
         # outputs = [self._state]
         # for i in range(outputs_.shape[-1].value):
         #     output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1]), self._width), outputs[-1])
         #     outputs.append(output)
 
         # outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
-
         # state = outputs[-1]
         # outputs = tf.reshape(outputs, shape=self._inputs.shape)
 
@@ -165,7 +265,6 @@ class PhiCell(Layer):
 
         assert self._state.shape.ndims == 2, colors.red("PhiCell states must be 2 dimensions")
         states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
-
         last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
         return outputs_, list(states_x)
 
@@ -194,17 +293,12 @@ class Operator(RNN):
         output = super(Operator, self).call(inputs, initial_state=initial_state)
         assert inputs.shape.ndims == 3, colors.red("ERROR: Input from Operator must be 3 dimensions")
         shape = inputs.shape.as_list()
-
         return tf.reshape(output, shape=(shape[0], -1, 1))
+        # return output
 
     @property
     def kernel(self):
         return self.cell.kernel
-
-
-    # @property
-    # def last_kernel(self):
-    #     return self.cell.last_kernel
 
 
 class MyDense(Layer):
@@ -221,6 +315,9 @@ class MyDense(Layer):
                  bias_constraint=None,
                  **kwargs):
         self._debug = kwargs.pop("debug", False)
+        if '_init_kernel' in kwargs:
+            self._init_kernel = kwargs.pop("_init_kernel")
+        self._init_bias = kwargs.pop("_init_bias", 0)
 
         super(MyDense, self).__init__(**kwargs)
         self.units = units
@@ -237,27 +334,19 @@ class MyDense(Layer):
         self.use_bias = use_bias
 
     def build(self, input_shape):
-        # self.last_kernel = self.add_weight(
-        #     "last_theta",
-        #     shape=(1, self.units),
-        #     initializer=self.kernel_initializer,
-        #     regularizer=self.kernel_regularizer,
-        #     constraint=self.kernel_constraint,
-        #     dtype=tf.float32,
-        #     trainable=False)
-
         if self._debug:
             LOG.debug("init mydense kernel/bias as pre-defined")
-            # _init_kernel = np.array([[1/2 * (i + 1) for i in range(self.units)]])
-            # _init_kernel = np.array([[1 for i in range(self.units)]])
-            _init_kernel = np.random.uniform(low=0.0, high=1.5, size=self.units)
+            if hasattr(self, '_init_kernel'):
+                _init_kernel = np.array([[self._init_kernel for i in range(self.units)]])
+            else:
+                _init_kernel = np.random.uniform(low=0.0, high=1.5, size=self.units)
             _init_kernel = _init_kernel.reshape([1, -1])
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
             self.kernel = tf.Variable(_init_kernel, name="theta", dtype=tf.float32)
-            # self._trainable_weights.append(self.kernel)
 
             if self.use_bias is True:
-                _init_bias = 0
+                # _init_bias = 0
+                _init_bias = self._init_bias
                 LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
 
                 self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
@@ -302,33 +391,28 @@ class MyDense(Layer):
 class MySimpleDense(Dense):
     def __init__(self, **kwargs):
         self._debug = kwargs.pop("debug", False)
+        self._init_bias = kwargs.pop("_init_bias", 0)
+        if '_init_kernel' in kwargs:
+            self._init_kernel = kwargs.pop("_init_kernel")
 
         kwargs['activation'] = None
         super(MySimpleDense, self).__init__(**kwargs)
 
     def build(self, input_shape):
         assert self.units == 1
-        # self.last_kernel = self.add_weight(
-        #     "last_kernel",
-        #     shape=(input_shape[-1].value, 1),
-        #     initializer=self.kernel_initializer,
-        #     regularizer=self.kernel_regularizer,
-        #     constraint=self.kernel_constraint,
-        #     dtype=tf.float32,
-        #     trainable=False)
-
         if self._debug is True:
             LOG.debug("init mysimpledense kernel/bias as pre-defined")
-            # _init_kernel = np.array([1 * (i + 1) for i in range(input_shape[-1].value)])
-            # _init_kernel = np.array([1 for i in range(input_shape[-1].value)])
-            _init_kernel = np.random.uniform(low=0.0, high=1.5, size=input_shape[-1].value)
+            if hasattr(self, '_init_kernel'):
+                _init_kernel = np.array([self._init_kernel for i in range(input_shape[-1].value)])
+            else:
+                _init_kernel = np.random.uniform(low=0.0, high=1.5, size=input_shape[-1].value)
             _init_kernel = _init_kernel.reshape(-1, 1)
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
 
             self.kernel = tf.Variable(_init_kernel, name="kernel", dtype=tf.float32)
 
             if self.use_bias:
-                _init_bias = (0,)
+                _init_bias = (self._init_bias,)
                 LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
                 self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
         else:
@@ -357,7 +441,6 @@ class Play(object):
                  timestep=1,
                  input_dim=1):
 
-        # if debug:
         self._weight = weight
         self._width = width
         self._debug = debug
@@ -388,11 +471,6 @@ class Play(object):
 
             if _inputs.shape.ndims == 1:
                 length = _inputs.shape[-1].value
-                # timesteps = length // self.batch_size
-                # if timesteps * self.batch_size != length:
-                #     raise Exception("The batch size cannot be divided by the length of input sequence.")
-                # self._batch_input_shape = tf.TensorShape([1, timesteps, self.batch_size])
-
                 if length % (self._play_input_dim * self._play_timestep) != 0:
                     LOG.error("length is: {}, input_dim: {}, play_timestep: {}".format(length,
                                                                                        self._play_input_dim,
@@ -739,24 +817,16 @@ class MyModel(object):
         self._nb_plays = nb_plays
         self._activation = activation
         self._input_dim = input_dim
-        i = 1
         _weight = 1.0
         _width = 0.1
         width = 1
         for nb_play in range(nb_plays):
-            # weight =  _weight / (i)
-            # weight = 1.0
             if diff_weights is True:
-                # weight =  2 * _weight / (i)
-                # weight = i * _weight
-                # xxxx: good weights
-                # weight = 2 * _weight / i
-                # weight = _weight * i / 10
                 weight = 0.5 / (_width * i) # width range from (0.1, ... 0.1 * nb_plays)
             else:
                 weight = 1.0
 
-            LOG.debug("MyModel geneartes {} with Weight: {}".format(colors.red("Play #{}".format(i)), weight))
+            LOG.debug("MyModel geneartes {} with Weight: {}".format(colors.red("Play #{}".format(nb_play+1)), weight))
 
             play = Play(units=units,
                         batch_size=batch_size,
@@ -767,17 +837,11 @@ class MyModel(object):
                         loss=None,
                         optimizer=None,
                         network_type=network_type,
-                        name="play-{}".format(i),
+                        name="play-{}".format(nb_play),
                         timestep=timestep,
                         input_dim=input_dim)
-            assert play._need_compile == False, colors.red("Play inside MyModel mustn't need compiled")
+            assert play._need_compile == False, colors.red("Play inside MyModel mustn't be compiled")
             self.plays.append(play)
-
-            i += 1
-        if optimizer is not None:
-            self.optimzer = optimizers.get(optimizer)
-        else:
-            self.optimizer = None
 
     def fit(self,
             inputs,
@@ -888,8 +952,6 @@ class MyModel(object):
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
     def predict(self, inputs, individual=False):
-
-        import time
         inputs = ops.convert_to_tensor(inputs, tf.float32)
 
         for play in self.plays:
@@ -937,11 +999,12 @@ class MyModel(object):
              learning_rate=0.001,
              decay=0.):
 
-        _inputs = inputs
         writer = utils.get_tf_summary_writer("./log/mle")
+
+        _inputs = inputs
         inputs = ops.convert_to_tensor(inputs, tf.float32)
         if outputs is not None:
-            LOG.debug("Random walk: mu: {}, sigma: {}".format(outputs.mean(), outputs.std()))
+            # glob ground-truth mu and sigma of outputs
             __mu__ = (outputs[1:] - outputs[:-1]).mean()
             __sigma__ = (outputs[1:] - outputs[:-1]).std()
             outputs = ops.convert_to_tensor(outputs, tf.float32)
@@ -959,104 +1022,24 @@ class MyModel(object):
 
         # import ipdb; ipdb.set_trace()
         #################### DO GRADIENT BY HAND HERE ####################
-        def gradient_phi_cell(P):
-            _P = tf.reshape(P, shape=(P.shape[0].value, -1))
-            _diff = _P[:, 1:] - _P[:, :-1]
-
-            x0 = tf.slice(_P, [0, 0], [1, 1])
-            diff = tf.concat([x0, _diff], axis=1)
-
-            p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
-            p2 = 1.0 - p1
-            p3_list = []
-            # TODO: multiple process here
-
-            for j in range(1, _P.shape[1].value):
-                p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
-
-            _p3 = tf.stack(p3_list, axis=1) + 1
-            p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
-
-            result = tf.multiply(p1, p3)
-            return tf.reshape(result, shape=P.shape.as_list())
-
-            # reshaped_P = tf.reshape(P, shape=(P.shape[0].value, -1))
-            # diff = reshaped_P[:, 1:] - reshaped_P[:, :-1]
-            # x0 = tf.slice(reshaped_P, [0, 0], [1, 1])
-            # diff_ = tf.concat([x0, diff], axis=1)
-            # result = tf.cast(tf.abs(diff_) >= 1e-7, dtype=tf.float32)
-            # return tf.reshape(result, shape=P.shape)
-
-        def gradient_nonlinear_layer(fZ, activation=None):
-            LOG.debug("gradient nonlinear activation {}".format(activation))
-            # ignore sample
-            _fZ = tf.reshape(fZ, shape=fZ.shape.as_list()[1:])
-            if activation is None:
-                return tf.keras.backend.ones(shape=_fZ.shape)
-            elif activation == 'tanh':
-                ### might be a bug here
-                ### we need to ensure the right epoch of fZ
-                return (1.0 + _fZ) * (1.0 - _fZ)
-            elif activation == 'relu':
-                _fZ = tf.reshape(fZ, shape=fZ.shape.as_list()[1:])
-                return tf.cast(_fZ >= 1e-8, dtype=tf.float32)
-            else:
-                raise Exception("activation: {} not support".format(activation))
 
         ################# FINISH GRADIENT BY HAND HERE ##################
-        # x = self.plays[0].reshape(inputs)
-        # NOTE(zxchen): don't move
+        # NOTE(zxchen): never move the following two lines
         _x = [play.reshape(inputs) for play in self.plays]
         _x_feed_dict = {"input_{}:0".format(k+1) : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
-        # import ipdb; ipdb.set_trace()
-        # self.mean = tf.Variable(mean, name="mean", dtype=tf.float32)
-        # self.sigma = tf.Variable(sigma, name="sigma", dtype=tf.float32)
-
-        self.mean = tf.constant(mean, name="mean", dtype=tf.float32)
-        self.sigma = tf.constant(sigma, name="sigma", dtype=tf.float32)
 
         params_list = []
-        # model_inputs = []
         feed_inputs = []
         model_outputs = []
-
         feed_targets = []
-        # update_inputs = []
-
-        # target_mean = tf.keras.backend.placeholder(ndim=0, name="mu_target", dtype=tf.float32)
-        # target_sigma = tf.keras.backend.placeholder(ndim=0, name="sigma_target", dtype=tf.float32)
-
-        # feed_targets = [target_mean, target_mean]
 
         for play in self.plays:
-            # inputs = play.model._layers[0].input
-            # outputs = play.model._layers[-1].output
-            # model_inputs.append(inputs)
-            # model_outputs.append(outputs)
-
-            feed_inputs.append(play._layers[0].input)
-            model_outputs.append(play._layers[-1].output)
-
-            # feed_inputs.append(inputs)
-
-            # for i in range(len(play.model.outputs)):
-            #     shape = tf.keras.backend.int_shape(play.model.outputs[i])
-            #     name = 'test{}'.format(i)
-            #     target = tf.keras.backend.placeholder(
-            #         ndim=len(shape),
-            #         name=name + '_target',
-            #         dtype=tf.keras.backend.dtype(play.model.outputs[i]))
-
-            #     feed_targets.append(target)
-
+            feed_inputs.append(play.input)
+            model_outputs.append(play.output)
             # update_inputs += play.model.get_updates_for(inputs)
             params_list += play.trainable_weights
 
-        if self._nb_plays > 1:
-            y_pred = tf.keras.layers.Average()(model_outputs)
-        else:
-            y_pred = model_outputs[0]
-
+        y = tf.keras.layers.Average()(model_ouputs)
         ##################### Prepare output of nonlinear #############################
 
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate,
@@ -1068,7 +1051,7 @@ class MyModel(object):
             J_list = []
             _by_hand_list = []
             _by_tf_list = []
-            last_nonlinear_outputs = []
+
             # import ipdb; ipdb.set_trace()
             ################### CALC J by hand #######################
             for idx in range(self._nb_plays):
@@ -1077,12 +1060,10 @@ class MyModel(object):
                 ###### Extract Layer's outputs ######
                 reshaped_operator_layer = play.layers[1]
                 operator_output = reshaped_operator_layer.output
-
                 nonlinear_output = play.layers[2].output
 
                 ######## Extract Layer's weights #######
-                trainable_weights = play.trainable_weights
-
+                # trainable_weights = play.trainable_weights
                 # phi_weight = play.model.layers[0].cell.last_kernel
                 # theta = play.model.layers[2].last_kernel
                 # tilde_theta = play.model.layers[3].last_kernel
@@ -1093,41 +1074,14 @@ class MyModel(object):
 
                 ######## HANDLE Layer's weights #########
                 # import ipdb; ipdb.set_trace()
-                start_tick = time.time()
                 _gradient_tilde_theta = tf.transpose(tilde_theta, perm=[1, 0])  # shape: 1 by units
-                end_tick = time.time()
-                LOG.debug("Play #{} _gradient_tilde_theta cost: {} s".format(idx, end_tick-start_tick))
-
-                start_tick = time.time()
                 _theta = tf.tile(theta, multiples=[operator_output.shape[1].value, 1])  # timestep by units
-                end_tick = time.time()
-                LOG.debug("Play #{} _theta cost: {} s".format(idx, end_tick-start_tick))
-
-                start_tick = time.time()
-                # gradient nonlinear layer, shape: timestep by units
                 _gradient_theta = tf.multiply(_theta, gradient_nonlinear_layer(nonlinear_output, self._activation))
-                end_tick = time.time()
-                LOG.debug("Play #{} _gradient_theta cost: {} s".format(idx, end_tick-start_tick))
-
-                start_tick = time.time()
                 gradient_nonlinear = tf.matmul(_gradient_theta, tilde_theta)  # shape: timestep by 1
-                end_tick = time.time()
-                LOG.debug("Play #{} gradient_nonlinear cost: {} s".format(idx, end_tick-start_tick))
-
-                start_tick = time.time()
-                _gradient_phi = gradient_phi_cell(play.layers[1].output)  # shape: timestep by 1
-                end_tick = time.time()
-                LOG.debug("Play #{} _gradient_phi cost: {} s".format(idx, end_tick-start_tick))
-
-                start_tick = time.time()
+                _gradient_phi = gradient_operator(play.layers[1].output)  # shape: timestep by 1
                 gradient_phi = tf.multiply(_gradient_phi, phi_weight)  # shape: timestep by 1
-                end_tick = time.time()
-                LOG.debug("Play #{} gradient_phi cost: {} s".format(idx, end_tick-start_tick))
-
-                start_tick = time.time()
                 gradient_J = tf.multiply(gradient_phi, gradient_nonlinear)  # shape: timestep by 1
-                end_tick = time.time()
-                LOG.debug("Play #{} gradient_J cost: {} s".format(idx, end_tick-start_tick))
+
                 #############################################
                 # import ipdb; ipdb.set_trace()
                 auto_gradient_nonlinear = tf.keras.backend.gradients(play.layers[3].output, play.layers[2].input)
@@ -1194,7 +1148,6 @@ class MyModel(object):
 
         writer.add_graph(tf.get_default_graph())
         self.cost_history = []
-        # steps_per_epoch = 1
         once = True
         cost = -1
 
@@ -1372,128 +1325,19 @@ class MyModel(object):
         # keep prices and random walk in the same direction in our assumption
         diff_pred = prediction[1:] - prediction[:-1]
         diff_input = inputs[1:] - inputs[:-1]
-        direction_input = (diff_input > 0).astype(np.int32) - (diff_input < 0).astype(np.int32)
-        direction_pred = (diff_pred > 0).astype(np.int32) - (diff_pred < 0).astype(np.int32)
-        direction_input = direction_input.reshape(-1)
-        direction_pred = direction_pred.reshape(-1)
-        # _direction = direction_input.reshape(-1)
-        # for i in range(direction_input.shape[0]):
-        #     if direction_input[i] == 0:
-        #         direction_input[i] = direction_input[i-1]
+        prediction = utils.slide_window_average(prediction, window_size=1)
 
-        # for i in range(direction_pred.shape[0]):
-        #     if direction_pred[i] == 0:
-        #         direction_pred[i] = direction_pred[i-1]
-
-        _direction = direction_input * direction_pred
-        direction = np.concatenate([[1], _direction])
-        for i in range(1, direction.shape[0]):
-            if direction[i] == 0:
-                direction[i] = direction[i-1]
-
-        # prediction = -1 * prediction
-        # prediction = utils.slide_window_average(prediction, window_size=1)
         mean = diff_pred.mean()
         std = diff_pred.std()
         LOG.debug("mean: {}, std: {}".format(mean, std))
         return prediction, float(mean), float(std)
 
-    # def trend(self, B, delta=0.01, max_iteration=10000):
-    #     shape = self.plays[0]._batch_input_shape.as_list()
-    #     assert shape[1] * shape[2] == B.shape[0]
+    def trend(self, prices, B, delta=0.001, max_iteration=10000):
+        _ppp = ops.convert_to_tensor(prices, dtype=tf.float32)
+        _ppp = tf.reshape(_ppp, shape=(1, 200, 10))
 
-    #     # NOTE: exclude b0
-    #     # B = B[:100]
-    #     length = B.shape[0]
-    #     prices = np.zeros(B.shape[0], dtype=np.float32).reshape(shape)
-
-    #     directions = (B[1:]- B[:-1] < 0).astype(np.int32) - (B[1:] - B[:-1] >= 0).astype(np.int32)
-    #     d = [1] if B[0] < 0 else [-1]
-    #     directions = np.concatenate([d, directions]).reshape(-1)
-    #     directions = directions.reshape(shape)
-
-    #     _x = []
-    #     feed_inputs = []
-    #     model_outputs = []
-    #     state_updates = []
-    #     for play in self.plays:
-    #         feed_inputs.append(play._layers[0].input)
-    #         model_outputs.append(play._layers[-1].output)
-    #         state_updates.extend(play.state_updates)
-    #         _x.append(prices)
-
-    #     if self._nb_plays > 1:
-    #         y_pred = [tf.keras.layers.Average()(model_outputs)]
-    #     else:
-    #         y_pred = model_outputs
-
-    #     predict_function = tf.keras.backend.function(
-    #         feed_inputs,
-    #         y_pred,
-    #         updates=state_updates,
-    #         name='prediction_function'
-    #     )
-
-    #     # B = B.reshape(shape)
-    #     import time
-    #     def do_prediction(j, i, k=1):
-    #         start_tick = time.time()
-    #         if i != 0:
-    #             p = prices[:, j, i-1] + directions[:, j, i] * delta * k
-    #         elif i == 0:
-    #             if j == 0:
-    #                 p = 0 + directions[:, j, i] * delta * k
-    #             elif j != 0:
-    #                 p = prices[:, j-1, -1] + directions[:, j, i] * delta * k
-
-    #         prices[:, j, i] = p
-    #         prediction = predict_function(_x)
-    #         end_tick = time.time()
-
-    #         LOG.debug("do prediciton cost: {} s".format(end_tick - start_tick))
-    #         return prediction[0]
-
-    #     curr_diff = prev_diff = None
-
-    #     j = -1
-    #     i = -1
-    #     while True:
-    #         i += 1
-    #         if i % shape[2] == 0:
-    #             j += 1
-    #             i = 0
-    #         if j * shape[2] + i == length:
-    #             break
-
-    #         start_tick = time.time()
-
-    #         prediction = do_prediction(j, i)
-    #         curr_diff = prediction[:, j*shape[2]+i, :] - B[j*shape[2]+i]
-    #         for k in range(2, max_iteration):
-    #             prev_diff = curr_diff
-    #             prediction = do_prediction(j, i, k)
-    #             curr_diff = prediction[:, j*shape[2]+i, :] - B[j*shape[2]+i]
-
-    #             LOG.debug(colors.yellow("j: {}, i: {}, curr_diff is: {}, prev_diff is: {}, prediction is: {}, ground_truth is: {}, price: {}".format(j, i,
-    #                                                                                                                                                  curr_diff,
-    #                                                                                                                                                  prev_diff,
-    #                                                                                                                                                  prediction[:, j*shape[2]+i, :],
-    #                                                                                                                                                  B[j*shape[2]+i],
-    #                                                                                                                                                  prices[:, j, i])))
-    #             if np.abs(curr_diff[0, 0]) < 1e-5 or (curr_diff * prev_diff)[0, 0] < 0:
-    #                 break
-
-    #         end_tick = time.time()
-    #         LOG.debug(colors.red("time cost: {}".format(end_tick - start_tick)))
-
-    #     return prices.reshape(-1)
-
-    def trend(self, prices, B, mu=0, sigma=1, delta=0.0001, max_iteration=10000):
-        _B = B
+        original_prediction = self.predict2(prices)
         shape = self.plays[0]._batch_input_shape.as_list()
-        B1, _, _ = self.predict2(prices[:1000])
-        B2, _, _ = self.predict2(prices[1000:])
-        B = np.concatenate([B1.reshape(-1), B2.reshape(-1)]).reshape(-1)
 
         weights_ = [[], [], [], [], []]
         for play in self.plays:
@@ -1509,103 +1353,218 @@ class MyModel(object):
             for j in range(len(weights[i])):
                 weights[i][j] = weights[i][j].reshape(-1)
 
-
         def phi(x, width=1.0):
-            if x > (width/2.0):
-                return (x - width/2.0)[0]
-            elif x < (-width/2.0):
-                return (x + width/2.0)[0]
+            if x[0] > (width/2.0):
+                return (x[0] - width/2.0)
+            elif x[0] < (-width/2.0):
+                return (x[0] + width/2.0)
             else:
                 return float(0)
 
-        past_list = ops.convert_to_tensor(prices[:1000], dtype=tf.float32)
-        past_list = tf.reshape(past_list, shape=(1, 100, 10))
-        p_list_ = []
+        individual_p_list = [[0] for _ in range(self._nb_plays)]
 
-        for i in range(self._nb_plays):
-            p_list_.append(self.plays[i].layers[0](past_list))
-
-        p_list = sess.run(p_list_)
-
-        individual_p_list = [[p_list[i].reshape(-1)[-1]] for i in range(self._nb_plays)]
         outputs = []
         k = 1000
 
-        import ipdb; ipdb.set_trace()
+        def do_guess(k, step=1, direction=1, guess_flag=True):
+            predict_noise_list = []
+            if guess_flag is True:
+                guess = prices[k-1] + direction * step * delta
+            else:
+                guess = prices[k]
 
-        def do_guess(k, step=1):
-            guess = prices[k-1] + direction * step * delta
             for i in range(self._nb_plays):
                 p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
-
                 pp = weights[1][i] * p + weights[2][i]
                 ppp = (weights[3][i] * pp).sum() + weights[4][i]
                 predict_noise_list.append(ppp[0])
 
             predict_noise = sum(predict_noise_list)/self._nb_plays
+
             return guess, predict_noise
 
-        predict_price = []
-        once = True
-        predict_noise_list = []
+
+        guess_prices_list = [[] for _ in range(2000)]
+
+        def repeat(k, iterations=1):
+            # guess_prices_list.append([])
+            for i in range(iterations):
+                curr_diff = prev_diff = None
+                step = 1
+                bk = np.random.normal(loc=mu, scale=sigma) + original_prediction[0][k-1]
+                if bk > original_prediction[0][k-1]:
+                    direction = 1
+                elif bk < original_prediction[0][k-1]:
+                    direction = -1
+                else:
+                    direction = 0
+
+                book_prev_diff_list = []
+
+                guess, guess_noise = do_guess(k, 1, direction)
+                curr_diff = guess_noise - bk
+
+                while True:
+                    if abs(curr_diff) < 1e-3:
+                        LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
+                            step,
+                            prices[k],
+                            guess,
+                            guess_noise,
+                            bk,
+                            original_prediction[0][k],
+                            curr_diff,
+                            prev_diff))
+
+                        for i in range(self._nb_plays):
+                            p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
+                            individual_p_list[i].append(p)
+
+                        guess_prices_list[k].append(guess)
+                        break
+
+                    prev_diff = curr_diff
+                    book_prev_diff_list.append(prev_diff)
+
+                    step += 1
+                    guess, guess_noise = do_guess(k, step, direction, guess_flag=True)
+                    curr_diff = guess_noise - bk
+
+                    if len(book_prev_diff_list) >= 100 and direction * (curr_diff - book_prev_diff_list[0]) > 0:
+                        direction = -direction
+                        book_prev_diff_list = []
+                    if curr_diff * prev_diff < 0:
+                        LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
+                            step,
+                            prices[k],
+                            guess,
+                            guess_noise,
+                            bk,
+                            original_prediction[0][k],
+                            curr_diff,
+                            prev_diff))
+
+                        for i in range(self._nb_plays):
+                            p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
+                            individual_p_list[i].append(p)
+                        guess_prices_list[k].append(guess)
+                        break
+
+            # import ipdb; ipdb.set_trace()
+            guess_prices.append(sum(guess_prices_list[k])/iterations)
+
+
+        curr_diff = prev_diff = None
+        mu = 0
+        sigma = 2
+        guess_prices = []
 
         while True:
-            bk = np.random.normal(loc=mu, scale=sigma, size=1) + B[k-1]
-            if B[k-1] > bk:
-                direction = 1
-            elif B[k-1] < bk:
-                direction = -1
-            else:
-                direction = 0
+            # bk_gt = original_prediction[0][k]
+            # bk = np.random.normal(loc=mu, scale=sigma) + original_prediction[0][k-1]
+            # if bk > original_prediction[0][k-1]:
+            #     direction = 1
+            # elif bk < original_prediction[0][k-1]:
+            #     direction = -1
+            # else:
+            #     direction = 0
 
-            curr_diff = prev_diff = None
-            guess, predict_noise = do_guess(k, 1)
-            curr_diff = predict_noise - bk
-            step = 1
+            # book_prev_diff_list = []
 
-            while True:
-                step += 1
-                prev_diff = curr_diff
+            # guess, guess_noise = do_guess(k, 1)
+            # curr_diff = guess_noise - bk
 
-                guess, predict_noise = do_guess(k, step)
-                curr_diff = predict_noise - bk
+            # while True:
+            #     # LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
+            #     #     step,
+            #     #     prices[k],
+            #     #     guess,
+            #     #     guess_noise,
+            #     #     bk,
+            #     #     original_prediction[0][k],
+            #     #     curr_diff,
+            #     #     prev_diff))
 
-                LOG.debug(colors.yellow(" curr_diff is: {}, prev_diff is: {}, prediction is: {}, ground_truth is: {}, price: {}, price_gt: {}".format(
-                    curr_diff[0],
-                    prev_diff[0],
-                    predict_noise,
-                    bk[0],
-                    guess,
-                    prices[k])))
+            #     if abs(curr_diff) < 1e-3:
+            #         LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
+            #             step,
+            #             prices[k],
+            #             guess,
+            #             guess_noise,
+            #             bk,
+            #             original_prediction[0][k],
+            #             curr_diff,
+            #             prev_diff))
 
-                # if once is False:
-                #     import ipdb; ipdb.set_trace()
+            #         for i in range(self._nb_plays):
+            #             p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
+            #             individual_p_list[i].append(p)
 
-                if abs(curr_diff) < 1e-5 or curr_diff * prev_diff < 0:
-                    import ipdb; ipdb.set_trace()
-                    # once = False
-                    for i in range(self._nb_plays):
-                        p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
-                        individual_p_list[i].append(p)
-                    outputs.append(predict_noise)
-                    predict_price.append(guess)
-                    break
-                if step % 100 == 0:
-                    import ipdb; ipdb.set_trace()
+            #         outputs.append(guess_noise)
+            #         guess_prices.append(guess)
+            #         break
 
+            #     prev_diff = curr_diff
+            #     book_prev_diff_list.append(prev_diff)
+
+            #     step += 1
+            #     guess, guess_noise = do_guess(k, step, guess_flag=True)
+            #     curr_diff = guess_noise - bk
+
+            #     if len(book_prev_diff_list) >= 100 and direction * (curr_diff - book_prev_diff_list[0]) > 0:
+            #         direction = -direction
+            #         book_prev_diff_list = []
+            #     if curr_diff * prev_diff < 0:
+            #         LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
+            #             step,
+            #             prices[k],
+            #             guess,
+            #             guess_noise,
+            #             bk,
+            #             original_prediction[0][k],
+            #             curr_diff,
+            #             prev_diff))
+
+            #         for i in range(self._nb_plays):
+            #             p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
+            #             individual_p_list[i].append(p)
+            #         guess_prices.append(guess)
+            #         outputs.append(guess_noise)
+            #         break
+            # import ipdb; ipdb.set_trace()
+            repeat(k, 100)
             k += 1
-            if k == 2000:
+            LOG.debug(colors.red("K: {}".format(k)))
+            if k == 1100:
                 break
 
-        # LOG.debug("Verifing...")
-        import ipdb; ipdb.set_trace()
+        LOG.debug("Verifing...")
         outputs = np.array(outputs).reshape(-1)
-        predict_price = np.array(predict_price).reshape(-1)
+        guess_prices = np.array(guess_prices).reshape(-1)
+        # import ipdb; ipdb.set_trace()
         # if not np.allclose(original_prediction[0].reshape(-1), outputs):
         #     import ipdb; ipdb.set_trace()
         # LOG.debug("seems correct now")
-        # return outputs
-        return predict_price
+        # loss1 = ((guess_prices - prices[999:1099]) ** 2)
+        # loss2 = np.abs(guess_prices - prices[999:1099])
+        loss1 =  ((guess_prices - prices[1000:1100]) ** 2)
+        loss2 = np.abs(guess_prices - prices[1000:1100])
+        loss3 = (prices[1000:1100] - prices[999:1099]) ** 2
+        loss4 = np.abs(prices[1000:1100] - prices[999:1099])
+
+        LOG.debug("root square loss: {}".format((loss1 ** (0.5))))
+        LOG.debug("abs error: {}".format(loss2))
+        LOG.debug("root square loss: {}".format((loss3 ** (0.5))))
+        LOG.debug("abs error: {}".format(loss4))
+
+        LOG.debug("root mean square loss1: {}".format((loss1.sum())**(0.5)))
+        LOG.debug("root mean square loss2: {}".format((loss3.sum())**(0.5)))
+
+        LOG.debug("mean abs loss1: {}".format((loss2.sum())))
+        LOG.debug("mean abs loss2: {}".format((loss4.sum())))
+
+        return guess_prices
+
 
     def save_weights(self, fname):
         suffix = fname.split(".")[-1]
@@ -1632,7 +1591,7 @@ class MyModel(object):
             line = f.read()
 
         shape = list(map(int, line.split(":")))
-
+        shape = [1, 200, 10]
         for play in self.plays:
             if not play.built:
                 play._batch_input_shape = tf.TensorShape(shape)
@@ -1802,7 +1761,7 @@ if __name__ == "__main__":
     y_res = sess.run(y)
     LOG.debug("y: {}".format(y_res))
 
-    g_by_hand = gradient_phi_cell(y)
+    g_by_hand = gradient_operator(y)
 
 
     LOG.debug("g: {}".format(sess.run(g)))
