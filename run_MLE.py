@@ -26,7 +26,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 2000
+    epochs = 1000
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     run_test = False
 
     mu = 0
-    sigma = 1
+    sigma = 2
 
     points = 1000
     input_dim = 1
@@ -192,7 +192,7 @@ if __name__ == "__main__":
     # __activation__ = 'relu'
     __activation__ = None
     __mu__ = 0
-    __sigma__ = 1
+    __sigma__ = 2
     # __sigma__ = 5
     # __sigma__ = 20
 
