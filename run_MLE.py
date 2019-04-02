@@ -1,8 +1,5 @@
-import sys
 import time
-import argparse
 import numpy as np
-import tensorflow as tf
 
 import log as logging
 from core import MyModel
@@ -29,11 +26,11 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 10000
+    epochs = 2000
     # steps_per_epoch = batch_size
 
     start = time.time()
-    input_dim = 1
+    input_dim = 10
     timestep = inputs.shape[0] // input_dim
     steps_per_epoch = input_dim
     # steps_per_epoch = 1
@@ -176,7 +173,7 @@ if __name__ == "__main__":
     run_test = False
 
     mu = 0
-    sigma = 2
+    sigma = 1
 
     points = 1000
     input_dim = 1
@@ -195,7 +192,7 @@ if __name__ == "__main__":
     # __activation__ = 'relu'
     # __activation__ = None
     __mu__ = 0
-    __sigma__ = 2
+    __sigma__ = 1
     # __sigma__ = 5
     # __sigma__ = 20
 

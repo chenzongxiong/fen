@@ -16,6 +16,8 @@ from tensorflow.python.keras import constraints
 from tensorflow.python.keras import optimizers
 from tensorflow.python.keras.engine import training_arrays
 from tensorflow.python.keras.utils import tf_utils
+from tensorflow.python.ops import math_ops
+
 import numpy as np
 
 import utils
@@ -866,6 +868,7 @@ class MyModel(object):
             self.plays.append(play)
 
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
+        # self.optimizer = tf.keras.optimizers.SGD(lr=learning_rate)
 
     def fit(self,
             inputs,
@@ -1022,6 +1025,18 @@ class MyModel(object):
         self.params_list = []
         self.feed_inputs = []
         self.model_outputs = []
+
+        self.feed_mu = tf.constant(mu, name='input-mu', dtype=tf.float32)
+        self.feed_sigma= tf.constant(sigma, name='input-sigma', dtype=tf.float32)
+
+        self.mu_placeholder = tf.keras.backend.placeholder(ndim=0,
+                                                           name='target-mu',
+                                                           dtype=tf.float32)
+        self.sigma_placeholder = tf.keras.backend.placeholder(ndim=0,
+                                                              name='target-sigma',
+                                                              dtype=tf.float32)
+        # self.feed_targets = [self.feed_mu, self.feed_sigma]
+        # self.feed_targets = [self.mu_placeholder, self.sigma_placeholder]
         self.feed_targets = []
 
         for play in self.plays:
@@ -1031,8 +1046,10 @@ class MyModel(object):
             # update_inputs += play.model.get_updates_for(inputs)
             self.params_list += play.trainable_weights
 
+
         # TODO: not feed with self._x, can't be a bug HERE
         self._x = [play.reshape(inputs) for play in self.plays]
+        self._y = [self.feed_mu, self.feed_sigma]
         self._x_feed_dict = {self.feed_inputs[k].name : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
 
         ##################### Average outputs #############################
@@ -1076,11 +1093,13 @@ class MyModel(object):
 
             # (T * 1)
             self.J_by_hand = tf.reduce_mean(tf.concat(J_list, axis=-1), axis=-1, keepdims=True) / self._nb_plays
-            normalized_J = tf.clip_by_value(tf.abs(self.J_by_hand), clip_value_min=1e-7, clip_value_max=1e9)
+            normalized_J = tf.clip_by_value(tf.abs(self.J_by_hand), clip_value_min=1e-5, clip_value_max=1e9)
             ################################################################################
             # TODO: support derivation for p0
             # TODO: make loss customize from outside
-            _loss = tf.keras.backend.square((diff - mu)/sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
+            # import ipdb; ipdb.set_trace()
+            self.curr_sigma = tf.keras.backend.std(diff)
+            _loss = tf.keras.backend.square((diff - mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
             self.loss = tf.keras.backend.mean(_loss)
 
     def fit2(self,
@@ -1111,34 +1130,46 @@ class MyModel(object):
             updates = self.optimizer.get_updates(params=self.params_list,
                                                  loss=self.loss)
 
-            # training_inputs = feed_inputs + feed_targets
-            training_inputs = self.feed_inputs
+            training_inputs = self.feed_inputs + self.feed_targets
+            # training_inputs = self.feed_inputs
             train_function = tf.keras.backend.function(training_inputs,
-                                                       # [loss, _by_hand_list, _by_tf_list, updated_weights, J, J_by_hand],
-                                                       [self.loss, mse_loss1, mse_loss2, diff],
+                                                       [self.loss, mse_loss1, mse_loss2, diff, self.curr_sigma, self.J_by_hand],
                                                        # [self.loss],
                                                        updates=updates)
 
+        # ins = self._x + self._y
         ins = self._x
         utils.init_tf_variables()
 
         writer.add_graph(tf.get_default_graph())
         self.cost_history = []
-        cost = -1
+        cost = np.inf
+        patience_list = []
+        prev_cost = np.inf
 
         for i in range(epochs):
             for j in range(steps_per_epoch):
-                cost, mse_cost1, mse_cost2, diff_res = train_function(ins)
-
-            LOG.debug("Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}".format(i,
-                                                                                                                                                             float(cost),
-                                                                                                                                                             float(mse_cost1),
-                                                                                                                                                             float(mse_cost2),
-                                                                                                                                                             float(diff_res.mean()),
-                                                                                                                                                             float(diff_res.std()),
-                                                                                                                                                             float(__mu__),
-                                                                                                                                                             float(__sigma__)))
+                cost, mse_cost1, mse_cost2, diff_res, sigma_res, J_by_hand_res = train_function(ins)
+                if prev_cost <= cost:
+                    patience_list.append(cost)
+                else:
+                    prev_cost = cost
+                    patience_list = []
+                import ipdb; ipdb.set_trace()
+            LOG.debug("Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, placeholder_sigma: {:.7f}, J_by_hand: {}".format(i,
+                                                                                                                                                                                                       float(cost),
+                                                                                                                                                                                                       float(mse_cost1),
+                                                                                                                                                                                                       float(mse_cost2),
+                                                                                                                                                                                                       float(diff_res.mean()),
+                                                                                                                                                                                                       float(diff_res.std()),
+                                                                                                                                                                                                       float(__mu__),
+                                                                                                                                                                                                       float(__sigma__),
+                                                                                                                                                                                                       float(sigma_res),
+                                                                                                                                                                                                       0))
             self.cost_history.append([i, cost])
+            if len(patience_list) >= 50:
+                LOG.debug(colors.yellow("Lost patience...."))
+                break
 
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
@@ -1427,7 +1458,6 @@ class MyModel(object):
             line = f.read()
 
         shape = list(map(int, line.split(":")))
-        shape = [1, 200, 10]
         for play in self.plays:
             if not play.built:
                 play._batch_input_shape = tf.TensorShape(shape)
