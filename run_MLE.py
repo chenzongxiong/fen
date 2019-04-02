@@ -122,6 +122,8 @@ def predict(inputs,
 
 def trend(prices,
           B,
+          mu,
+          sigma,
           units=1,
           activation='tanh',
           nb_plays=1,
@@ -143,7 +145,7 @@ def trend(prices,
 
     mymodel.load_weights(weights_fname)
 
-    prediction = mymodel.trend(prices=prices, B=B)
+    prediction = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
     # loss = ((prediction - prices) ** 2).mean()
     # loss = float(loss)
     # LOG.debug("loss: {}".format(loss))
@@ -258,8 +260,6 @@ if __name__ == "__main__":
     loss_file_key = 'models_diff_weights_mc_stock_model_loss_history'
     predictions_file_key = 'models_diff_weights_mc_stock_model_predictions'
 
-
-
     fname = constants.DATASET_PATH[input_file_key].format(interp=interp,
                                                           method=method,
                                                           activation=activation,
@@ -320,6 +320,8 @@ if __name__ == "__main__":
 
         predictions, loss = trend(prices=inputs,
                                   B=outputs,
+                                  mu=__mu__,
+                                  sigma=__sigma__,
                                   units=__units__,
                                   activation=__activation__,
                                   nb_plays=__nb_plays__,

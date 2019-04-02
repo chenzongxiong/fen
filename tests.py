@@ -40,7 +40,7 @@ class TestCases(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_phi(self):
+    def test_Phi(self):
         a = tf.constant([[1]], dtype=tf.float32, name="a")
         aa = session.run(core.Phi(a))
         self.assertTrue(aa.shape == (1, 1))
@@ -76,6 +76,34 @@ class TestCases(unittest.TestCase):
         aa = session.run(core.Phi(a))
         self.assertTrue(aa.shape == (1, 1))
         self.assertTrue(aa[0, 0] == -99.5)
+    def test_phi(self):
+        a = np.array([1], dtype=np.float32)
+        aa = core.phi(a)
+        self.assertTrue(aa == 0.5)
+
+        a = np.array([-1], dtype=np.float32)
+        aa = core.phi(a)
+        self.assertTrue(aa == -0.5)
+
+        a = np.array([0], dtype=np.float32)
+        aa = core.phi(a)
+        self.assertTrue(aa == 0)
+
+        a = np.array([0.5], dtype=np.float32)
+        aa = core.phi(a)
+        self.assertTrue(aa == 0)
+
+        a = np.array([-0.5], dtype=np.float32)
+        aa = core.phi(a)
+        self.assertTrue(aa == 0)
+
+        a = np.array([100], dtype=np.float32)
+        aa = core.phi(a)
+        self.assertTrue(aa == 99.5)
+
+        a = np.array([-100], dtype=np.float32)
+        aa = core.phi(a)
+        self.assertTrue(aa == -99.5)
 
     def test_phicell(self):
         input_1 = ops.convert_to_tensor(self.inputs.reshape([1, -1, 1]), dtype=tf.float32)
