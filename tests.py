@@ -286,9 +286,9 @@ class TestCases(unittest.TestCase):
         self._test_multiple_plays_helper(2, 'relu', 1)
         self._test_multiple_plays_helper(2, 'relu', 5)
 
-    def _test_multiple_plays_helper(self, nb_plays, activation, input_dims):
+    def _test_multiple_plays_helper(self, nb_plays, activation, input_dim):
         units = 5
-        timestep = self.inputs.shape[0] // input_dims
+        timestep = self.inputs.shape[0] // input_dim
         mymodel = core.MyModel(nb_plays=nb_plays,
                                units=units,
                                input_dim=input_dim,

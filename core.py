@@ -1033,7 +1033,7 @@ class MyModel(object):
 
         # TODO: not feed with self._x, can't be a bug HERE
         self._x = [play.reshape(inputs) for play in self.plays]
-        self._x_feed_dict = {"input_{}:0".format(k+1) : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
+        self._x_feed_dict = {self.feed_inputs[k].name : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
 
         ##################### Average outputs #############################
         if self._nb_plays > 1:
