@@ -1208,24 +1208,28 @@ class MyModel(object):
         _ppp = ops.convert_to_tensor(prices, dtype=tf.float32)
         _ppp = tf.reshape(_ppp, shape=(1, 200, 10))
 
-        original_prediction = self.predict2(prices)
+        original_prediction, _, _ = self.predict2(prices)
         shape = self.plays[0]._batch_input_shape.as_list()
 
         weights_ = [[], [], [], [], []]
+        # TODO: extract the state of timestep N
+        operator_outputs_ = []
         for play in self.plays:
             weights_[0].append(play.operator_layer.kernel)
             weights_[1].append(play.nonlinear_layer.kernel)
             weights_[2].append(play.nonlinear_layer.bias)
             weights_[3].append(play.linear_layer.kernel)
             weights_[4].append(play.linear_layer.bias)
+            operator_outputs_.append(play.operator_layer(prices[:1000]))
 
-        weights = sess.run(weights_)
+        weights, operator_outputs = sess.run([weights_, operator_outputs_])
 
         for i in range(len(weights)):
             for j in range(len(weights[i])):
                 weights[i][j] = weights[i][j].reshape(-1)
 
-        individual_p_list = [[0] for _ in range(self._nb_plays)]
+        # BUG: state of p is error
+        individual_p_list = [operator_output.reshape(-1)[-1] for operator_output in operator_outputs]
 
         outputs = []
 
@@ -1246,15 +1250,14 @@ class MyModel(object):
 
             return guess, predict_noise
 
-
         guess_prices_list = [[] for _ in range(2000)]
 
         def repeat(k, iterations=1):
             for i in range(iterations):
-                bk = np.random.normal(loc=mu, scale=sigma) + original_prediction[0][k-1]
-                if bk > original_prediction[0][k-1]:
+                bk = np.random.normal(loc=mu, scale=sigma) + original_prediction[k-1]
+                if bk > original_prediction[k-1]:
                     direction = 1
-                elif bk < original_prediction[0][k-1]:
+                elif bk < original_prediction[k-1]:
                     direction = -1
                 else:
                     direction = 0
@@ -1273,7 +1276,7 @@ class MyModel(object):
                             guess,
                             guess_noise,
                             bk,
-                            original_prediction[0][k],
+                            original_prediction[k],
                             curr_diff,
                             prev_diff))
 
@@ -1300,7 +1303,6 @@ class MyModel(object):
             guess_prices.append(sum(guess_prices_list[k])/iterations)
 
 
-        curr_diff = prev_diff = None
         guess_prices = []
 
         k = 1000
