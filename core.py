@@ -1155,7 +1155,6 @@ class MyModel(object):
                 else:
                     prev_cost = cost
                     patience_list = []
-                import ipdb; ipdb.set_trace()
             LOG.debug("Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, placeholder_sigma: {:.7f}, J_by_hand: {}".format(i,
                                                                                                                                                                                                        float(cost),
                                                                                                                                                                                                        float(mse_cost1),
