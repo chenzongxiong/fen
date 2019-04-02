@@ -1098,8 +1098,10 @@ class MyModel(object):
             # TODO: support derivation for p0
             # TODO: make loss customize from outside
             # import ipdb; ipdb.set_trace()
+            self.curr_mu = tf.keras.backend.mean(diff)
             self.curr_sigma = tf.keras.backend.std(diff)
-            _loss = tf.keras.backend.square((diff - mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
+            # _loss = tf.keras.backend.square((diff - mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
+            _loss = tf.keras.backend.square((diff - self.curr_mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
             self.loss = tf.keras.backend.mean(_loss)
 
     def fit2(self,
@@ -1133,7 +1135,7 @@ class MyModel(object):
             training_inputs = self.feed_inputs + self.feed_targets
             # training_inputs = self.feed_inputs
             train_function = tf.keras.backend.function(training_inputs,
-                                                       [self.loss, mse_loss1, mse_loss2, diff, self.curr_sigma, self.J_by_hand],
+                                                       [self.loss, mse_loss1, mse_loss2, diff, self.curr_sigma, self.curr_mu],
                                                        # [self.loss],
                                                        updates=updates)
 
@@ -1149,22 +1151,22 @@ class MyModel(object):
 
         for i in range(epochs):
             for j in range(steps_per_epoch):
-                cost, mse_cost1, mse_cost2, diff_res, sigma_res, J_by_hand_res = train_function(ins)
+                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res = train_function(ins)
                 if prev_cost <= cost:
                     patience_list.append(cost)
                 else:
                     prev_cost = cost
                     patience_list = []
-            LOG.debug("Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, placeholder_sigma: {:.7f}, J_by_hand: {}".format(i,
-                                                                                                                                                                                                       float(cost),
-                                                                                                                                                                                                       float(mse_cost1),
-                                                                                                                                                                                                       float(mse_cost2),
-                                                                                                                                                                                                       float(diff_res.mean()),
-                                                                                                                                                                                                       float(diff_res.std()),
-                                                                                                                                                                                                       float(__mu__),
-                                                                                                                                                                                                       float(__sigma__),
-                                                                                                                                                                                                       float(sigma_res),
-                                                                                                                                                                                                       0))
+            LOG.debug("Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, placeholder_sigma: {:.7f}, placeholder_mu: {:.7f}".format(i,
+                                                                                                                                                                                                                float(cost),
+                                                                                                                                                                                                                float(mse_cost1),
+                                                                                                                                                                                                                float(mse_cost2),
+                                                                                                                                                                                                                float(diff_res.mean()),
+                                                                                                                                                                                                                float(diff_res.std()),
+                                                                                                                                                                                                                float(__mu__),
+                                                                                                                                                                                                                float(__sigma__),
+                                                                                                                                                                                                                float(sigma_res),
+                                                                                                                                                                                                                float(mu_res)))
             self.cost_history.append([i, cost])
             if len(patience_list) >= 50:
                 LOG.debug(colors.yellow("Lost patience...."))
