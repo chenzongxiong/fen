@@ -1,12 +1,14 @@
 import unittest
-import core
-import utils
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import ops
 from tensorflow.python.ops.parallel_for.gradients import jacobian
 import pickle
 import pickletools
+
+import core
+import utils
+
 
 session = utils.get_session(interactive=True)
 
@@ -268,13 +270,25 @@ class TestCases(unittest.TestCase):
         result_by_tf, result_by_hand = session.run([gradient_by_tf, gradient_by_hand])
         self.assertTrue(np.allclose(result_by_tf, result_by_hand))
 
-
     def test_multiple_plays(self):
-        nb_plays = 2
+        self._test_multiple_plays_helper(1, None, 1)
+        self._test_multiple_plays_helper(1, None, 5)
+        self._test_multiple_plays_helper(2, None, 1)
+        self._test_multiple_plays_helper(2, None, 5)
+
+        self._test_multiple_plays_helper(1, 'tanh', 1)
+        self._test_multiple_plays_helper(1, 'tanh', 5)
+        self._test_multiple_plays_helper(2, 'tanh', 1)
+        self._test_multiple_plays_helper(2, 'tanh', 5)
+
+        self._test_multiple_plays_helper(1, 'relu', 1)
+        self._test_multiple_plays_helper(1, 'relu', 5)
+        self._test_multiple_plays_helper(2, 'relu', 1)
+        self._test_multiple_plays_helper(2, 'relu', 5)
+
+    def _test_multiple_plays_helper(self, nb_plays, activation, input_dims):
         units = 5
-        input_dim = 2
-        activation = None
-        timestep = self.inputs.shape[0] // input_dim
+        timestep = self.inputs.shape[0] // input_dims
         mymodel = core.MyModel(nb_plays=nb_plays,
                                units=units,
                                input_dim=input_dim,
@@ -291,14 +305,6 @@ class TestCases(unittest.TestCase):
                 import ipdb; ipdb.set_trace()
 
         self.assertTrue(np.allclose(result_by_tf, result_by_hand, atol=1e-5))
-
-
-    # def test_pickle(self):
-    #     foo = Foo()
-    #     p_foo = pickle.dumps(foo)
-    #     print(pickletools.dis(p_foo))
-    #     a = pickle.loads(p_foo)
-    #     a.bar("world")
 
 
 if __name__ == '__main__':

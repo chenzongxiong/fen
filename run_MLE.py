@@ -4,10 +4,10 @@ import argparse
 import numpy as np
 import tensorflow as tf
 
+import log as logging
 from core import MyModel
 import utils
 import trading_data as tdata
-import log as logging
 import constants
 import colors
 
@@ -176,7 +176,7 @@ if __name__ == "__main__":
     run_test = False
 
     mu = 0
-    sigma = 1
+    sigma = 2
 
     points = 1000
     input_dim = 1
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     # __activation__ = 'relu'
     # __activation__ = None
     __mu__ = 0
-    __sigma__ = 1
+    __sigma__ = 2
     # __sigma__ = 5
     # __sigma__ = 20
 

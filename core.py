@@ -58,7 +58,6 @@ def Phi(x, width=1.0):
     return r2
     # return tf.maximum(x-width/2, 0) + tf.minimum(x+width/2.0, 0)
 
-
 def gradient_operator(P, weights=None):
     # _P = tf.reshape(P, shape=(P.shape[0].value, -1))
     # _diff = _P[:, 1:] - _P[:, :-1]
@@ -178,6 +177,7 @@ def gradient_all_layers(P,
                                             feed_dict=feed_dict)
     g2 = tf.expand_dims(tf.matmul(g1[0], linear_weights), axis=0)
     return g2
+
 
 class PhiCell(Layer):
     def __init__(self,
