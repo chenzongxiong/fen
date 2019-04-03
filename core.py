@@ -189,6 +189,35 @@ def phi(x, width=1.0):
         return float(0)
 
 
+def calculate_output_by_hand(plays, weights, operator_outputs):
+    # operator_outputs_ = []
+    # weights_ = [[], [], [], [], []]
+    # for play in plays:
+    #     weights_[0].append(play.operator_layer.kernel)
+    #     weights_[1].append(play.nonlinear_layer.kernel)
+    #     weights_[2].append(play.nonlinear_layer.bias)
+    #     weights_[3].append(play.linear_layer.kernel)
+    #     weights_[4].append(play.linear_layer.bias)
+    #     operator_outputs_.append(play.operator_layer(prices[:1000]))
+
+    # weights, operator_outputs = sess.run([weights_, operator_outputs_])
+
+    # for i in range(len(weights)):
+    #     for j in range(len(weights[i])):
+    #         weights[i][j] = weights[i][j].reshape(-1)
+
+    # individual_p_list = [operator_output.reshape(-1)[-1] for operator_output in operator_outputs]
+
+    # for i in range(len(plays)):
+    #     p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
+    #     pp = weights[1][i] * p + weights[2][i]
+    #     ppp = (weights[3][i] * pp).sum() + weights[4][i]
+    #     predict_noise_list.append(ppp[0])
+
+    # predict_noise = sum(predict_noise_list) / self._nb_plays
+    pass
+
+
 class PhiCell(Layer):
     def __init__(self,
                  input_dim=1,
@@ -1104,7 +1133,7 @@ class MyModel(object):
             self.curr_mu = tf.keras.backend.mean(diff)
             self.curr_sigma = tf.keras.backend.std(diff)
             # _loss = tf.keras.backend.square((diff - mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
-            _loss = tf.keras.backend.square((diff - self.curr_mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
+            _loss = tf.keras.backend.square((diff - mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
             self.loss = tf.keras.backend.mean(_loss)
 
     def fit2(self,
@@ -1171,9 +1200,9 @@ class MyModel(object):
                                                                                                                                                                                                                 float(sigma_res),
                                                                                                                                                                                                                 float(mu_res)))
             self.cost_history.append([i, cost])
-            if len(patience_list) >= 50:
-                LOG.debug(colors.yellow("Lost patience...."))
-                break
+            # if len(patience_list) >= 50:
+            #     LOG.debug(colors.yellow("Lost patience...."))
+            #     break
 
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
@@ -1203,16 +1232,32 @@ class MyModel(object):
         LOG.debug("mean: {}, std: {}".format(mean, std))
         return prediction, float(mean), float(std)
 
-    def trend(self, prices, B, mu, sigma, delta=0.001, max_iteration=10000):
-        import ipdb; ipdb.set_trace()
-        _ppp = ops.convert_to_tensor(prices, dtype=tf.float32)
-        _ppp = tf.reshape(_ppp, shape=(1, 200, 10))
+    def trend(self, prices, B, mu, sigma,
+              start_pos=1000, end_pos=1100,
+              delta=0.001, max_iteration=10000):
+        assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
+        assert len(prices.shape) == 1, colors.red("Prices should be a vector")
+        if not hasattr(self, '_batch_input_shape'):
+            if hasattr(self.plays[0], '_batch_input_shape'):
+                input_dim = self._batch_input_shape.as_list()[-1]
+            else:
+                raise Exception(colors.red("Not found batch_input_shape"))
+        elif isinstance(self._batch_input_shape, (list, tuple)):
+            input_dim = self._batch_input_shape[-1]
+        else:
+            raise Exception(colors.red("Unknown error occurs in trend"))
 
-        original_prediction, _, _ = self.predict2(prices)
-        shape = self.plays[0]._batch_input_shape.as_list()
+        timestep = prices.shape[0] // input_dim
+        shape = [1, timestep, input_dim]
+        _ppp = ops.convert_to_tensor(prices, dtype=tf.float32)
+        _ppp = tf.reshape(_ppp, shape=shape)
+
+        original_prediction = self.predict(prices)
+        mu = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).mean()
+        sigma = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).std()
 
         weights_ = [[], [], [], [], []]
-        # TODO: extract the state of timestep N
+
         operator_outputs_ = []
         for play in self.plays:
             weights_[0].append(play.operator_layer.kernel)
@@ -1220,7 +1265,7 @@ class MyModel(object):
             weights_[2].append(play.nonlinear_layer.bias)
             weights_[3].append(play.linear_layer.kernel)
             weights_[4].append(play.linear_layer.bias)
-            operator_outputs_.append(play.operator_layer(prices[:1000]))
+            operator_outputs_.append(play.operator_layer(_ppp))
 
         weights, operator_outputs = sess.run([weights_, operator_outputs_])
 
@@ -1228,8 +1273,10 @@ class MyModel(object):
             for j in range(len(weights[i])):
                 weights[i][j] = weights[i][j].reshape(-1)
 
-        # BUG: state of p is error
-        individual_p_list = [operator_output.reshape(-1)[-1] for operator_output in operator_outputs]
+        if start_pos == 0:
+            individual_p_list = [[0] for operator_output in operator_outputs]
+        else:
+            individual_p_list = [[operator_output.reshape(-1)[start_pos-1]] for operator_output in operator_outputs]
 
         outputs = []
 
@@ -1250,15 +1297,22 @@ class MyModel(object):
 
             return guess, predict_noise
 
-        guess_prices_list = [[] for _ in range(2000)]
+        guess_prices_list = [[] for _ in range(end_pos-start_pos)]
+        delta = 0.001
+        np.random.seed(int(time.time()))
+        # import ipdb; ipdb.set_trace()
+
+        # TODO: automatically adjust the delta to search the results
 
         def repeat(k, iterations=1):
-            for i in range(iterations):
+            # for i in range(iterations):
+            i = 0
+            while i < iterations:
                 bk = np.random.normal(loc=mu, scale=sigma) + original_prediction[k-1]
                 if bk > original_prediction[k-1]:
-                    direction = 1
-                elif bk < original_prediction[k-1]:
                     direction = -1
+                elif bk < original_prediction[k-1]:
+                    direction = 1
                 else:
                     direction = 0
 
@@ -1266,27 +1320,11 @@ class MyModel(object):
                 guess, guess_noise = do_guess(k, 1, direction)
                 step = 1
                 curr_diff = guess_noise - bk
-                prev_diff = curr_diff
+                prev_diff = None
+                LOG.debug(colors.cyan("============================= Iteration #{} ======================================".format(i+1)))
+                good_guess = True
 
                 while True:
-                    if abs(curr_diff) < 1e-3 or curr_diff * prev_diff < 0:
-                        LOG.debug("step: {}, true_price: {}, guess price: {}, guess noise: {}, generated noise: {}, true noise: {}, curr_diff: {}, prev_diff: {}".format(
-                            step,
-                            prices[k],
-                            guess,
-                            guess_noise,
-                            bk,
-                            original_prediction[k],
-                            curr_diff,
-                            prev_diff))
-
-                        for i in range(self._nb_plays):
-                            p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
-                            individual_p_list[i].append(p)
-
-                        guess_prices_list[k].append(guess)
-                        break
-
                     prev_diff = curr_diff
                     book_prev_diff_list.append(prev_diff)
 
@@ -1294,33 +1332,69 @@ class MyModel(object):
                     guess, guess_noise = do_guess(k, step, direction, guess_flag=True)
                     curr_diff = guess_noise - bk
 
-                    if len(book_prev_diff_list) >= 100 and direction * (curr_diff - book_prev_diff_list[0]) > 0:
-                        direction = -direction
-                        LOG.warn(colors.red("Strange to change the direction..."))
-                        book_prev_diff_list = []
+                    if curr_diff * prev_diff < 0:
+                        LOG.debug(colors.yellow("step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}".format(
+                            step,
+                            float(prices[k]),
+                            float(guess),
+                            float(guess_noise),
+                            float(bk),
+                            float(original_prediction[k]),
+                            float(curr_diff),
+                            float(prev_diff),
+                            direction,
+                            delta)))
+                        guess_prices_list[k-start_pos].append(guess)
+                        break
 
-            # import ipdb; ipdb.set_trace()
-            guess_prices.append(sum(guess_prices_list[k])/iterations)
+                    LOG.debug("step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}".format(
+                        step,
+                        float(prices[k]),
+                        float(guess),
+                        float(guess_noise),
+                        float(bk),
+                        float(original_prediction[k]),
+                        float(curr_diff),
+                        float(prev_diff),
+                        direction,
+                        delta))
 
+                    # if step % 10 == 0:
+                    #     import ipdb; ipdb.set_trace()
+                    if step >= 1000:
+                        LOG.warn(colors.red("Not a good guess"))
+                        good_guess = False
+                        break
+
+                if good_guess is True:
+                    i += 1
+
+            avg_guess = sum(guess_prices_list[k-start_pos]) / iterations
+            for j in range(self._nb_plays):
+                p = phi(weights[0][j] * avg_guess - individual_p_list[j][-1]) + individual_p_list[j][-1]
+                individual_p_list[j].append(p)
+
+            return avg_guess
 
         guess_prices = []
 
-        k = 1000
+        k = start_pos
         while True:
-            repeat(k, 100)
+            avg_guess = repeat(k, 100)
+            guess_prices.append(avg_guess)
+            LOG.debug(colors.red("================ Guess k: {} successfully, predict price: {}, grouth-truth price: {}  =====================".format(k, avg_guess, prices[k])))
             k += 1
-            LOG.debug(colors.red("K: {}".format(k)))
-            if k == 1100:
+            if k >= end_pos:
                 break
 
         LOG.debug("Verifing...")
         outputs = np.array(outputs).reshape(-1)
         guess_prices = np.array(guess_prices).reshape(-1)
 
-        loss1 =  ((guess_prices - prices[1000:1100]) ** 2)
-        loss2 = np.abs(guess_prices - prices[1000:1100])
-        loss3 = (prices[1000:1100] - prices[999:1099]) ** 2
-        loss4 = np.abs(prices[1000:1100] - prices[999:1099])
+        loss1 =  ((guess_prices - prices[start_pos:end_pos]) ** 2)
+        loss2 = np.abs(guess_prices - prices[start_pos:end_pos])
+        loss3 = (prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1]) ** 2
+        loss4 = np.abs(prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1])
 
         LOG.debug("root sum square loss1: {}".format((loss1.sum())**(0.5)))
         LOG.debug("root sum square loss2: {}".format((loss3.sum())**(0.5)))
@@ -1328,7 +1402,6 @@ class MyModel(object):
         LOG.debug("total abs loss2: {}".format((loss4.sum())))
 
         return guess_prices
-
 
     def save_weights(self, fname):
         suffix = fname.split(".")[-1]
@@ -1343,7 +1416,7 @@ class MyModel(object):
         with open("{}/{}plays/input_shape.txt".format(fname[:-3], len(self.plays)), "w") as f:
             f.write(":".join(map(str, self.plays[0]._batch_input_shape.as_list())))
 
-    def load_weights(self, fname):
+    def load_weights(self, fname, extra={}):
         LOG.debug(colors.cyan("Trying to Load Weights first..."))
         suffix = fname.split(".")[-1]
         dirname = "{}/{}plays".format(fname[:-3], len(self.plays))
@@ -1355,6 +1428,11 @@ class MyModel(object):
             line = f.read()
 
         shape = list(map(int, line.split(":")))
+        if 'shape' in extra:
+            shape = extra['shape']
+
+        self._batch_input_shape = shape
+
         for play in self.plays:
             if not play.built:
                 play._batch_input_shape = tf.TensorShape(shape)

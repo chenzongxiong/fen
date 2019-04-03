@@ -76,6 +76,7 @@ class TestCases(unittest.TestCase):
         aa = session.run(core.Phi(a))
         self.assertTrue(aa.shape == (1, 1))
         self.assertTrue(aa[0, 0] == -99.5)
+
     def test_phi(self):
         a = np.array([1], dtype=np.float32)
         aa = core.phi(a)

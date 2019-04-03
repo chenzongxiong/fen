@@ -26,7 +26,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 1000
+    epochs = 100
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -134,16 +134,19 @@ def trend(prices,
 
     assert len(shape) == 3, "shape must be 3 dimensions"
     input_dim = shape[2]
-    timestep = shape[1]
-    num_samples = inputs.shape[0] // (input_dim * timestep)
+    timestep = inputs.shape[0] // input_dim
+    shape[1] = timestep
+
     start = time.time()
+
     mymodel = MyModel(input_dim=input_dim,
                       timestep=timestep,
                       units=units,
                       activation=activation,
                       nb_plays=nb_plays)
 
-    mymodel.load_weights(weights_fname)
+
+    mymodel.load_weights(weights_fname, extra={'shape': shape})
 
     prediction = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
     # loss = ((prediction - prices) ** 2).mean()
@@ -167,7 +170,8 @@ if __name__ == "__main__":
     # method = 'noise'
     interp = 1
     do_prediction = False
-    do_trend = False
+    # do_trend = False
+    do_trend = True
 
     with_noise = True
     diff_weights = True
@@ -175,7 +179,7 @@ if __name__ == "__main__":
     run_test = False
 
     mu = 0
-    sigma = 2
+    sigma = 1
 
     points = 1000
     input_dim = 1
@@ -194,7 +198,7 @@ if __name__ == "__main__":
     # __activation__ = 'relu'
     __activation__ = None
     __mu__ = 0
-    __sigma__ = 2
+    __sigma__ = 1
     # __sigma__ = 5
     # __sigma__ = 20
 
@@ -315,9 +319,6 @@ if __name__ == "__main__":
                                                                           loss=loss_name)
 
     if do_trend is True:
-        import ipdb; ipdb.set_trace()
-        a, b = tdata.DatasetLoader.load_data(predicted_fname)
-
         predictions, loss = trend(prices=inputs,
                                   B=outputs,
                                   mu=__mu__,

@@ -1,0 +1,22 @@
+* Predicting
+** method 1
+  We predict the next price:
+  \begin{eqnarray}
+  p_{N+1}^{predicted} = F((B_N, b_N + \Delta b), W_p) + \mathcal{N}(0, \sigma_p), & \Delta b \sim \mathcal{N}(\mu_b, \sigma_b)
+  \end{eqnarray}
+  e.g., by sampling or by propagaating \(\mathcal{N}(\mu, \sigma)\) through the network similarly to before.
+
+  Once we observed the true price \(p_{N+1}\), we predict the next noise level:
+  \[b_{N+1} = G(P_{N+1}, W_b)\]
+
+  We keep predicting the next price and the next noise level in turn.
+
+** method 2
+   - Sample \(\Delta b_{N+1}^{S} \sim \mathcal{N}(b_{N}^{observed} + \mu, \sigma)\), where \(b_{N}^{observed}\) is the random walk
+     observed in previous timestep.
+   - We predict price \(p_{N+1}\) by grid-search prices \((p_{N} + \Delta p_{1}, p_{N} + \Delta p_{2}, ..., p_{N} + \Delta p_{T})\)
+     to make the following equation hold
+     \begin{eqnarray}
+      G(p_{N} + \Delta p_{i}, W_{b}) = b_{N+1}^{S}
+     \end{eqnarray}
+     where \(i\) is in \((1, 2, ..., T)\).

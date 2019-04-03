@@ -3,3 +3,4 @@ TODO.org
 __pycache__/*
 log/*
 tmp/*
+*.log
