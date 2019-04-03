@@ -335,6 +335,13 @@ class TestCases(unittest.TestCase):
 
         self.assertTrue(np.allclose(result_by_tf, result_by_hand, atol=1e-5))
 
+    def test_confusion_matrix(self):
+        y_true = np.array([1, 2, 3, 1, 6, 3, 2, 7, 8, 9], dtype=np.float32)
+        y_pred = np.array([2, 4, 1, 4, 6, 9, 3, 12, 2, 9], dtype=np.float32)
+        confusion = core.confusion_matrix(y_true, y_pred)
+        correct = np.array([4, 2, 3, 0], dtype=np.int32)
+        self.assertTrue(np.all(confusion == correct))
+
 
 if __name__ == '__main__':
     unittest.main()

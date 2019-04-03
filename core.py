@@ -189,33 +189,28 @@ def phi(x, width=1.0):
         return float(0)
 
 
-def calculate_output_by_hand(plays, weights, operator_outputs):
-    # operator_outputs_ = []
-    # weights_ = [[], [], [], [], []]
-    # for play in plays:
-    #     weights_[0].append(play.operator_layer.kernel)
-    #     weights_[1].append(play.nonlinear_layer.kernel)
-    #     weights_[2].append(play.nonlinear_layer.bias)
-    #     weights_[3].append(play.linear_layer.kernel)
-    #     weights_[4].append(play.linear_layer.bias)
-    #     operator_outputs_.append(play.operator_layer(prices[:1000]))
+def confusion_matrix(y_true, y_pred, labels=['increase', 'descrease']):
+    '''
+    confusion matrix is impolemented as following
+                        | increase (truth)  | descrease (truth) |
+        increase (pred) |                   |                   |
+       descrease (pred) |                   |                   |
+    '''
 
-    # weights, operator_outputs = sess.run([weights_, operator_outputs_])
+    diff1 = ((y_true[1:] - y_true[:-1]) >= 0).tolist()
+    diff2 = ((y_pred[1:] - y_true[:-1]) >= 0).tolist()
+    confusion = np.zeros(4, dtype=np.int32)
+    for a, b in zip(diff1, diff2):
+        if a is True and b is True:
+            confusion[0] += 1
+        elif a is True and b is False:
+            confusion[1] += 1
+        elif a is False and b is True:
+            confusion[2] += 1
+        elif a is False and b is False:
+            confusion[3] += 1
 
-    # for i in range(len(weights)):
-    #     for j in range(len(weights[i])):
-    #         weights[i][j] = weights[i][j].reshape(-1)
-
-    # individual_p_list = [operator_output.reshape(-1)[-1] for operator_output in operator_outputs]
-
-    # for i in range(len(plays)):
-    #     p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
-    #     pp = weights[1][i] * p + weights[2][i]
-    #     ppp = (weights[3][i] * pp).sum() + weights[4][i]
-    #     predict_noise_list.append(ppp[0])
-
-    # predict_noise = sum(predict_noise_list) / self._nb_plays
-    pass
+    return confusion
 
 
 class PhiCell(Layer):
@@ -803,16 +798,17 @@ class Play(object):
 
         return output, float(mean), float(std)
 
+    def save_weights(self, path):
+        self.model.save_weights(path)
 
-    def save(self):
-        pass
+    def load_weights(self, path, by_name=False):
+        self.model.load_weights(path, by_name=by_name)
 
     @property
     def layers(self):
         if hasattr(self, 'model'):
             return self.model.layers
         return []
-
 
     @property
     def _layers(self):
@@ -1256,9 +1252,11 @@ class MyModel(object):
         mu = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).mean()
         sigma = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).std()
 
-        weights_ = [[], [], [], [], []]
+        import ipdb; ipdb.set_trace()
 
+        weights_ = [[], [], [], [], []]
         operator_outputs_ = []
+
         for play in self.plays:
             weights_[0].append(play.operator_layer.kernel)
             weights_[1].append(play.nonlinear_layer.kernel)
@@ -1401,6 +1399,9 @@ class MyModel(object):
         LOG.debug("total abs loss1: {}".format((loss2.sum())))
         LOG.debug("total abs loss2: {}".format((loss4.sum())))
 
+        # LOG.debug()
+        # TODO: calculate confusion matrix HERE
+
         return guess_prices
 
     def save_weights(self, fname):
@@ -1410,7 +1411,7 @@ class MyModel(object):
             os.makedirs(os.path.dirname(path), exist_ok=True)
             open(path, 'w').close()
             LOG.debug(colors.cyan("Saving {}'s Weights to {}".format(play._name, path)))
-            play.model.save_weights(path)
+            play.save_weights(path)
 
         LOG.debug(colors.cyan("Writing input shape into disk..."))
         with open("{}/{}plays/input_shape.txt".format(fname[:-3], len(self.plays)), "w") as f:
@@ -1439,5 +1440,5 @@ class MyModel(object):
                 play._preload_weights = True
                 play.build()
             path = "{}/{}.{}".format(dirname, play._name, suffix)
-            play.model.load_weights(path, by_name=False)
+            play.load_weights(path)
             LOG.debug(colors.red("Set Weights for {}".format(play._name)))
