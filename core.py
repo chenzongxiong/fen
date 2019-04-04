@@ -149,7 +149,7 @@ def gradient_operator_nonlinear_layers(P,
         utils.init_tf_variables()
         J_result, calc_g_result = session.run([J, calc_g], feed_dict=feed_dict)
         if not np.allclose(np.diag(J_result), calc_g_result.reshape(-1)):
-            LOG.debug(colors.red("ERROR: gradient operator- and nonlinear- layers"))
+            LOG.error(colors.red("ERROR: gradient operator- and nonlinear- layers"))
             import ipdb; ipdb.set_trace()
     else:
         g1 = gradient_operator(P, operator_weights)
@@ -191,6 +191,7 @@ def phi(x, width=1.0):
 
 def confusion_matrix(y_true, y_pred, labels=['increase', 'descrease']):
     '''
+    # https://en.wikipedia.org/wiki/Confusion_matrix
     confusion matrix is impolemented as following
                         | increase (truth)  | descrease (truth) |
         increase (pred) |                   |                   |
@@ -204,13 +205,13 @@ def confusion_matrix(y_true, y_pred, labels=['increase', 'descrease']):
         if a is True and b is True:
             confusion[0] += 1
         elif a is True and b is False:
-            confusion[1] += 1
-        elif a is False and b is True:
             confusion[2] += 1
+        elif a is False and b is True:
+            confusion[1] += 1
         elif a is False and b is False:
             confusion[3] += 1
 
-    return confusion
+    return confusion.reshape([2, 2])
 
 
 class PhiCell(Layer):
@@ -1042,8 +1043,10 @@ class MyModel(object):
             LOG.debug("{}, number of layer is: {}".format(play._name, play.number_of_layers))
             LOG.debug("{}, weight: {}".format(play._name, play.weight))
 
-    def compile(self, inputs, mu, sigma, **kwargs):
+    def compile(self, inputs, **kwargs):
         unittest = kwargs.pop('unittest', False)
+        mu = kwargs.pop('mu', None)
+        sigma = kwargs.pop('sigma', None)
         _inputs = inputs
         inputs = ops.convert_to_tensor(inputs, tf.float32)
         for play in self.plays:
@@ -1128,8 +1131,12 @@ class MyModel(object):
             # import ipdb; ipdb.set_trace()
             self.curr_mu = tf.keras.backend.mean(diff)
             self.curr_sigma = tf.keras.backend.std(diff)
+            ## learn mu/sigma/weights
+            # _loss = tf.keras.backend.square((diff - self.curr_mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
+            ## fix mu and learn sigma/weights
             # _loss = tf.keras.backend.square((diff - mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
-            _loss = tf.keras.backend.square((diff - mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
+            ## fix mu/sigma and learn weights
+            _loss = tf.keras.backend.square((diff - mu)/sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
             self.loss = tf.keras.backend.mean(_loss)
 
     def fit2(self,
@@ -1152,7 +1159,7 @@ class MyModel(object):
             __sigma__ = (outputs[1:] - outputs[:-1]).std()
             outputs = ops.convert_to_tensor(outputs, tf.float32)
 
-        self.compile(inputs, mu, sigma)
+        self.compile(inputs, mu=mu, sigma=sigma)
         mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))
         mse_loss2 = tf.keras.backend.mean(tf.square(self.y_pred + tf.reshape(outputs, shape=self.y_pred.shape)))
         diff = self.y_pred[:, 1:, :] - self.y_pred[:, :-1, :]

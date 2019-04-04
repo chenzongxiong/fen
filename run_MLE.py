@@ -196,8 +196,8 @@ if __name__ == "__main__":
     __nb_plays__ = 20
     __units__ = 20
     __state__ = 0
-    __activation__ = 'tanh'
-    __activation__ = 'relu'
+    # __activation__ = 'tanh'
+    # __activation__ = 'relu'
     __activation__ = None
     __mu__ = 0
     __sigma__ = 2
@@ -320,13 +320,13 @@ if __name__ == "__main__":
                                                                           __nb_plays__=__nb_plays__,
                                                                           loss=loss_name)
 
-    try:
-        a, b = tdata.DatasetLoader.load_data(predicted_fname)
-        confusion = confusion_matrix(a, b)
-        LOG.debug(colors.purple("confusion matrix is: {}".format(confusion)))
-        sys.exit(0)
-    except FileNotFoundError:
-        LOG.warn("Not found prediction file, no way to create confusion matrix")
+    # try:
+    #     a, b = tdata.DatasetLoader.load_data(predicted_fname)
+    #     confusion = confusion_matrix(a, b)
+    #     LOG.debug(colors.purple("confusion matrix is: {}".format(confusion)))
+    #     sys.exit(0)
+    # except FileNotFoundError:
+    #     LOG.warn("Not found prediction file, no way to create confusion matrix")
 
     if do_trend is True:
         import ipdb; ipdb.set_trace()
