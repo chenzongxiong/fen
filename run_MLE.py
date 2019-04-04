@@ -27,7 +27,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 100
+    epochs = 150
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -173,7 +173,7 @@ if __name__ == "__main__":
     do_prediction = False
     do_trend = False
     do_confusion_matrix = True
-    do_trend = True
+    # do_trend = True
 
     with_noise = True
     diff_weights = True
@@ -197,8 +197,8 @@ if __name__ == "__main__":
     __units__ = 20
     __state__ = 0
     # __activation__ = 'tanh'
-    # __activation__ = 'relu'
-    __activation__ = None
+    __activation__ = 'relu'
+    # __activation__ = None
     __mu__ = 0
     __sigma__ = 2
     # __sigma__ = 5
