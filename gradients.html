@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2019-03-22 Fri 09:50 -->
+<!-- 2019-04-04 Thu 11:04 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>&lrm;</title>
@@ -254,18 +254,18 @@ for the JavaScript code in this tag.
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org011c946">1. formula</a></li>
-<li><a href="#org9241952">2. RNN gradients</a></li>
-<li><a href="#orgf38d911">3. Implementation</a></li>
-<li><a href="#org2ebd725">4. Trading</a></li>
-<li><a href="#org824ce5d">5. Direct Learning</a></li>
-<li><a href="#org05f9888">6. MSE and MLE</a></li>
-<li><a href="#org9820d6b">7. How to determine undetermined direction of random walk ?</a></li>
+<li><a href="#org54df408">1. formula</a></li>
+<li><a href="#org1c1d021">2. RNN gradients</a></li>
+<li><a href="#org330e887">3. Implementation</a></li>
+<li><a href="#orgf6fff1a">4. Trading</a></li>
+<li><a href="#org6976db1">5. Direct Learning</a></li>
+<li><a href="#org2804e8c">6. MSE and MLE</a></li>
+<li><a href="#org07fb5ea">7. How to determine undetermined direction of random walk ?</a></li>
 </ul>
 </div>
 </div>
-<div id="outline-container-org011c946" class="outline-2">
-<h2 id="org011c946"><span class="section-number-2">1</span> formula</h2>
+<div id="outline-container-org54df408" class="outline-2">
+<h2 id="org54df408"><span class="section-number-2">1</span> formula</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 First we only consider <b>one play</b>
@@ -334,12 +334,21 @@ and
 \begin{eqnarray}
 \Phi(x) =
         \begin{cases}
-        x, x > 0 \\
-        0, -1 < x < 0 \\
-        x-1, x < -1 \\
+        x - 1/2, & x > 1/2 \\
+        0, & -1/2 < x < -1/2 \\
+        x + 1/2, & x < -1/2 \\
         \end{cases}
-
 \end{eqnarray}
+
+\begin{eqnarray}
+\Phi(x) =
+        \begin{cases}
+        x + 1/2, & x > 1/2 \\
+        0, & -1/2 < x < -1/2 \\
+        x - 1/2, & x < -1/2 \\
+        \end{cases}
+\end{eqnarray}
+
 
 <p>
 Using chain rule, we obtain
@@ -386,8 +395,8 @@ our derivation is:
 </div>
 </div>
 
-<div id="outline-container-org9241952" class="outline-2">
-<h2 id="org9241952"><span class="section-number-2">2</span> RNN gradients</h2>
+<div id="outline-container-org1c1d021" class="outline-2">
+<h2 id="org1c1d021"><span class="section-number-2">2</span> RNN gradients</h2>
 <div class="outline-text-2" id="text-2">
 \begin{eqnarray}
 \frac{\partial p_j}{\partial x_j} &=& \Phi'(\sigma_j) \frac{\partial \sigma_j}{\partial x_j} \\
@@ -408,8 +417,8 @@ our derivation is:
 </div>
 </div>
 
-<div id="outline-container-orgf38d911" class="outline-2">
-<h2 id="orgf38d911"><span class="section-number-2">3</span> Implementation</h2>
+<div id="outline-container-org330e887" class="outline-2">
+<h2 id="org330e887"><span class="section-number-2">3</span> Implementation</h2>
 <div class="outline-text-2" id="text-3">
 <p>
 Consider \(\mathcal{P}_{n} = [p_{1}, p_{2}, p_{3}, ..., p_{n}]\), \(G(\mathcal{P}_{n}, w^{1}) = [y_{1}, y_{2}, y_{3}, ..., y_{n}]\)
@@ -417,8 +426,8 @@ Consider \(\mathcal{P}_{n} = [p_{1}, p_{2}, p_{3}, ..., p_{n}]\), \(G(\mathcal{P
 </div>
 </div>
 
-<div id="outline-container-org2ebd725" class="outline-2">
-<h2 id="org2ebd725"><span class="section-number-2">4</span> Trading</h2>
+<div id="outline-container-orgf6fff1a" class="outline-2">
+<h2 id="orgf6fff1a"><span class="section-number-2">4</span> Trading</h2>
 <div class="outline-text-2" id="text-4">
 <p>
 Assume, we observe prices \(p_1, p_2, ..., p_N\) for a fixed \(N > 0\). Based on Dima's paper,
@@ -455,8 +464,8 @@ plays and nonlinear functions**
 </div>
 
 
-<div id="outline-container-org824ce5d" class="outline-2">
-<h2 id="org824ce5d"><span class="section-number-2">5</span> Direct Learning</h2>
+<div id="outline-container-org6976db1" class="outline-2">
+<h2 id="org6976db1"><span class="section-number-2">5</span> Direct Learning</h2>
 <div class="outline-text-2" id="text-5">
 <p>
 We learn the parameters \(W_b, \mu_b, \sigma_b\) and the initial state \(p_0\) of the network \(G\) by maximizing
@@ -504,10 +513,14 @@ It's also equivalent to minimize the loss function as following:
 \min_{W_b, p_0} L &=& \min_{W_b, p_0} \sum_{n=1}^{N} \left[\left(\frac{b_n - b_{n-1} - \mu_{b}}{\sigma_b} \right)^2 - 2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right] \\
        &=& \min_{W_b, p_0} \sum_{n=1}^{N} \left[\left( b_n - b_{n-1} - \mu_{b}\right)^2 - 2 \sigma_{b}^2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right]
 \end{eqnarray}
+
+<p>
+From the target loss function, the only parameters we need to known is \(\mu_b\).
+</p>
 </div>
 </div>
-<div id="outline-container-org05f9888" class="outline-2">
-<h2 id="org05f9888"><span class="section-number-2">6</span> MSE and MLE</h2>
+<div id="outline-container-org2804e8c" class="outline-2">
+<h2 id="org2804e8c"><span class="section-number-2">6</span> MSE and MLE</h2>
 <div class="outline-text-2" id="text-6">
 \begin{eqnarray}
 
@@ -530,8 +543,8 @@ p(z_i) = p(f(y_i)) \left(\frac{\partial f}{\partial y_i}\right)^{-1} f^{-1}(z_i)
 </div>
 </div>
 
-<div id="outline-container-org9820d6b" class="outline-2">
-<h2 id="org9820d6b"><span class="section-number-2">7</span> How to determine undetermined direction of random walk ?</h2>
+<div id="outline-container-org07fb5ea" class="outline-2">
+<h2 id="org07fb5ea"><span class="section-number-2">7</span> How to determine undetermined direction of random walk ?</h2>
 <div class="outline-text-2" id="text-7">
 <p>
 If external agents buy stocks from the market, then the total number of stocks in market descreases, leading to increasing the prices.
@@ -553,7 +566,7 @@ Since we observe a series of prices in advance, we can determine the direction o
 </div>
 </div>
 <div id="postamble" class="status">
-<p class="date">Created: 2019-03-22 Fri 09:50</p>
+<p class="date">Created: 2019-04-04 Thu 11:04</p>
 <p class="validation"><a href="http://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

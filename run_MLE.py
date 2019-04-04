@@ -173,7 +173,7 @@ if __name__ == "__main__":
     do_prediction = False
     do_trend = False
     do_confusion_matrix = True
-    # do_trend = True
+    do_trend = True
 
     with_noise = True
     diff_weights = True

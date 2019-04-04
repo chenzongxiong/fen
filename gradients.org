@@ -50,12 +50,21 @@ and
 \begin{eqnarray}
 \Phi(x) =
         \begin{cases}
-        x, x > 0 \\
-        0, -1 < x < 0 \\
-        x-1, x < -1 \\
+        x - 1/2, & x > 1/2 \\
+        0, & -1/2 < x < -1/2 \\
+        x + 1/2, & x < -1/2 \\
         \end{cases}
-
 \end{eqnarray}
+
+\begin{eqnarray}
+\Phi(x) =
+        \begin{cases}
+        x + 1/2, & x > 1/2 \\
+        0, & -1/2 < x < -1/2 \\
+        x - 1/2, & x < -1/2 \\
+        \end{cases}
+\end{eqnarray}
+
 
 Using chain rule, we obtain
 \begin{eqnarray}

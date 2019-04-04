@@ -57,6 +57,8 @@ def Phi(x, width=1.0):
 
     r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: x + _width, lambda: ZEROS)
     r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x - _width, lambda: r1)
+    # r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: x - _width, lambda: ZEROS)
+    # r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x + _width, lambda: r1)
     return r2
 
 def gradient_operator(P, weights=None):
@@ -1256,8 +1258,8 @@ class MyModel(object):
         _ppp = tf.reshape(_ppp, shape=shape)
 
         original_prediction = self.predict(prices)
-        mu = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).mean()
-        sigma = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).std()
+        # mu = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).mean()
+        # sigma = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).std()
 
         import ipdb; ipdb.set_trace()
 
@@ -1315,9 +1317,10 @@ class MyModel(object):
             while i < iterations:
                 bk = np.random.normal(loc=mu, scale=sigma) + original_prediction[k-1]
                 if bk > original_prediction[k-1]:
-                    direction = -1
-                elif bk < original_prediction[k-1]:
+                    # direction = -1
                     direction = 1
+                elif bk < original_prediction[k-1]:
+                    direction = -1
                 else:
                     direction = 0
 
@@ -1387,7 +1390,7 @@ class MyModel(object):
         while True:
             avg_guess = repeat(k, 100)
             guess_prices.append(avg_guess)
-            LOG.debug(colors.red("================ Guess k: {} successfully, predict price: {}, grouth-truth price: {}  =====================".format(k, avg_guess, prices[k])))
+            LOG.debug(colors.red("================ Guess k: {} successfully, predict price: {:.5f}, grouth-truth price: {:.5f}  =====================".format(k, float(avg_guess), float(prices[k]))))
             k += 1
             if k >= end_pos:
                 break
