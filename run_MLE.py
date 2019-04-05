@@ -156,6 +156,28 @@ def trend(prices,
     loss = float(-1.0)
     return prediction, loss
 
+def plot(a, b):
+    from matplotlib import pyplot as plt
+    x = range(a.shape[0])
+    diff1 = ((a[1:] - a[:-1]) >= 0).tolist()
+    diff2 = ((b[1:] - a[:-1]) >= 0).tolist()
+    fig, ax = plt.subplots()
+    ax.plot(x, a, color='blue')
+    ax.plot(x, b, color='black')
+    markers = ['^', 's']
+    for index, d1, d2 in zip(x[1:], diff1, diff2):
+        if d1 is True and d2 is True:
+            ax.scatter([x[index]], [b[index]], marker='^', color='green')
+        elif d1 is False and d2 is False:
+            ax.scatter([x[index]], [b[index]], marker='^', color='green')
+        elif d1 is False and d2 is True:
+            ax.scatter([x[index]], [b[index]], marker='s', color='black')
+        elif d1 is True and d2 is False:
+            ax.scatter([x[index]], [b[index]], marker='s', color='black')
+
+    # plt.show()
+    fname = "/Users/baymax_testios/Desktop/1.png"
+    fig.savefig(fname, dpi=400)
 
 if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
@@ -173,7 +195,7 @@ if __name__ == "__main__":
     do_prediction = False
     do_trend = False
     do_confusion_matrix = True
-    # do_trend = True
+    do_trend = True
 
     with_noise = True
     diff_weights = True
@@ -196,9 +218,9 @@ if __name__ == "__main__":
     __nb_plays__ = 20
     __units__ = 20
     __state__ = 0
-    # __activation__ = 'tanh'
-    __activation__ = 'relu'
-    # __activation__ = None
+    __activation__ = 'tanh'
+    # __activation__ = 'relu'
+    __activation__ = None
     __mu__ = 0
     __sigma__ = 2
     # __sigma__ = 5
@@ -322,11 +344,15 @@ if __name__ == "__main__":
 
     # try:
     #     a, b = tdata.DatasetLoader.load_data(predicted_fname)
+    #     a = a[:20]
+    #     b = b[:20]
+
     #     confusion = confusion_matrix(a, b)
     #     LOG.debug(colors.purple("confusion matrix is: {}".format(confusion)))
+    #     plot(a, b)
     #     sys.exit(0)
     # except FileNotFoundError:
-    #     LOG.warn("Not found prediction file, no way to create confusion matrix")
+    #     LOG.warning("Not found prediction file, no way to create confusion matrix")
 
     if do_trend is True:
         import ipdb; ipdb.set_trace()
