@@ -128,14 +128,16 @@ def trend(prices,
           units=1,
           activation='tanh',
           nb_plays=1,
-          weights_name='model.h5'):
+          weights_name='model.h5',
+          trends_list_fname=None):
+
     with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
         line = f.read()
     shape = list(map(int, line.split(":")))
 
     assert len(shape) == 3, "shape must be 3 dimensions"
     input_dim = shape[2]
-    timestep = inputs.shape[0] // input_dim
+    timestep = prices.shape[0] // input_dim
     shape[1] = timestep
 
     start = time.time()
@@ -149,35 +151,51 @@ def trend(prices,
 
     mymodel.load_weights(weights_fname, extra={'shape': shape})
 
-    prediction = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
+    guess_trend, guess_trend_list = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
     # loss = ((prediction - prices) ** 2).mean()
     # loss = float(loss)
     # LOG.debug("loss: {}".format(loss))
-    loss = float(-1.0)
-    return prediction, loss
+    # import ipdb; ipdb.set_trace()
+    if trends_list_fname is not None:
+        inputs = prices[1000:1000+guess_trend.shape[-1]]
+        outputs = guess_trend_list
+        tdata.DatasetSaver.save_data(inputs, outputs, trends_list_fname)
 
-def plot(a, b):
+    loss = float(-1.0)
+    return guess_trend, loss
+
+def plot(a, b, trend_list):
     from matplotlib import pyplot as plt
-    x = range(a.shape[0])
+    x = range(1, a.shape[0]+1)
     diff1 = ((a[1:] - a[:-1]) >= 0).tolist()
     diff2 = ((b[1:] - a[:-1]) >= 0).tolist()
-    fig, ax = plt.subplots()
-    ax.plot(x, a, color='blue')
-    ax.plot(x, b, color='black')
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
+    ax1.plot(x, a, color='blue')
+    ax1.plot(x, b, color='black')
     markers = ['^', 's']
     for index, d1, d2 in zip(x[1:], diff1, diff2):
         if d1 is True and d2 is True:
-            ax.scatter([x[index]], [b[index]], marker='^', color='green')
+            ax1.scatter([index], [b[index-1]], marker='^', color='green')
         elif d1 is False and d2 is False:
-            ax.scatter([x[index]], [b[index]], marker='^', color='green')
+            ax1.scatter([index], [b[index-1]], marker='^', color='green')
         elif d1 is False and d2 is True:
-            ax.scatter([x[index]], [b[index]], marker='s', color='black')
+            ax1.scatter([index], [b[index-1]], marker='s', color='black')
         elif d1 is True and d2 is False:
-            ax.scatter([x[index]], [b[index]], marker='s', color='black')
+            ax1.scatter([index], [b[index-1]], marker='s', color='black')
 
-    # plt.show()
+    ax2.plot(x, a, color='blue')
+    min_trend_list = trend_list.min(axis=1)
+    max_trend_list = trend_list.max(axis=1)
+    ax2.fill_between(x, min_trend_list, max_trend_list, facecolor='gray', alpha=0.5, interpolate=True)
+    import ipdb; ipdb.set_trace()
+    ax3.plot(x, a, color='blue')
+    trend_list_ = [trend for trend in  trend_list]
+    ax3.boxplot(trend_list_)
+
+    plt.show()
     fname = "/Users/baymax_testios/Desktop/1.png"
     fig.savefig(fname, dpi=400)
+
 
 if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
@@ -220,7 +238,7 @@ if __name__ == "__main__":
     __state__ = 0
     __activation__ = 'tanh'
     # __activation__ = 'relu'
-    __activation__ = None
+    # __activation__ = None
     __mu__ = 0
     __sigma__ = 2
     # __sigma__ = 5
@@ -287,6 +305,9 @@ if __name__ == "__main__":
     input_file_key = 'models_diff_weights_mc_stock_model'
     loss_file_key = 'models_diff_weights_mc_stock_model_loss_history'
     predictions_file_key = 'models_diff_weights_mc_stock_model_predictions'
+    if do_trend is True:
+        predictions_file_key = 'models_diff_weights_mc_stock_model_trends'
+        trends_list_file_key = 'models_diff_weights_mc_stock_model_trends_list'
 
     fname = constants.DATASET_PATH[input_file_key].format(interp=interp,
                                                           method=method,
@@ -342,17 +363,36 @@ if __name__ == "__main__":
                                                                           __nb_plays__=__nb_plays__,
                                                                           loss=loss_name)
 
-    # try:
-    #     a, b = tdata.DatasetLoader.load_data(predicted_fname)
-    #     a = a[:20]
-    #     b = b[:20]
+    trends_list_fname = constants.DATASET_PATH[trends_list_file_key].format(interp=interp,
+                                                                            method=method,
+                                                                            activation=activation,
+                                                                            state=state,
+                                                                            mu=mu,
+                                                                            sigma=sigma,
+                                                                            units=units,
+                                                                            nb_plays=nb_plays,
+                                                                            points=points,
+                                                                            input_dim=input_dim,
+                                                                            __activation__=__activation__,
+                                                                            __state__=__state__,
+                                                                            __units__=__units__,
+                                                                            __nb_plays__=__nb_plays__,
+                                                                            loss=loss_name)
 
-    #     confusion = confusion_matrix(a, b)
-    #     LOG.debug(colors.purple("confusion matrix is: {}".format(confusion)))
-    #     plot(a, b)
-    #     sys.exit(0)
-    # except FileNotFoundError:
-    #     LOG.warning("Not found prediction file, no way to create confusion matrix")
+    try:
+        a, b = tdata.DatasetLoader.load_data(predicted_fname)
+        inp, trend_list = tdata.DatasetLoader.load_data(trends_list_fname)
+        assert np.allclose(a, inp, atol=1e-5)
+        a = a[:20]
+        b = b[:20]
+        trend_list = trend_list[:20, :]
+        confusion = confusion_matrix(a, b)
+        LOG.debug(colors.purple("confusion matrix is: {}".format(confusion)))
+
+        plot(a, b, trend_list)
+        sys.exit(0)
+    except FileNotFoundError:
+        LOG.warning("Not found prediction file, no way to create confusion matrix")
 
     if do_trend is True:
         import ipdb; ipdb.set_trace()
@@ -363,7 +403,8 @@ if __name__ == "__main__":
                                   units=__units__,
                                   activation=__activation__,
                                   nb_plays=__nb_plays__,
-                                  weights_name=weights_fname)
+                                  weights_name=weights_fname,
+                                  trends_list_fname=trends_list_fname)
         inputs = inputs[1000:1000+predictions.shape[-1]]
     elif do_prediction is True:
         LOG.debug(colors.red("Load weights from {}".format(weights_fname)))

@@ -57,9 +57,8 @@ def Phi(x, width=1.0):
 
     r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: x + _width, lambda: ZEROS)
     r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x - _width, lambda: r1)
-    # r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: x - _width, lambda: ZEROS)
-    # r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x + _width, lambda: r1)
     return r2
+
 
 def gradient_operator(P, weights=None):
     # _P = tf.reshape(P, shape=(P.shape[0].value, -1))
@@ -1240,6 +1239,7 @@ class MyModel(object):
     def trend(self, prices, B, mu, sigma,
               start_pos=1000, end_pos=1100,
               delta=0.001, max_iteration=10000):
+        # end_pos = 1010
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
         assert len(prices.shape) == 1, colors.red("Prices should be a vector")
         if not hasattr(self, '_batch_input_shape'):
@@ -1258,10 +1258,8 @@ class MyModel(object):
         _ppp = tf.reshape(_ppp, shape=shape)
 
         original_prediction = self.predict(prices)
-        # mu = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).mean()
-        # sigma = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).std()
-
-        import ipdb; ipdb.set_trace()
+        mu = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).mean()
+        sigma = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).std()
 
         weights_ = [[], [], [], [], []]
         operator_outputs_ = []
@@ -1280,23 +1278,57 @@ class MyModel(object):
             for j in range(len(weights[i])):
                 weights[i][j] = weights[i][j].reshape(-1)
 
-        if start_pos == 0:
-            individual_p_list = [[0] for operator_output in operator_outputs]
-        else:
-            individual_p_list = [[operator_output.reshape(-1)[start_pos-1]] for operator_output in operator_outputs]
+        # if start_pos == 0:
+        #     individual_p_list = [[0] for operator_output in operator_outputs]
+        # else:
+        #     individual_p_list = [[operator_output.reshape(-1)[start_pos-1]] for operator_output in operator_outputs]
+        individual_p_list = [operator_output.reshape(-1)[start_pos-1:end_pos-1] for operator_output in operator_outputs]
 
+        # import ipdb; ipdb.set_trace()
         outputs = []
 
-        def do_guess(k, step=1, direction=1, guess_flag=True):
+        def do_guess(k, step=1, direction=1, guess_flag=True, input_p=None):
             predict_noise_list = []
-            if guess_flag is True:
-                guess = prices[k-1] + direction * step * delta
-            else:
-                guess = prices[k]
+            guess = prices[k]
+            if input_p is not None:
+                guess = input_p
 
             for i in range(self._nb_plays):
-                p = phi(weights[0][i] * guess - individual_p_list[i][-1]) + individual_p_list[i][-1]
+                p = phi(weights[0][i] * guess - individual_p_list[i][k-start_pos]) + individual_p_list[i][k-start_pos]
                 pp = weights[1][i] * p + weights[2][i]
+                if self._activation is None:
+                    pass
+                elif self._activation == 'tanh':
+                    pp = np.tanh(pp)
+                elif self._activation == 'relu':
+                    pp = np.relu(pp)
+
+                ppp = (weights[3][i] * pp).sum() + weights[4][i]
+                predict_noise_list.append(ppp[0])
+
+            predict_noise = sum(predict_noise_list) / self._nb_plays
+            if not np.allclose(predict_noise, original_prediction[k], atol=1e-5):
+                LOG.debug(colors.red("ERROR: predict_noise: {}, base_noise: {}".format(
+                    predict_noise, original_prediction[k]
+                )))
+
+                import ipdb; ipdb.set_trace()
+
+            if guess_flag is False:
+                return guess,  predict_noise
+            predict_noise_list = []
+            guess = prices[k-1] + direction * step * delta
+
+            for i in range(self._nb_plays):
+                p = phi(weights[0][i] * guess - individual_p_list[i][k-start_pos]) + individual_p_list[i][k-start_pos]
+                pp = weights[1][i] * p + weights[2][i]
+                if self._activation is None:
+                    pass
+                elif self._activation == 'tanh':
+                    pp = np.tanh(pp)
+                elif self._activation == 'relu':
+                    pp = np.relu(pp)
+
                 ppp = (weights[3][i] * pp).sum() + weights[4][i]
                 predict_noise_list.append(ppp[0])
 
@@ -1315,12 +1347,13 @@ class MyModel(object):
             # for i in range(iterations):
             i = 0
             while i < iterations:
+                # import ipdb;ipdb.set_trace()
+
                 bk = np.random.normal(loc=mu, scale=sigma) + original_prediction[k-1]
                 if bk > original_prediction[k-1]:
-                    # direction = -1
-                    direction = 1
-                elif bk < original_prediction[k-1]:
                     direction = -1
+                elif bk < original_prediction[k-1]:
+                    direction = 1
                 else:
                     direction = 0
 
@@ -1341,13 +1374,14 @@ class MyModel(object):
                     curr_diff = guess_noise - bk
 
                     if curr_diff * prev_diff < 0:
-                        LOG.debug(colors.yellow("step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}".format(
+                        LOG.debug(colors.yellow("step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, prev true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}".format(
                             step,
                             float(prices[k]),
                             float(guess),
                             float(guess_noise),
                             float(bk),
                             float(original_prediction[k]),
+                            float(original_prediction[k-1]),
                             float(curr_diff),
                             float(prev_diff),
                             direction,
@@ -1355,21 +1389,21 @@ class MyModel(object):
                         guess_prices_list[k-start_pos].append(guess)
                         break
 
-                    LOG.debug("step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}".format(
-                        step,
-                        float(prices[k]),
-                        float(guess),
-                        float(guess_noise),
-                        float(bk),
-                        float(original_prediction[k]),
-                        float(curr_diff),
-                        float(prev_diff),
-                        direction,
-                        delta))
+                    # LOG.debug("step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}".format(
+                    #     step,
+                    #     float(prices[k]),
+                    #     float(guess),
+                    #     float(guess_noise),
+                    #     float(bk),
+                    #     float(original_prediction[k]),
+                    #     float(curr_diff),
+                    #     float(prev_diff),
+                    #     direction,
+                    #     delta))
 
                     # if step % 10 == 0:
                     #     import ipdb; ipdb.set_trace()
-                    if step >= 1000:
+                    if step >= 300:
                         LOG.warn(colors.red("Not a good guess"))
                         good_guess = False
                         break
@@ -1378,9 +1412,9 @@ class MyModel(object):
                     i += 1
 
             avg_guess = sum(guess_prices_list[k-start_pos]) / iterations
-            for j in range(self._nb_plays):
-                p = phi(weights[0][j] * avg_guess - individual_p_list[j][-1]) + individual_p_list[j][-1]
-                individual_p_list[j].append(p)
+            # for j in range(self._nb_plays):
+            #     p = phi(weights[0][j] * avg_guess - individual_p_list[j][-1]) + individual_p_list[j][-1]
+                # individual_p_list[j].append(p)
 
             return avg_guess
 
@@ -1390,7 +1424,11 @@ class MyModel(object):
         while True:
             avg_guess = repeat(k, 100)
             guess_prices.append(avg_guess)
-            LOG.debug(colors.red("================ Guess k: {} successfully, predict price: {:.5f}, grouth-truth price: {:.5f}  =====================".format(k, float(avg_guess), float(prices[k]))))
+            LOG.debug(colors.red("================ Guess k: {} successfully, predict price: {:.5f}, grouth-truth price: {:.5f} prev gt price: {:.5f} =====================".format(k,
+                                                                                                                                                                                   float(avg_guess),
+                                                                                                                                                                                   float(prices[k]),
+                                                                                                                                                                                   float(prices[k-1]))))
+            # import ipdb; ipdb.set_trace()
             k += 1
             if k >= end_pos:
                 break
@@ -1408,11 +1446,12 @@ class MyModel(object):
         LOG.debug("root sum square loss2: {}".format((loss3.sum())**(0.5)))
         LOG.debug("total abs loss1: {}".format((loss2.sum())))
         LOG.debug("total abs loss2: {}".format((loss4.sum())))
+        # import ipdb; ipdb.set_trace()
+        guess_prices_list = np.array(guess_prices_list)
 
         # LOG.debug()
         # TODO: calculate confusion matrix HERE
-
-        return guess_prices
+        return guess_prices, guess_prices_list
 
     def save_weights(self, fname):
         suffix = fname.split(".")[-1]
