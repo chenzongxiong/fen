@@ -1282,8 +1282,8 @@ class MyModel(object):
         #     individual_p_list = [[0] for operator_output in operator_outputs]
         # else:
         #     individual_p_list = [[operator_output.reshape(-1)[start_pos-1]] for operator_output in operator_outputs]
-        individual_p_list = [operator_output.reshape(-1)[start_pos-1:end_pos-1] for operator_output in operator_outputs]
-
+        # individual_p_list = [operator_output.reshape(-1)[start_pos-1:end_pos-1] for operator_output in operator_outputs]
+        individual_p_list = [[operator_output.reshape(-1)[start_pos-1]] for operator_output in operator_outputs]
         # import ipdb; ipdb.set_trace()
         outputs = []
 
@@ -1335,6 +1335,7 @@ class MyModel(object):
             predict_noise = sum(predict_noise_list) / self._nb_plays
 
             return guess, predict_noise
+
 
         guess_prices_list = [[] for _ in range(end_pos-start_pos)]
         delta = 0.001
@@ -1412,10 +1413,10 @@ class MyModel(object):
                     i += 1
 
             avg_guess = sum(guess_prices_list[k-start_pos]) / iterations
-            # for j in range(self._nb_plays):
-            #     p = phi(weights[0][j] * avg_guess - individual_p_list[j][-1]) + individual_p_list[j][-1]
+            for j in range(self._nb_plays):
+                # p = phi(weights[0][j] * avg_guess - individual_p_list[j][-1]) + individual_p_list[j][-1]
                 # individual_p_list[j].append(p)
-
+                individual_p_list[j].append(operator_outputs[j].reshape(-1)[k])
             return avg_guess
 
         guess_prices = []
