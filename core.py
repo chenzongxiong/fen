@@ -1511,7 +1511,7 @@ class MyModel(object):
         guess_prices = []
 
         k = start_pos
-        seq = 10
+        seq = 1
         iteration = 100
         for s in range(seq-1):
             guess_prices.append(0)
