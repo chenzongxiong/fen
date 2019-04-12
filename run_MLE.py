@@ -201,7 +201,7 @@ if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
     # Hyper Parameters
-    learning_rate = 0.01
+    learning_rate = 0.003
 
     loss_name = 'mse'
     loss_name = 'mle'
@@ -213,9 +213,11 @@ if __name__ == "__main__":
     do_prediction = False
     do_trend = False
     do_confusion_matrix = True
-    do_trend = True
+    mc_mode = False
+    # do_trend = True
 
     with_noise = True
+
     diff_weights = True
 
     run_test = False
@@ -228,15 +230,15 @@ if __name__ == "__main__":
     ############################## ground truth #############################
     nb_plays = 20
     # units is 10000 special for dataset comes from simulation
-    units = 10000
+    units = 20
     state = 0
-    # activation = 'tanh'
-    activation = None
+    activation = 'tanh'
+    # activation = None
     ############################## predicitons #############################
     # __nb_plays__ = 20
     # __units__ = 20
-    __nb_plays__ = 100
-    __units__ = 50
+    __nb_plays__ = 20
+    __units__ = 20
 
     __state__ = 0
     __activation__ = 'tanh'
@@ -257,7 +259,10 @@ if __name__ == "__main__":
     if diff_weights is True:
         # input_file_key = 'models_diff_weights'
         # loss_file_key = 'models_diff_weights_loss_history'
-        weights_file_key = 'models_diff_weights_mc_saved_weights'
+        if mc_mode is True:
+            weights_file_key = 'models_diff_weights_mc_saved_weights'
+        else:
+            weights_file_key = 'models_diff_weights_saved_weights'
         # predictions_file_key = 'models_diff_weights_predictions'
     else:
         # input_file_key = 'models'
@@ -266,7 +271,7 @@ if __name__ == "__main__":
         # predictions_file_key = 'models_predictions'
         raise
 
-    weights_file_key = 'models_diff_weights_mc_stock_model_saved_weights'
+    # weights_file_key = 'models_diff_weights_mc_stock_model_saved_weights'
 
     # XXXX: place weights_fname before run_test
     weights_fname = constants.DATASET_PATH[weights_file_key].format(method=method,
@@ -298,19 +303,21 @@ if __name__ == "__main__":
             raise
         elif run_test is False:
             if diff_weights is True:
-                input_file_key = 'models_diff_weights_mc'
-                loss_file_key = 'models_diff_weights_mc_loss_history'
-                predictions_file_key = 'models_diff_weights_mc_predictions'
+                input_file_key = 'models_diff_weights'
+                loss_file_key = 'models_diff_weights_loss_history'
+                predictions_file_key = 'models_diff_weights_predictions'
             else:
                 raise
 
     # if do_trend is True:
-    input_file_key = 'models_diff_weights_mc_stock_model'
-    loss_file_key = 'models_diff_weights_mc_stock_model_loss_history'
-    predictions_file_key = 'models_diff_weights_mc_stock_model_predictions'
-    if do_trend is True:
-        predictions_file_key = 'models_diff_weights_mc_stock_model_trends'
-        trends_list_file_key = 'models_diff_weights_mc_stock_model_trends_list'
+    ################### markov chain #############################
+    if mc_mode is True:
+        input_file_key = 'models_diff_weights_mc_stock_model'
+        loss_file_key = 'models_diff_weights_mc_stock_model_loss_history'
+        predictions_file_key = 'models_diff_weights_mc_stock_model_predictions'
+        if do_trend is True:
+            predictions_file_key = 'models_diff_weights_mc_stock_model_trends'
+            trends_list_file_key = 'models_diff_weights_mc_stock_model_trends_list'
 
     fname = constants.DATASET_PATH[input_file_key].format(interp=interp,
                                                           method=method,
@@ -327,12 +334,14 @@ if __name__ == "__main__":
     if do_prediction is True and do_trend is True:
         raise Exception("both do predictions and do_trend are True")
 
-    # import ipdb; ipdb.set_trace()
 
     inputs, outputs= tdata.DatasetLoader.load_data(fname)
     if do_trend is False:
         inputs, outputs = inputs[:points], outputs[:points]
-    inputs, outputs = outputs, inputs
+    if mc_mode is True:
+        inputs, outputs = outputs, inputs
+
+    import ipdb; ipdb.set_trace()
 
     loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
                                                                      method=method,
@@ -366,21 +375,22 @@ if __name__ == "__main__":
                                                                           __nb_plays__=__nb_plays__,
                                                                           loss=loss_name)
 
-    trends_list_fname = constants.DATASET_PATH[trends_list_file_key].format(interp=interp,
-                                                                            method=method,
-                                                                            activation=activation,
-                                                                            state=state,
-                                                                            mu=mu,
-                                                                            sigma=sigma,
-                                                                            units=units,
-                                                                            nb_plays=nb_plays,
-                                                                            points=points,
-                                                                            input_dim=input_dim,
-                                                                            __activation__=__activation__,
-                                                                            __state__=__state__,
-                                                                            __units__=__units__,
-                                                                            __nb_plays__=__nb_plays__,
-                                                                            loss=loss_name)
+    if mc_mode is True:
+        trends_list_fname = constants.DATASET_PATH[trends_list_file_key].format(interp=interp,
+                                                                                method=method,
+                                                                                activation=activation,
+                                                                                state=state,
+                                                                                mu=mu,
+                                                                                sigma=sigma,
+                                                                                units=units,
+                                                                                nb_plays=nb_plays,
+                                                                                points=points,
+                                                                                input_dim=input_dim,
+                                                                                __activation__=__activation__,
+                                                                                __state__=__state__,
+                                                                                __units__=__units__,
+                                                                                __nb_plays__=__nb_plays__,
+                                                                                loss=loss_name)
 
     # try:
     #     a, b = tdata.DatasetLoader.load_data(predicted_fname)
@@ -397,7 +407,7 @@ if __name__ == "__main__":
     # except FileNotFoundError:
     #     LOG.warning("Not found prediction file, no way to create confusion matrix")
 
-    if do_trend is True:
+    if mc_mode is True and do_trend is True:
         import ipdb; ipdb.set_trace()
         predictions, loss = trend(prices=inputs,
                                   B=outputs,
