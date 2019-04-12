@@ -27,7 +27,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 1000
+    epochs = 150
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -128,16 +128,14 @@ def trend(prices,
           units=1,
           activation='tanh',
           nb_plays=1,
-          weights_name='model.h5',
-          trends_list_fname=None):
-
+          weights_name='model.h5'):
     with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
         line = f.read()
     shape = list(map(int, line.split(":")))
 
     assert len(shape) == 3, "shape must be 3 dimensions"
     input_dim = shape[2]
-    timestep = prices.shape[0] // input_dim
+    timestep = inputs.shape[0] // input_dim
     shape[1] = timestep
 
     start = time.time()
@@ -151,57 +149,24 @@ def trend(prices,
 
     mymodel.load_weights(weights_fname, extra={'shape': shape})
 
-    guess_trend, guess_trend_list = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
+    prediction = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
     # loss = ((prediction - prices) ** 2).mean()
     # loss = float(loss)
     # LOG.debug("loss: {}".format(loss))
-    # import ipdb; ipdb.set_trace()
-    if trends_list_fname is not None:
-        inputs = prices[1000:1000+guess_trend.shape[-1]]
-        outputs = guess_trend_list
-        tdata.DatasetSaver.save_data(inputs, outputs, trends_list_fname)
-
     loss = float(-1.0)
-    return guess_trend, loss
+    return prediction, loss
 
-def plot(a, b, trend_list):
+
+def plot(a, b):
     from matplotlib import pyplot as plt
-    x = range(1, a.shape[0]+1)
-    diff1 = ((a[1:] - a[:-1]) >= 0).tolist()
-    diff2 = ((b[1:] - a[:-1]) >= 0).tolist()
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
-    ax1.plot(x, a, color='blue')
-    ax1.plot(x, b, color='black')
-    markers = ['^', 's']
-    for index, d1, d2 in zip(x[1:], diff1, diff2):
-        if d1 is True and d2 is True:
-            ax1.scatter([index], [b[index-1]], marker='^', color='green')
-        elif d1 is False and d2 is False:
-            ax1.scatter([index], [b[index-1]], marker='^', color='green')
-        elif d1 is False and d2 is True:
-            ax1.scatter([index], [b[index-1]], marker='s', color='black')
-        elif d1 is True and d2 is False:
-            ax1.scatter([index], [b[index-1]], marker='s', color='black')
 
-    ax2.plot(x, a, color='blue')
-    min_trend_list = trend_list.min(axis=1)
-    max_trend_list = trend_list.max(axis=1)
-    ax2.fill_between(x, min_trend_list, max_trend_list, facecolor='gray', alpha=0.5, interpolate=True)
-    import ipdb; ipdb.set_trace()
-    ax3.plot(x, a, color='blue')
-    trend_list_ = [trend for trend in  trend_list]
-    ax3.boxplot(trend_list_)
-
-    plt.show()
-    fname = "/Users/baymax_testios/Desktop/1.png"
-    fig.savefig(fname, dpi=400)
 
 
 if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
     # Hyper Parameters
-    learning_rate = 0.003
+    learning_rate = 0.01
 
     loss_name = 'mse'
     loss_name = 'mle'
@@ -213,11 +178,9 @@ if __name__ == "__main__":
     do_prediction = False
     do_trend = False
     do_confusion_matrix = True
-    mc_mode = False
     # do_trend = True
 
     with_noise = True
-
     diff_weights = True
 
     run_test = False
@@ -230,16 +193,13 @@ if __name__ == "__main__":
     ############################## ground truth #############################
     nb_plays = 20
     # units is 10000 special for dataset comes from simulation
-    units = 20
+    units = 10000
     state = 0
-    activation = 'tanh'
-    # activation = None
+    # activation = 'tanh'
+    activation = None
     ############################## predicitons #############################
-    # __nb_plays__ = 20
-    # __units__ = 20
-    __nb_plays__ = 20
-    __units__ = 20
-
+    __nb_plays__ = 100
+    __units__ = 50
     __state__ = 0
     __activation__ = 'tanh'
     # __activation__ = 'relu'
@@ -259,10 +219,7 @@ if __name__ == "__main__":
     if diff_weights is True:
         # input_file_key = 'models_diff_weights'
         # loss_file_key = 'models_diff_weights_loss_history'
-        if mc_mode is True:
-            weights_file_key = 'models_diff_weights_mc_saved_weights'
-        else:
-            weights_file_key = 'models_diff_weights_saved_weights'
+        weights_file_key = 'models_diff_weights_mc_saved_weights'
         # predictions_file_key = 'models_diff_weights_predictions'
     else:
         # input_file_key = 'models'
@@ -271,7 +228,7 @@ if __name__ == "__main__":
         # predictions_file_key = 'models_predictions'
         raise
 
-    # weights_file_key = 'models_diff_weights_mc_stock_model_saved_weights'
+    weights_file_key = 'models_diff_weights_mc_stock_model_saved_weights'
 
     # XXXX: place weights_fname before run_test
     weights_fname = constants.DATASET_PATH[weights_file_key].format(method=method,
@@ -303,21 +260,16 @@ if __name__ == "__main__":
             raise
         elif run_test is False:
             if diff_weights is True:
-                input_file_key = 'models_diff_weights'
-                loss_file_key = 'models_diff_weights_loss_history'
-                predictions_file_key = 'models_diff_weights_predictions'
+                input_file_key = 'models_diff_weights_mc'
+                loss_file_key = 'models_diff_weights_mc_loss_history'
+                predictions_file_key = 'models_diff_weights_mc_predictions'
             else:
                 raise
 
     # if do_trend is True:
-    ################### markov chain #############################
-    if mc_mode is True:
-        input_file_key = 'models_diff_weights_mc_stock_model'
-        loss_file_key = 'models_diff_weights_mc_stock_model_loss_history'
-        predictions_file_key = 'models_diff_weights_mc_stock_model_predictions'
-        if do_trend is True:
-            predictions_file_key = 'models_diff_weights_mc_stock_model_trends'
-            trends_list_file_key = 'models_diff_weights_mc_stock_model_trends_list'
+    input_file_key = 'models_diff_weights_mc_stock_model'
+    loss_file_key = 'models_diff_weights_mc_stock_model_loss_history'
+    predictions_file_key = 'models_diff_weights_mc_stock_model_predictions'
 
     fname = constants.DATASET_PATH[input_file_key].format(interp=interp,
                                                           method=method,
@@ -334,14 +286,12 @@ if __name__ == "__main__":
     if do_prediction is True and do_trend is True:
         raise Exception("both do predictions and do_trend are True")
 
+    import ipdb; ipdb.set_trace()
 
     inputs, outputs= tdata.DatasetLoader.load_data(fname)
     if do_trend is False:
         inputs, outputs = inputs[:points], outputs[:points]
-    if mc_mode is True:
-        inputs, outputs = outputs, inputs
-
-    import ipdb; ipdb.set_trace()
+    inputs, outputs = outputs, inputs
 
     loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
                                                                      method=method,
@@ -375,39 +325,15 @@ if __name__ == "__main__":
                                                                           __nb_plays__=__nb_plays__,
                                                                           loss=loss_name)
 
-    if mc_mode is True:
-        trends_list_fname = constants.DATASET_PATH[trends_list_file_key].format(interp=interp,
-                                                                                method=method,
-                                                                                activation=activation,
-                                                                                state=state,
-                                                                                mu=mu,
-                                                                                sigma=sigma,
-                                                                                units=units,
-                                                                                nb_plays=nb_plays,
-                                                                                points=points,
-                                                                                input_dim=input_dim,
-                                                                                __activation__=__activation__,
-                                                                                __state__=__state__,
-                                                                                __units__=__units__,
-                                                                                __nb_plays__=__nb_plays__,
-                                                                                loss=loss_name)
-
     # try:
     #     a, b = tdata.DatasetLoader.load_data(predicted_fname)
-    #     inp, trend_list = tdata.DatasetLoader.load_data(trends_list_fname)
-    #     assert np.allclose(a, inp, atol=1e-5)
-    #     # a = a[:20]
-    #     # b = b[:20]
-    #     # trend_list = trend_list[:20, :]
     #     confusion = confusion_matrix(a, b)
     #     LOG.debug(colors.purple("confusion matrix is: {}".format(confusion)))
-
-    #     plot(a, b, trend_list)
     #     sys.exit(0)
     # except FileNotFoundError:
-    #     LOG.warning("Not found prediction file, no way to create confusion matrix")
+    #     LOG.warn("Not found prediction file, no way to create confusion matrix")
 
-    if mc_mode is True and do_trend is True:
+    if do_trend is True:
         import ipdb; ipdb.set_trace()
         predictions, loss = trend(prices=inputs,
                                   B=outputs,
@@ -416,8 +342,7 @@ if __name__ == "__main__":
                                   units=__units__,
                                   activation=__activation__,
                                   nb_plays=__nb_plays__,
-                                  weights_name=weights_fname,
-                                  trends_list_fname=trends_list_fname)
+                                  weights_name=weights_fname)
         inputs = inputs[1000:1000+predictions.shape[-1]]
     elif do_prediction is True:
         LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
