@@ -341,6 +341,8 @@ if __name__ == "__main__":
     if mc_mode is True:
         inputs, outputs = outputs, inputs
 
+    inputs, outputs = outputs, inputs
+
     import ipdb; ipdb.set_trace()
 
     loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
