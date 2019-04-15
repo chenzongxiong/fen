@@ -1,0 +1,35 @@
+#+AUTHOR:
+
+According the equation you provided in the paper,
+\begin{eqnarray}
+n = \frac{-ln(1 - \frac{\delta (1 - e^{-\alpha})}{e^{-\alpha}})}{\alpha}
+\end{eqnarray}
+
+So we deduce that \(0 < 1 - \frac{\delta (1 - e^{-\alpha})}{e^{-\alpha}} < 1\), since $n$ and $\alpha$ are also greater than $0$
+
+In other words, we should make sure that \( 0 < \alpha < ln(1+\frac{1}{\delta})\).
+
+Here comes a problem.
+We draw $\delta$ and $\alpha$ from gamma distribution respectively in advance and then calculate the root of $n$.
+But the value of $\delta$ and $\alpha$ might be not fit the previous condition. And it does happen in my simulation although I change
+a set of parameters.
+
+I wrote a simple code to simulate our situation.
+
+\begin{eqnarray}
+n &=& \frac{-ln(1 - \frac{\delta (1 - e^{-\alpha})}{e^{-\alpha}})}{\alpha} \ge M \\
+f(\delta, \alpha) &=& ln(1-\delta (e^{\alpha} - 1)) + M \alpha \le 0
+\end{eqnarray}
+
+Parameter is shown as following:
+1. $\delta$ is in range (0, 10) with 100 points. \\
+2. $\alpha$ is in range (0, 10) with 100 points. \\
+3. $M$ is in range (0, 10) with 10 points, stands for at least M layers\\
+
+| M | number of satisfied points | probablity |
+| 1 |                        191 |     0.0191 |
+| 2 |                        145 |     0.0145 |
+| 3 |                        117 |     0.0117 |
+| 4 |                         98 |     0.0098 |
+
+To sum up, it's difficult to generate suitable $n$ through the formula you updated in the paper.
