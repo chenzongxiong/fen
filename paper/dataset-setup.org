@@ -1,0 +1,42 @@
+* Agents N.
+  We should choose the following parameters
+  - \(\delta\) - maximum amount of money which can spend the agent;
+  - \(\alpha \in \mathbb{R}\) - the /step/ of the strategy (width of the relay);
+  - \(\alpha_0 \in (-\alpha, \alpha)\) - the /middle layer/ of the strategy;
+  - \(n \in \mathbb{N}_{0}\) - number of layers above middle layer;
+  - \(L = L(\delta)\) - number of real agents with this strategy;
+
+
+  First we should choose \(\delta\). We fix \(\delta_0 > 0, \hat{\delta} > 0, k \in \mathbb{N}\) and consider \(\delta_0\),
+  \(\delta_{1} = \delta_{0} + \hat{\delta}, ..., \delta_{k} = \delta_{0} + k\hat{\delta}\). So, we just consider finite sequence of
+  \(\delta_{i}\) with fixed step. For each \(\delta_{i}\) we should find \(L(\delta_{i})\). For this purpose we need so-called gamma
+  distribution. We take on with \(k = 5, \theta = 5\), multiply it by 10. We set \(L(\delta_{i}) = 10 f_{(5, 4)} (\delta_{i})\)
+
+  Each real agent with strategy corresponding to parameters \(\alpha, \alpha_{0}, n\) is represented by \(2n\) relays with thresholds
+  \([\alpha_{0} - n \alpha, \alpha_{0} - (n-1)\alpha], [\alpha_{0} - (n-1) \alpha, \alpha_{0} - (n-2)\alpha], ...
+  [\alpha_{0} + (n-1) \alpha, \alpha_{0} + n\alpha]\) (at these layers agent buys/sells his stock). At the beginning agent have \(n\)
+  stocks if \(\alpha_0 \ge 0\) and \(n-1\) otherwise.
+
+  We choose \(\alpha\) also using gamma distribution. Take one with \(k = 2, \theta=2\). \(\alpha_0\) we choose using the uniform
+  distribution between \(-\alpha\) and \(\alpha\). \(n\) we find as a root of the equation
+  \(L(\delta) = \frac{e^{-\alpha}(1 - e^{-\alpha n})}{1-e^{-\alpha}}\). Here we assume that the number of stocks is exponential decline.
+  (geometric progression).
+
+* Agents D
+  We should choose parameter \(\beta\)( when price rise/drop \beta points we buy/sell) and decide whether agents have stock at the
+  very beginning. We consider sequence \(\beta_{i}\) with fixed step. We also fix gamma distribution with some parameters sand multiply
+  it by number \(B\). We want to give the same amount of stocks for \(N\) and \(D\). So \(B\) we can found from the equation
+  \(\sum_{\alpha, \delta} n (\delta, \alpha) L (\delta) = \sum D_{1} (\beta_{i}) = B \sum_{i} \Gamma(\beta_{i}) \) where \(D_{1}(\beta_{i})\)
+  is number of \(D\) agent corresponded to \(beta_{i}\) with stock at the very beginning. We also assume that
+  \(D_{0} (\beta_{i}) = D_{1}(\beta_{i})\) where \(D_{0}(\beta_{i})\) is number of D agent corresponded to \(\beta_{i}\) without
+  stock at very beginning.
+
+* Note:
+  - why should we choose gamma distribution?
+    since the probability density function of gamma distribution is in *first quadrant*, and it's continous.
+
+  - why should we assume that the amount of money belonged to people is following to gamma distribution
+    it make sense to make this assumption. In reality, most people only possess medium wealth.
+
+  - why should we assume that the width of relay(\(\alpha\)) is following to gamma distribution.
+    In reality, most people will have the same strategy to react to the change of stock price.

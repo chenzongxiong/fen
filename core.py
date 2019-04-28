@@ -25,12 +25,6 @@ import colors
 import constants
 import trading_data as tdata
 import log as logging
-# import pool
-import pickle
-# import dill
-# from pathos.multiprocessing import ProcessingPool
-from multiprocessing import Pool as ProcessingPool
-pool = ProcessingPool(4)
 
 
 LOG = logging.getLogger(__name__)
@@ -878,7 +872,8 @@ class MyModel(object):
         width = 1
         for nb_play in range(nb_plays):
             if diff_weights is True:
-                weight = 0.5 / (_width * i) # width range from (0.1, ... 0.1 * nb_plays)
+                # weight = 0.5 / (_width * (1 + nb_play)) # width range from (0.1, ... 0.1 * nb_plays)
+                weight = 0.5 / (_width * (1 + nb_play)) # width range from (0.1, ... 0.1 * nb_plays)
             else:
                 weight = 1.0
 
@@ -899,6 +894,7 @@ class MyModel(object):
             assert play._need_compile == False, colors.red("Play inside MyModel mustn't be compiled")
             self.plays.append(play)
 
+        # self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, decay=0.1)
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
         # self.optimizer = tf.keras.optimizers.SGD(lr=learning_rate)
 
@@ -923,51 +919,39 @@ class MyModel(object):
             if not play.built:
                 play.build(inputs)
 
-        x, y = self.plays[0].reshape(inputs, outputs)
+        _xs = []
+        _ys = []
+        for play in self.plays:
+            _x, _y = play.reshape(inputs, outputs)
+            _xs.append(_x)
+            _ys.append(_y)
 
         params_list = []
-        # model_inputs = []
         model_outputs = []
         feed_inputs = []
         feed_targets = []
-        # update_inputs = []
 
         for idx, play in enumerate(self.plays):
-            # inputs = play.model._layers[0].input
-            # outputs = play.model._layers[-1].output
-            # inputs = play._layers[0].input
-            # outputs = play._layers[-1].output
-
-            # model_inputs.append(inputs)
-            # feed_inputs.append(play._layers[0].input)
-            # model_outputs.append(play._layers[-1].output)
             feed_inputs.append(play.input)
             model_outputs.append(play.output)
 
-            # for i in range(len(play.output)):
-            #     shape = tf.keras.backend.int_shape(play.outputs[i])
-            #     name = 'play{}_target'.format(i)
-            #     target = tf.keras.backend.placeholder(
-            #         ndim=len(shape),
-            #         name=name,
-            #         dtype=tf.keras.backend.dtype(play.outputs[i]))
             shape = tf.keras.backend.int_shape(play.output)
             name = 'play{}_target'.format(idx)
             target = tf.keras.backend.placeholder(
                 ndim=len(shape),
                 name=name,
-                dtype=tf.keras.backend.dtype(play.output))
+                dtype=tf.float32)
             feed_targets.append(target)
 
             # update_inputs += play.model.get_updates_for(inputs)
-            params_list += play.model.trainable_weights
+            params_list += play.trainable_weights
 
         if self._nb_plays > 1:
             y_pred = tf.keras.layers.Average()(model_outputs)
         else:
             y_pred = model_outputs[0]
 
-        loss = tf.keras.backend.mean(tf.math.square(y_pred - y))
+        loss = tf.keras.backend.mean(tf.math.square(y_pred - _y))
         mu = tf.keras.backend.mean(y_pred[:, 1:, :] - y_pred[:, :-1, :])
         sigma = tf.keras.backend.std(y_pred[:, 1:, :] - y_pred[:, :-1, :])
         # decay: decay learning rate to half every 100 steps
@@ -983,9 +967,9 @@ class MyModel(object):
                                                        [loss, mu, sigma],
                                                        updates=updates)
 
-        _x = [x for _ in range(self._nb_plays)]
-        _y = [y for _ in range(self._nb_plays)]
-        ins = _x + _y
+        # _x = [x for _ in range(self._nb_plays)]
+        # _y = [y for _ in range(self._nb_plays)]
+        ins = _xs + _ys
 
         self.cost_history = []
 
@@ -997,9 +981,6 @@ class MyModel(object):
             for j in range(steps_per_epoch):
                 cost, predicted_mu, predicted_sigma = train_function(ins)
             self.cost_history.append([i, cost])
-            # if i != 0  and i % 50 == 0:     # save weights every 50 epochs
-            #     fname = "{}/epochs-{}/weights-mse.h5".format(path, i)
-            #     self.save_weights(fname)
             LOG.debug("Epoch: {}, Loss: {}, predicted_mu: {}, predicted_sigma: {}, truth_mu: {}, truth_sigma: {}".format(i,
                                                                                                                          cost,
                                                                                                                          predicted_mu,
@@ -1048,6 +1029,8 @@ class MyModel(object):
         unittest = kwargs.pop('unittest', False)
         mu = kwargs.pop('mu', None)
         sigma = kwargs.pop('sigma', None)
+        LOG.debug("Compile with mu: {}, sigma: {}".format(mu, sigma))
+
         _inputs = inputs
         inputs = ops.convert_to_tensor(inputs, tf.float32)
         for play in self.plays:
@@ -1077,7 +1060,6 @@ class MyModel(object):
             # TODO: figure out the function of get_updates_for
             # update_inputs += play.model.get_updates_for(inputs)
             self.params_list += play.trainable_weights
-
 
         # TODO: not feed with self._x, can't be a bug HERE
         self._x = [play.reshape(inputs) for play in self.plays]
@@ -1125,7 +1107,7 @@ class MyModel(object):
 
             # (T * 1)
             self.J_by_hand = tf.reduce_mean(tf.concat(J_list, axis=-1), axis=-1, keepdims=True) / self._nb_plays
-            normalized_J = tf.clip_by_value(tf.abs(self.J_by_hand), clip_value_min=1e-5, clip_value_max=1e9)
+            normalized_J = tf.clip_by_value(tf.abs(self.J_by_hand), clip_value_min=1e-9, clip_value_max=1e9)
             ################################################################################
             # TODO: support derivation for p0
             # TODO: make loss customize from outside
@@ -1137,6 +1119,10 @@ class MyModel(object):
             ## fix mu and learn sigma/weights
             # _loss = tf.keras.backend.square((diff - mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
             ## fix mu/sigma and learn weights
+            self.loss_a = tf.keras.backend.square((diff - mu)/sigma) / 2
+            self.loss_b = - tf.keras.backend.log(normalized_J[:, 1:, :])
+            # import ipdb; ipdb.set_trace()
+
             _loss = tf.keras.backend.square((diff - mu)/sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
             self.loss = tf.keras.backend.mean(_loss)
 
@@ -1171,7 +1157,7 @@ class MyModel(object):
             training_inputs = self.feed_inputs + self.feed_targets
             # training_inputs = self.feed_inputs
             train_function = tf.keras.backend.function(training_inputs,
-                                                       [self.loss, mse_loss1, mse_loss2, diff, self.curr_sigma, self.curr_mu],
+                                                       [self.loss, mse_loss1, mse_loss2, diff, self.curr_sigma, self.curr_mu, self.loss_a, self.loss_b, self.J_by_hand],
                                                        # [self.loss],
                                                        updates=updates)
 
@@ -1187,7 +1173,7 @@ class MyModel(object):
 
         for i in range(epochs):
             for j in range(steps_per_epoch):
-                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res = train_function(ins)
+                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, loss_a, loss_b, J_by_hand = train_function(ins)
                 if prev_cost <= cost:
                     patience_list.append(cost)
                 else:
@@ -1203,6 +1189,22 @@ class MyModel(object):
                                                                                                                                                                                                                 float(__sigma__),
                                                                                                                                                                                                                 float(sigma_res),
                                                                                                                                                                                                                 float(mu_res)))
+            # LOG.debug("Epoch: {}, max(loss_a): {:.7f}, min(loss_a): {:.7f}, max(loss_b): {:.7f}, min(loss_b): {:.7f}".format(i,
+            #                                                                                                                  float(np.max(loss_a)),
+            #                                                                                                                  float(np.min(loss_a)),
+            #                                                                                                                  float(np.max(loss_b)),
+            #                                                                                                                  float(np.min(loss_b))))
+            # LOG.debug("Epoch: {}, loss_a: {}".format(i,
+            #                                          loss_a.reshape(-1)))
+
+            # LOG.debug("Epoch: {}, loss_b: {}".format(i,
+            #                                          loss_b.reshape(-1)))
+
+            # LOG.debug("Epoch: {}, J_by_hand: {}".format(i,
+            #                                             J_by_hand.reshape(-1)))
+            LOG.debug("================================================================================")
+
+
             self.cost_history.append([i, cost])
             # if len(patience_list) >= 50:
             #     LOG.debug(colors.yellow("Lost patience...."))

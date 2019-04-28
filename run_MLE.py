@@ -27,7 +27,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 1000
+    epochs = 1500
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -201,7 +201,8 @@ if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
     # Hyper Parameters
-    learning_rate = 0.003
+    # learning_rate = 0.003
+    learning_rate = 0.01
 
     loss_name = 'mse'
     loss_name = 'mle'
@@ -245,7 +246,7 @@ if __name__ == "__main__":
     # __activation__ = 'relu'
     # __activation__ = None
     __mu__ = 0
-    __sigma__ = 2
+    __sigma__ = 7
     # __sigma__ = 5
     # __sigma__ = 20
 
@@ -264,6 +265,7 @@ if __name__ == "__main__":
         else:
             weights_file_key = 'models_diff_weights_saved_weights'
         # predictions_file_key = 'models_diff_weights_predictions'
+        weights_file_key = 'models_diff_weights_mc_saved_weights'
     else:
         # input_file_key = 'models'
         # loss_file_key = 'models_loss_history'
@@ -318,6 +320,10 @@ if __name__ == "__main__":
         if do_trend is True:
             predictions_file_key = 'models_diff_weights_mc_stock_model_trends'
             trends_list_file_key = 'models_diff_weights_mc_stock_model_trends_list'
+    else:
+        input_file_key = 'models_diff_weights_mc'
+        loss_file_key = 'models_diff_weights_mc_loss_history'
+        predictions_file_key = 'models_diff_weights_mc_predictions'
 
     fname = constants.DATASET_PATH[input_file_key].format(interp=interp,
                                                           method=method,
@@ -340,8 +346,10 @@ if __name__ == "__main__":
         inputs, outputs = inputs[:points], outputs[:points]
     if mc_mode is True:
         inputs, outputs = outputs, inputs
-
-    inputs, outputs = outputs, inputs
+    else:
+        # inputs, outputs = outputs, inputs
+        pass
+    # inputs, outputs = outputs, inputs
 
     import ipdb; ipdb.set_trace()
 
@@ -423,6 +431,7 @@ if __name__ == "__main__":
         inputs = inputs[1000:1000+predictions.shape[-1]]
     elif do_prediction is True:
         LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
+        import ipdb; ipdb.set_trace()
         predictions, loss = predict(inputs=inputs,
                                     outputs=outputs,
                                     units=__units__,
@@ -430,6 +439,8 @@ if __name__ == "__main__":
                                     nb_plays=__nb_plays__,
                                     weights_name=weights_fname)
     else:
+        LOG.debug("START to FIT via {}".format(colors.red(loss_name.upper())))
+        import ipdb; ipdb.set_trace()
         predictions, loss = fit(inputs=inputs,
                                 outputs=outputs,
                                 mu=__mu__,

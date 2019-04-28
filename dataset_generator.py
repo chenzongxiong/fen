@@ -189,11 +189,11 @@ def model_nb_plays_generator_with_noise():
     # sigma = 0.001
     # sigma = 1.8
     # sigma = 0.5
-    sigma = 2
+    sigma = 7
 
     points = 1000
-    units = 2
-    nb_plays = 20
+    units = 50
+    nb_plays = 50
 
     method = 'sin'
     # method = 'mixed'

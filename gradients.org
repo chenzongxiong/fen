@@ -197,12 +197,21 @@ our derivation is:
 
   From the target loss function, the only parameters we need to known is \(\mu_b\).
 * MSE and MLE
-  \begin{eqnarray}
 
-  y &\thicksim& \mathcal{N} \left( y | G(x, w), \sigma^2 \right) \\
-  p(y) &=& \frac{1}{\sqrt{2 \pi} \sigma} \exp \left(-\frac{(y-G(x, w))^2}{\sigma^2} \right) \\
+  \begin{eqnarray}
+  y &\thicksim& \mathcal{N} \left( y | G(x, w), \sigma^2 \right)
+  \end{eqnarray}
+
+  \begin{eqnarray}
+  p(y) &=& \frac{1}{\sqrt{2 \pi} \sigma} \exp \left(-\frac{(y-G(x, w))^2}{\sigma^2} \right)
+  \end{eqnarray}
+
+  \begin{eqnarray}
   p(\mathcal{Y}) &=& p (y_1, y_2, ..., y_N) \\
-                 &=& \prod_{i} p(y_i) \\
+                 &=& \prod_{i}^N p(y_i)
+  \end{eqnarray}
+
+  \begin{eqnarray}
   \ln p(\mathcal{Y}) &=& \sum_{i} \left( -\frac{1}{2}\ln 2 \pi - \ln \sigma - \frac{(y_i - G(x_i, w)^2}{\sigma^2} \right)
   \end{eqnarray}
 
@@ -210,7 +219,7 @@ our derivation is:
   \begin{eqnarray}
   p(z_i) = p(f(y_i)) \left(\frac{\partial f}{\partial y_i}\right)^{-1} f^{-1}(z_i)
   \end{eqnarray}
-  \(\max (\mu, \sigma, w)\) s.t. \(p(z_i)\) is maximal \\
+  \(\max (\mu, \sigma, w)\) s.t. \(p(z_i)\) is maximal
 
 * How to determine undetermined direction of random walk ?
   If external agents buy stocks from the market, then the total number of stocks in market descreases, leading to increasing the prices.

@@ -24,7 +24,7 @@ def fit(inputs,
         loss_file_name="./tmp/my_model_loss_history.csv",
         weights_name='model.h5'):
 
-    epochs = 500
+    epochs = 6000
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -38,7 +38,7 @@ def fit(inputs,
                       units=units,
                       activation=activation,
                       nb_plays=nb_plays)
-    mymodel.load_weights(weights_fname)
+    # mymodel.load_weights(weights_fname)
     LOG.debug("Learning rate is {}".format(learning_rate))
     mymodel.fit(inputs,
                 outputs,
@@ -109,6 +109,7 @@ def predict(inputs,
 
 def generate_Gdata_from_mc(mu,
                            sigma,
+                           activation,
                            nb_plays=1,
                            weights_name='model.h5'):
     with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
@@ -151,7 +152,7 @@ if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
     # Hyper Parameters
-    learning_rate = 0.001
+    learning_rate = 0.01
     loss_name = 'mse'
 
     method = 'sin'
@@ -177,20 +178,20 @@ if __name__ == "__main__":
     input_dim = 1
     ############################## ground truth #############################
     nb_plays = 20
-    units = 2
+    units = 20
     state = 0
     activation = 'tanh'
-    activation = None
+    # activation = None
     ############################## predicitons #############################
-    __units__ = 2
+    __units__ = 20
     __state__ = 0
     __activation__ = 'tanh'
     # __activation__ = 'relu'
-    __activation__ = None
+    # __activation__ = None
     __nb_plays__ = 20
     ############################ For markov chain ##########################
     __mu__ = 0
-    __sigma__ = 2
+    __sigma__ = 0.02
 
     if method == 'noise':
         with_noise = True
@@ -340,10 +341,12 @@ if __name__ == "__main__":
                                                                           __nb_plays__=__nb_plays__,
                                                                           loss=loss_name)
     if generated_Gdata is True:
+        # __activation__ = None
         LOG.debug(colors.red("Generated Gdata, Load weights from {}".format(weights_fname)))
         inputs, predictions = generate_Gdata_from_mc(mu=__mu__,
                                                      sigma=__sigma__,
                                                      nb_plays=__nb_plays__,
+                                                     activation=__activation__,
                                                      weights_name=weights_fname)
     elif do_prediction is True:
         LOG.debug(colors.red("Do predictions, Load weights from {}".format(weights_fname)))
