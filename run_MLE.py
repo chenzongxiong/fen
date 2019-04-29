@@ -348,6 +348,7 @@ if __name__ == "__main__":
         inputs, outputs = outputs, inputs
     else:
         # inputs, outputs = outputs, inputs
+        # inputs, outputs = outputs[:0], inputs[:20]
         pass
     # inputs, outputs = outputs, inputs
 

@@ -107,7 +107,7 @@ def gradient_nonlinear_layer(fZ, weights=None, activation=None, reduce_sum=True)
         partial_gradient = (1.0 + _fZ) * (1.0 - _fZ)
     elif activation == 'relu':
         _fZ = tf.reshape(fZ, shape=fZ.shape.as_list()[1:])
-        partial_gradient = tf.cast(_fZ >= 1e-8, dtype=tf.float32)
+        partial_gradient = tf.cast(_fZ >= 1e-9, dtype=tf.float32)
     else:
         raise Exception("activation: {} not support".format(activation))
 
@@ -306,6 +306,7 @@ class PhiCell(Layer):
 
         assert self._state.shape.ndims == 2, colors.red("PhiCell states must be 2 dimensions")
         states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
+        self.unroll = True
         last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
         return outputs_, list(states_x)
 
@@ -326,7 +327,8 @@ class Operator(RNN):
             return_sequences=True,
             return_state=False,
             stateful=True,
-            unroll=False,
+            # unroll=False,
+            unroll=True
             )
 
     def call(self, inputs, initial_state=None):
@@ -546,10 +548,15 @@ class Play(object):
                                    activation=self.activation,
                                    use_bias=self.use_bias,
                                    debug=getattr(self, "_debug", False)))
+            # self.model.add(MySimpleDense(units=1,
+            #                              activation=None,
+            #                              use_bias=self.use_bias,
+            #                              debug=getattr(self, "_debug", False)))
             self.model.add(MySimpleDense(units=1,
                                          activation=None,
-                                         use_bias=self.use_bias,
+                                         use_bias=False,
                                          debug=getattr(self, "_debug", False)))
+
         if self._need_compile is True:
             LOG.info(colors.yellow("Start to compile this model"))
             self.model.compile(loss=self.loss,
@@ -1050,18 +1057,20 @@ class MyModel(object):
         self.sigma_placeholder = tf.keras.backend.placeholder(ndim=0,
                                                               name='target-sigma',
                                                               dtype=tf.float32)
+
+        # TODO: not feed with self._x, can't be a bug HERE
+
         # self.feed_targets = [self.feed_mu, self.feed_sigma]
         # self.feed_targets = [self.mu_placeholder, self.sigma_placeholder]
         self.feed_targets = []
-
+        self.update_inputs = []
         for play in self.plays:
             self.feed_inputs.append(play.input)
             self.model_outputs.append(play.output)
             # TODO: figure out the function of get_updates_for
-            # update_inputs += play.model.get_updates_for(inputs)
+            self.update_inputs += play.model.get_updates_for(play.input)
             self.params_list += play.trainable_weights
 
-        # TODO: not feed with self._x, can't be a bug HERE
         self._x = [play.reshape(inputs) for play in self.plays]
         self._y = [self.feed_mu, self.feed_sigma]
         self._x_feed_dict = {self.feed_inputs[k].name : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
@@ -1077,12 +1086,13 @@ class MyModel(object):
 
             if unittest is False:
                 ###################### Calculate J by hand ###############################
-                J_list = [gradient_all_layers(play.operator_layer.output,
-                                              play.nonlinear_layer.output,
-                                              play.operator_layer.kernel,
-                                              play.nonlinear_layer.kernel,
-                                              play.linear_layer.kernel,
-                                              activation=self._activation) for play in self.plays]
+                # J_list = [gradient_all_layers(play.operator_layer.output,
+                #                               play.nonlinear_layer.output,
+                #                               play.operator_layer.kernel,
+                #                               play.nonlinear_layer.kernel,
+                #                               play.linear_layer.kernel,
+                #                               activation=self._activation) for play in self.plays]
+                pass
             else:
                 ###################### Calculate J by hand ###############################
                 J_list = [gradient_all_layers(play.operator_layer.output,
@@ -1105,9 +1115,20 @@ class MyModel(object):
                 J_list_by_tf = tf.keras.backend.gradients(model_outputs, self.feed_inputs)
                 self.J_list_by_tf = [tf.reshape(J_list_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
 
+
+            # by tf
+            model_outputs = [tf.reshape(self.model_outputs[i], shape=self.feed_inputs[i].shape) for i in range(self._nb_plays)]
+            J_list_by_tf = tf.keras.backend.gradients(model_outputs, self.feed_inputs)
+            self.J_list_by_tf = [tf.reshape(J_list_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
+            self.J_by_tf = tf.reduce_mean(tf.concat(self.J_list_by_tf, axis=-1), axis=-1, keepdims=True) / self._nb_plays
+            normalized_J_by_tf = tf.clip_by_value(tf.abs(self.J_by_tf), clip_value_min=1e-9, clip_value_max=1e9)
+
+            # import ipdb; ipdb.set_trace()
+            # by hand
             # (T * 1)
-            self.J_by_hand = tf.reduce_mean(tf.concat(J_list, axis=-1), axis=-1, keepdims=True) / self._nb_plays
-            normalized_J = tf.clip_by_value(tf.abs(self.J_by_hand), clip_value_min=1e-9, clip_value_max=1e9)
+            # self.J_by_hand = tf.reduce_mean(tf.concat(J_list, axis=-1), axis=-1, keepdims=True) / self._nb_plays
+            # normalized_J = tf.clip_by_value(tf.abs(self.J_by_hand), clip_value_min=1e-9, clip_value_max=1e9)
+
             ################################################################################
             # TODO: support derivation for p0
             # TODO: make loss customize from outside
@@ -1119,11 +1140,17 @@ class MyModel(object):
             ## fix mu and learn sigma/weights
             # _loss = tf.keras.backend.square((diff - mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
             ## fix mu/sigma and learn weights
+            mu = -0.0032573
+            sigma = 6.9357114
             self.loss_a = tf.keras.backend.square((diff - mu)/sigma) / 2
-            self.loss_b = - tf.keras.backend.log(normalized_J[:, 1:, :])
-            # import ipdb; ipdb.set_trace()
-
-            _loss = tf.keras.backend.square((diff - mu)/sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
+            # self.loss_b = - tf.keras.backend.log(normalized_J[:, 1:, :])
+            self.loss_c = - tf.keras.backend.log(normalized_J_by_tf[:, 1:, :])
+            self.loss_b = self.loss_c
+            normalized_J = normalized_J_by_tf
+            self.J_by_hand = self.J_by_tf
+            # _loss = tf.keras.backend.square((diff - mu)/sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
+            # _loss = self.loss_a + self.loss_b
+            _loss = self.loss_a + self.loss_c
             self.loss = tf.keras.backend.mean(_loss)
 
     def fit2(self,
@@ -1150,10 +1177,12 @@ class MyModel(object):
         mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))
         mse_loss2 = tf.keras.backend.mean(tf.square(self.y_pred + tf.reshape(outputs, shape=self.y_pred.shape)))
         diff = self.y_pred[:, 1:, :] - self.y_pred[:, :-1, :]
+        import ipdb; ipdb.set_trace()
         with tf.name_scope(self.optimizer.__class__.__name__):
             updates = self.optimizer.get_updates(params=self.params_list,
                                                  loss=self.loss)
 
+            # updates += self.update_inputs
             training_inputs = self.feed_inputs + self.feed_targets
             # training_inputs = self.feed_inputs
             train_function = tf.keras.backend.function(training_inputs,
