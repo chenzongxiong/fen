@@ -571,8 +571,8 @@ class Play(object):
                                                                      write_grads=False,
                                                                      write_images=False)
 
-        if not getattr(self, "_preload_weights", False):
-            utils.init_tf_variables()
+        # if not getattr(self, "_preload_weights", False):
+        #     utils.init_tf_variables()
         if self._network_type == constants.NetworkType.OPERATOR:
             LOG.debug(colors.yellow("SUMMARY of Operator"))
         elif self._network_type == constants.NetworkType.PLAY:
@@ -1177,7 +1177,7 @@ class MyModel(object):
         mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))
         mse_loss2 = tf.keras.backend.mean(tf.square(self.y_pred + tf.reshape(outputs, shape=self.y_pred.shape)))
         diff = self.y_pred[:, 1:, :] - self.y_pred[:, :-1, :]
-        import ipdb; ipdb.set_trace()
+
         with tf.name_scope(self.optimizer.__class__.__name__):
             updates = self.optimizer.get_updates(params=self.params_list,
                                                  loss=self.loss)
@@ -1200,6 +1200,7 @@ class MyModel(object):
         patience_list = []
         prev_cost = np.inf
 
+        utils.init_tf_variables()
         for i in range(epochs):
             for j in range(steps_per_epoch):
                 cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, loss_a, loss_b, J_by_hand = train_function(ins)
