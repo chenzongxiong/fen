@@ -666,141 +666,6 @@ class Play(object):
 
         return len(self.model._layers)
 
-    def fit2(self, inputs, mean, sigma, epochs, verbose=0, steps_per_epoch=1, loss_file_name="./tmp/tmp.csv"):
-
-        _inputs = ops.convert_to_tensor(inputs, tf.float32)
-        if not self.built:
-            self._need_compile = False
-            self.build(_inputs)
-
-        self.model.optimizer = optimizers.get(self.optimizer)
-
-        x = self.reshape(_inputs)
-
-        self._model_input = self.model.layers[0].input
-        self._model_output = self.model.layers[-1].output
-
-        self.mean = tf.Variable(mean, name="mean", dtype=tf.float32)
-        self.std = tf.Variable(sigma, name="sigma", dtype=tf.float32)
-
-        feed_inputs = [self._model_input]
-        target_mean = tf.keras.backend.placeholder(
-            ndim=0,
-            name="mean_target",
-            dtype=tf.float32
-        )
-        target_std = tf.keras.backend.placeholder(
-            ndim=0,
-            name="sigma_target",
-            dtype=tf.float32
-        )
-        feed_targets = [target_mean, target_std]
-
-        # import ipdb; ipdb.set_trace()
-        with tf.name_scope('training'):
-            J = tf.keras.backend.gradients(self._model_output, self._model_input)
-            detJ = tf.reshape(tf.keras.backend.abs(J[0]), shape=self._model_output.shape)
-            # avoid zeros
-            detJ = tf.keras.backend.clip(detJ, min_value=1e-5, max_value=1e9)
-
-            diff = self._model_output[:, 1:, :] - self._model_output[:, :-1, :]
-            # _loss = (tf.keras.backend.square((diff - self.mean) / self.std) + tf.keras.backend.log(self.std*self.std)) + tf.keras.backend.log(detJ[:, 1:, :])
-            _loss = tf.keras.backend.square((diff-mean)/std)/2.0 - tf.keras.backend.log(detJ[:, 1:, :])
-            loss = tf.keras.backend.mean(_loss)
-
-            params = self.model.trainable_weights
-
-            with tf.name_scope(self.model.optimizer.__class__.__name__):
-                updates = self.model.optimizer.get_updates(params=params,
-                                                           loss=loss)
-
-            updates += self.model.get_updates_for(self._model_input)
-
-            inputs = feed_inputs + feed_targets
-            self.train_function = tf.keras.backend.function(inputs,
-                                                            [loss, self._model_output, detJ],
-                                                            # [loss],
-                                                            updates=updates)
-        self._max_retry = 10
-        self.retry = False
-        self.cost_history = []
-
-        def fit2_loop(ins):
-            self.cost_history = []
-            self.retry = False
-            i = 0
-            prev_cost = np.inf
-            patient_list = []
-            start_flag = True
-            cost = np.inf
-            while i < epochs:
-                i += 1
-                for j in range(steps_per_epoch):  # bugs when steps_per_epoch == 1
-                    prev_cost = cost
-                    # cost = self.train_function(ins)[0]
-                    cost, output, J = self.train_function(ins)
-                    if np.isnan(cost):
-                        LOG.debug(colors.cyan("loss runs into NaN, retry to train the neural network"))
-                        self.retry = True
-                        break
-
-                if prev_cost == cost:
-                    patient_list.append(cost)
-                else:
-                    start_flag = False
-                    patient_list = []
-                if len(patient_list) >= 50 and start_flag:
-                    self.retry = True
-                    LOG.debug("lost patient...")
-                    break
-
-                if np.isnan(cost):
-                    self.retry = True
-                    break
-
-                # if cost < 10:
-                #     import ipdb; ipdb.set_trace()
-                #     predictions, mu, sigma = self.predict2(inputs)
-                #     LOG.debug("Predicted mean: {}, sigma: {}".format(mean, std))
-                #     LOG.debug("weight: {}".format(self.weight))
-                self.cost_history.append([i, cost])
-                LOG.debug("Epoch: {}, Loss: {}".format(i, cost))
-
-            # if cost > 10:
-            #     self.retry = True
-
-        ins = [x, self.mean, self.std]
-        retry_count = 0
-        while retry_count < self._max_retry:
-            init = tf.global_variables_initializer()
-            utils.get_session().run(init)
-
-            fit2_loop(ins)
-            if self.retry is False:
-                LOG.debug("Train neural network sucessfully, retry count: {}".format(retry_count))
-                break
-
-            retry_count += 1
-            LOG.debug("Retry to train the neural network, retry count: {}".format(retry_count))
-
-        cost_history = np.array(self.cost_history)
-        tdata.DatasetSaver.save_data(cost_history[:,0], cost_history[:, 1], loss_file_name)
-
-    def predict2(self, inputs, steps_per_epoch=1):
-        _inputs = ops.convert_to_tensor(inputs, tf.float32)
-        if not self.built:
-            self._need_compile = False
-            self.build(_inputs)
-
-        x = self.reshape(_inputs)
-        output = self.model.predict(x, steps=steps_per_epoch)
-        output = output.reshape(-1)
-        diff = output[1:] - output[:-1]
-        mean = diff.mean()
-        std = diff.std()
-
-        return output, float(mean), float(std)
-
     def save_weights(self, path):
         self.model.save_weights(path)
 
@@ -842,9 +707,11 @@ class Play(object):
     @property
     def operator_layer(self):
         return self.layers[0]
+
     @property
     def nonlinear_layer(self):
         return self.layers[1]
+
     @property
     def linear_layer(self):
         return self.layers[2]
@@ -1086,13 +953,12 @@ class MyModel(object):
 
             if unittest is False:
                 ###################### Calculate J by hand ###############################
-                # J_list = [gradient_all_layers(play.operator_layer.output,
-                #                               play.nonlinear_layer.output,
-                #                               play.operator_layer.kernel,
-                #                               play.nonlinear_layer.kernel,
-                #                               play.linear_layer.kernel,
-                #                               activation=self._activation) for play in self.plays]
-                pass
+                J_list = [gradient_all_layers(play.operator_layer.output,
+                                              play.nonlinear_layer.output,
+                                              play.operator_layer.kernel,
+                                              play.nonlinear_layer.kernel,
+                                              play.linear_layer.kernel,
+                                              activation=self._activation) for play in self.plays]
             else:
                 ###################### Calculate J by hand ###############################
                 J_list = [gradient_all_layers(play.operator_layer.output,
@@ -1117,22 +983,21 @@ class MyModel(object):
 
 
             # by tf
-            model_outputs = [tf.reshape(self.model_outputs[i], shape=self.feed_inputs[i].shape) for i in range(self._nb_plays)]
-            J_list_by_tf = tf.keras.backend.gradients(model_outputs, self.feed_inputs)
-            self.J_list_by_tf = [tf.reshape(J_list_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
-            self.J_by_tf = tf.reduce_mean(tf.concat(self.J_list_by_tf, axis=-1), axis=-1, keepdims=True) / self._nb_plays
+            # model_outputs = [tf.reshape(self.model_outputs[i], shape=self.feed_inputs[i].shape) for i in range(self._nb_plays)]
+            # J_list_by_tf = tf.keras.backend.gradients(model_outputs, self.feed_inputs)
+            # self.J_list_by_tf = [tf.reshape(J_list_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
+            # self.J_by_tf = tf.reduce_mean(tf.concat(self.J_list_by_tf, axis=-1), axis=-1, keepdims=True) / self._nb_plays
             normalized_J_by_tf = tf.clip_by_value(tf.abs(self.J_by_tf), clip_value_min=1e-9, clip_value_max=1e9)
 
             # import ipdb; ipdb.set_trace()
             # by hand
             # (T * 1)
-            # self.J_by_hand = tf.reduce_mean(tf.concat(J_list, axis=-1), axis=-1, keepdims=True) / self._nb_plays
-            # normalized_J = tf.clip_by_value(tf.abs(self.J_by_hand), clip_value_min=1e-9, clip_value_max=1e9)
+            self.J_by_hand = tf.reduce_mean(tf.concat(J_list, axis=-1), axis=-1, keepdims=True) / self._nb_plays
+            normalized_J_by_hand = tf.clip_by_value(tf.abs(self.J_by_hand), clip_value_min=1e-9, clip_value_max=1e9)
 
             ################################################################################
             # TODO: support derivation for p0
             # TODO: make loss customize from outside
-            # import ipdb; ipdb.set_trace()
             self.curr_mu = tf.keras.backend.mean(diff)
             self.curr_sigma = tf.keras.backend.std(diff)
             ## learn mu/sigma/weights
@@ -1141,17 +1006,17 @@ class MyModel(object):
             # _loss = tf.keras.backend.square((diff - mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
             ## fix mu/sigma and learn weights
             mu = -0.0032573
-            sigma = 6.9357114
+            # sigma = 6.9357114
+            sigma = 8.4
             self.loss_a = tf.keras.backend.square((diff - mu)/sigma) / 2
-            # self.loss_b = - tf.keras.backend.log(normalized_J[:, 1:, :])
+            self.loss_b = - tf.keras.backend.log(normalized_J_by_hand[:, 1:, :])
             self.loss_c = - tf.keras.backend.log(normalized_J_by_tf[:, 1:, :])
-            self.loss_b = self.loss_c
-            normalized_J = normalized_J_by_tf
-            self.J_by_hand = self.J_by_tf
             # _loss = tf.keras.backend.square((diff - mu)/sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
             # _loss = self.loss_a + self.loss_b
             _loss = self.loss_a + self.loss_c
-            self.loss = tf.keras.backend.mean(_loss)
+            self.loss_by_tf = tf.keras.backend.mean(_loss)
+            self.loss_by_hand = tf.keras.backend.mean(self.loss_a + self.loss_b)
+            self.loss = self.loss_by_tf
 
     def fit2(self,
              inputs,
@@ -1173,7 +1038,7 @@ class MyModel(object):
             __sigma__ = (outputs[1:] - outputs[:-1]).std()
             outputs = ops.convert_to_tensor(outputs, tf.float32)
 
-        self.compile(inputs, mu=mu, sigma=sigma)
+        self.compile(inputs, mu=mu, sigma=sigma, unittest=True)
         mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))
         mse_loss2 = tf.keras.backend.mean(tf.square(self.y_pred + tf.reshape(outputs, shape=self.y_pred.shape)))
         diff = self.y_pred[:, 1:, :] - self.y_pred[:, :-1, :]
@@ -1186,7 +1051,7 @@ class MyModel(object):
             training_inputs = self.feed_inputs + self.feed_targets
             # training_inputs = self.feed_inputs
             train_function = tf.keras.backend.function(training_inputs,
-                                                       [self.loss, mse_loss1, mse_loss2, diff, self.curr_sigma, self.curr_mu, self.loss_a, self.loss_b, self.J_by_hand],
+                                                       [self.loss, mse_loss1, mse_loss2, diff, self.curr_sigma, self.curr_mu, self.loss_by_hand, self.loss_by_tf],
                                                        # [self.loss],
                                                        updates=updates)
 
@@ -1203,22 +1068,34 @@ class MyModel(object):
         utils.init_tf_variables()
         for i in range(epochs):
             for j in range(steps_per_epoch):
-                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, loss_a, loss_b, J_by_hand = train_function(ins)
+                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, loss_by_hand, loss_by_tf = train_function(ins)
                 if prev_cost <= cost:
                     patience_list.append(cost)
                 else:
                     prev_cost = cost
                     patience_list = []
-            LOG.debug("Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, placeholder_sigma: {:.7f}, placeholder_mu: {:.7f}".format(i,
-                                                                                                                                                                                                                float(cost),
-                                                                                                                                                                                                                float(mse_cost1),
-                                                                                                                                                                                                                float(mse_cost2),
-                                                                                                                                                                                                                float(diff_res.mean()),
-                                                                                                                                                                                                                float(diff_res.std()),
-                                                                                                                                                                                                                float(__mu__),
-                                                                                                                                                                                                                float(__sigma__),
-                                                                                                                                                                                                                float(sigma_res),
-                                                                                                                                                                                                                float(mu_res)))
+            # LOG.debug("Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, placeholder_sigma: {:.7f}, placeholder_mu: {:.7f}".format(i,
+            #                                                                                                                                                                                                     float(cost),
+            #                                                                                                                                                                                                     float(mse_cost1),
+            #                                                                                                                                                                                                     float(mse_cost2),
+            #                                                                                                                                                                                                     float(diff_res.mean()),
+            #                                                                                                                                                                                                     float(diff_res.std()),
+            #                                                                                                                                                                                                     float(__mu__),
+            #                                                                                                                                                                                                     float(__sigma__),
+            #                                                                                                                                                                                                     float(sigma_res),
+            #                                                                                                                                                                                                     float(mu_res)))
+            LOG.debug("Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}".format(i,
+                                                                                                                                                                                                       float(cost),
+                                                                                                                                                                                                       float(mse_cost1),
+                                                                                                                                                                                                       float(mse_cost2),
+                                                                                                                                                                                                       float(diff_res.mean()),
+                                                                                                                                                                                                       float(diff_res.std()),
+                                                                                                                                                                                                       float(__mu__),
+                                                                                                                                                                                                       float(__sigma__),
+                                                                                                                                                                                                       float(loss_by_hand),
+                                                                                                                                                                                                       float(loss_by_tf)))
+
+
             # LOG.debug("Epoch: {}, max(loss_a): {:.7f}, min(loss_a): {:.7f}, max(loss_b): {:.7f}, min(loss_b): {:.7f}".format(i,
             #                                                                                                                  float(np.max(loss_a)),
             #                                                                                                                  float(np.min(loss_a)),
