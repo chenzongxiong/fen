@@ -959,6 +959,7 @@ class MyModel(object):
                                               play.nonlinear_layer.kernel,
                                               play.linear_layer.kernel,
                                               activation=self._activation) for play in self.plays]
+                self.J_list_by_hand = J_list
             else:
                 ###################### Calculate J by hand ###############################
                 J_list = [gradient_all_layers(play.operator_layer.output,
@@ -972,10 +973,10 @@ class MyModel(object):
                                               feed_dict=self._x_feed_dict) for i, play in enumerate(self.plays)]
                 self.J_list_by_hand = J_list
                 ####################### Calculate J by Tensorflow ###############################
-                y_pred = tf.reshape(self.y_pred, shape=self.feed_inputs[0].shape)
-                J_by_tf = tf.keras.backend.gradients(y_pred, self.feed_inputs)
-                J_by_tf = [tf.reshape(J_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
-                self.J_by_tf = tf.reduce_mean(tf.concat(J_by_tf, axis=-1), axis=-1, keepdims=True)
+                # y_pred = tf.reshape(self.y_pred, shape=self.feed_inputs[0].shape)
+                # J_by_tf = tf.keras.backend.gradients(y_pred, self.feed_inputs)
+                # J_by_tf = [tf.reshape(J_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
+                # self.J_by_tf = tf.reduce_mean(tf.concat(J_by_tf, axis=-1), axis=-1, keepdims=True)
 
                 model_outputs = [tf.reshape(self.model_outputs[i], shape=self.feed_inputs[i].shape) for i in range(self._nb_plays)]
                 J_list_by_tf = tf.keras.backend.gradients(model_outputs, self.feed_inputs)
@@ -986,13 +987,13 @@ class MyModel(object):
             # model_outputs = [tf.reshape(self.model_outputs[i], shape=self.feed_inputs[i].shape) for i in range(self._nb_plays)]
             # J_list_by_tf = tf.keras.backend.gradients(model_outputs, self.feed_inputs)
             # self.J_list_by_tf = [tf.reshape(J_list_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
-            # self.J_by_tf = tf.reduce_mean(tf.concat(self.J_list_by_tf, axis=-1), axis=-1, keepdims=True) / self._nb_plays
+            self.J_by_tf = tf.reduce_mean(tf.concat(self.J_list_by_tf, axis=-1), axis=-1, keepdims=True) / self._nb_plays
             normalized_J_by_tf = tf.clip_by_value(tf.abs(self.J_by_tf), clip_value_min=1e-9, clip_value_max=1e9)
 
             # import ipdb; ipdb.set_trace()
             # by hand
             # (T * 1)
-            self.J_by_hand = tf.reduce_mean(tf.concat(J_list, axis=-1), axis=-1, keepdims=True) / self._nb_plays
+            self.J_by_hand = tf.reduce_mean(tf.concat(self.J_list_by_hand, axis=-1), axis=-1, keepdims=True) / self._nb_plays
             normalized_J_by_hand = tf.clip_by_value(tf.abs(self.J_by_hand), clip_value_min=1e-9, clip_value_max=1e9)
 
             ################################################################################
@@ -1012,11 +1013,9 @@ class MyModel(object):
             self.loss_b = - tf.keras.backend.log(normalized_J_by_hand[:, 1:, :])
             self.loss_c = - tf.keras.backend.log(normalized_J_by_tf[:, 1:, :])
             # _loss = tf.keras.backend.square((diff - mu)/sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
-            # _loss = self.loss_a + self.loss_b
-            _loss = self.loss_a + self.loss_c
-            self.loss_by_tf = tf.keras.backend.mean(_loss)
             self.loss_by_hand = tf.keras.backend.mean(self.loss_a + self.loss_b)
-            self.loss = self.loss_by_tf
+            self.loss_by_tf = tf.keras.backend.mean(self.loss_a + self.loss_c)
+            self.loss = self.loss_by_hand
 
     def fit2(self,
              inputs,

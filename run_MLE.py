@@ -202,7 +202,7 @@ if __name__ == "__main__":
 
     # Hyper Parameters
     # learning_rate = 0.003
-    learning_rate = 0.01
+    learning_rate = 0.05
 
     loss_name = 'mse'
     loss_name = 'mle'
@@ -238,7 +238,7 @@ if __name__ == "__main__":
     ############################## predicitons #############################
     # __nb_plays__ = 20
     # __units__ = 20
-    __nb_plays__ = 20
+    __nb_plays__ = 10
     __units__ = 20
 
     __state__ = 0
@@ -348,7 +348,8 @@ if __name__ == "__main__":
         inputs, outputs = outputs, inputs
     else:
         # inputs, outputs = outputs, inputs
-        # inputs, outputs = outputs[:0], inputs[:20]
+        gap = 5
+        inputs, outputs = inputs[::gap], outputs[::gap]
         pass
     # inputs, outputs = outputs, inputs
 
