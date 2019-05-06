@@ -27,7 +27,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 1500
+    epochs = 3000
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -202,7 +202,7 @@ if __name__ == "__main__":
 
     # Hyper Parameters
     # learning_rate = 0.003
-    learning_rate = 0.05
+    learning_rate = 0.01
 
     loss_name = 'mse'
     loss_name = 'mle'
@@ -242,9 +242,9 @@ if __name__ == "__main__":
     __units__ = 20
 
     __state__ = 0
-    __activation__ = 'tanh'
+    # __activation__ = 'tanh'
     # __activation__ = 'relu'
-    # __activation__ = None
+    __activation__ = None
     __mu__ = 0
     __sigma__ = 7
     # __sigma__ = 5
@@ -350,6 +350,17 @@ if __name__ == "__main__":
         # inputs, outputs = outputs, inputs
         gap = 5
         inputs, outputs = inputs[::gap], outputs[::gap]
+        # inputs = np.arange(800)[::4].astype(np.float32)
+        # inputs = np.zeros(800)[::4].astype(np.float32)
+        # mu = 0
+        # sigma = 0.5
+        # points = 200
+        # noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
+        # inputs += noise
+        mu1 = 4
+        sigma1 = 2.5
+        inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(200, mu1, sigma1)
+
         pass
     # inputs, outputs = outputs, inputs
 

@@ -180,8 +180,7 @@ class DatasetGenerator(object):
             bi = np.random.normal(loc=B[-1] + mu, scale=sigma)
             B.append(bi)
 
-        return np.array(B)
-
+        return np.array(B).reshape(-1).astype(np.float32)
 
 class DatasetLoader(object):
     SPLIT_RATIO = 0.6
