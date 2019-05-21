@@ -27,7 +27,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 500
+    epochs = 200
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -236,8 +236,8 @@ if __name__ == "__main__":
     activation = 'tanh'
     activation = None
     ############################## predicitons #############################
-    __nb_plays__ = 20
-    __units__ = 20
+    __nb_plays__ = 100
+    __units__ = 100
     # __nb_plays__ = 50
     # __units__ = 50
 
