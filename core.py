@@ -262,7 +262,7 @@ class PhiCell(Layer):
     def build(self, input_shape):
 
         if input_shape[-1] <= 20:
-            self.unroll = True
+            self.unroll = False
 
         if self.debug:
             LOG.debug("Initialize *weight* as pre-defined: {} ....".format(self._weight))
@@ -325,7 +325,6 @@ class PhiCell(Layer):
 
         assert self._state.shape.ndims == 2, colors.red("PhiCell states must be 2 dimensions")
         states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
-        self.unroll = True
         last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
         return outputs_, list(states_x)
 
