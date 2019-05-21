@@ -27,7 +27,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 200
+    epochs = 250
     # steps_per_epoch = batch_size
 
     start = time.time()
