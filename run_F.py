@@ -191,7 +191,7 @@ if __name__ == "__main__":
     __nb_plays__ = 20
     ############################ For markov chain ##########################
     __mu__ = 0
-    __sigma__ = 0.02
+    __sigma__ = 3.5
 
     if method == 'noise':
         with_noise = True
@@ -199,7 +199,6 @@ if __name__ == "__main__":
     if with_noise is False:
         mu = 0
         sigma = 0
-
 
     if use_inversion is False:
         raise Exception(colors.red("F is an inverted neural network, use_inversion must be True"))
@@ -341,13 +340,31 @@ if __name__ == "__main__":
                                                                           __nb_plays__=__nb_plays__,
                                                                           loss=loss_name)
     if generated_Gdata is True:
-        # __activation__ = None
+        __activation__ = None
         LOG.debug(colors.red("Generated Gdata, Load weights from {}".format(weights_fname)))
         inputs, predictions = generate_Gdata_from_mc(mu=__mu__,
                                                      sigma=__sigma__,
                                                      nb_plays=__nb_plays__,
                                                      activation=__activation__,
                                                      weights_name=weights_fname)
+
+
+        predicted_fname = constants.DATASET_PATH[predictions_file_key].format(interp=interp,
+                                                                              method=method,
+                                                                              activation=__activation__,
+                                                                              state=state,
+                                                                              mu=__mu__,
+                                                                              sigma=__sigma__,
+                                                                              units=units,
+                                                                              nb_plays=nb_plays,
+                                                                              points=points,
+                                                                              input_dim=input_dim,
+                                                                              __activation__=__activation__,
+                                                                              __state__=__state__,
+                                                                              __units__=__units__,
+                                                                              __nb_plays__=__nb_plays__,
+                                                                              loss=loss_name)
+
     elif do_prediction is True:
         LOG.debug(colors.red("Do predictions, Load weights from {}".format(weights_fname)))
         predictions, loss = predict(inputs=inputs,

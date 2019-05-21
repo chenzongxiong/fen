@@ -27,7 +27,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 3000
+    epochs = 200
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -214,8 +214,8 @@ if __name__ == "__main__":
     do_prediction = False
     do_trend = False
     do_confusion_matrix = True
-    mc_mode = False
-    # do_trend = True
+    mc_mode = True
+    do_trend = False
 
     with_noise = True
 
@@ -224,7 +224,7 @@ if __name__ == "__main__":
     run_test = False
 
     mu = 0
-    sigma = 2
+    sigma = 50
 
     points = 1000
     input_dim = 1
@@ -234,22 +234,21 @@ if __name__ == "__main__":
     units = 20
     state = 0
     activation = 'tanh'
-    # activation = None
+    activation = None
     ############################## predicitons #############################
     # __nb_plays__ = 20
     # __units__ = 20
-    __nb_plays__ = 10
+    __nb_plays__ = 20
     __units__ = 20
 
     __state__ = 0
-    # __activation__ = 'tanh'
-    # __activation__ = 'relu'
-    __activation__ = None
+    __activation__ = 'tanh'
+    __activation__ = 'relu'
+    # __activation__ = None
     __mu__ = 0
-    __sigma__ = 7
+    __sigma__ = 50
     # __sigma__ = 5
     # __sigma__ = 20
-
     if method == 'noise':
         with_noise = True
 
@@ -345,25 +344,27 @@ if __name__ == "__main__":
     if do_trend is False:
         inputs, outputs = inputs[:points], outputs[:points]
     if mc_mode is True:
-        inputs, outputs = outputs, inputs
-    else:
         # inputs, outputs = outputs, inputs
-        gap = 5
-        inputs, outputs = inputs[::gap], outputs[::gap]
-        # inputs = np.arange(800)[::4].astype(np.float32)
-        # inputs = np.zeros(800)[::4].astype(np.float32)
-        # mu = 0
-        # sigma = 0.5
-        # points = 200
-        # noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
-        # inputs += noise
-        mu1 = 4
-        sigma1 = 2.5
-        inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(200, mu1, sigma1)
+        pass
+    else:
+        inputs, outputs = outputs, inputs
+        # gap = 5
+        # inputs, outputs = inputs[::gap], outputs[::gap]
+        # # inputs = np.arange(800)[::4].astype(np.float32)
+        # # inputs = np.zeros(800)[::4].astype(np.float32)
+        # # mu = 0
+        # # sigma = 0.5
+        # # points = 200
+        # # noise = np.random.normal(loc=mu, scale=sigma, size=points).astype(np.float32)
+        # # inputs += noise
+        # mu1 = 4
+        # sigma1 = 2.5
+        # inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(200, mu1, sigma1)
 
         pass
+    import ipdb; ipdb.set_trace()
     # inputs, outputs = outputs, inputs
-
+    # inputs, outputs = inputs[:1100], outputs[:1100]
     import ipdb; ipdb.set_trace()
 
     loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
@@ -398,7 +399,7 @@ if __name__ == "__main__":
                                                                           __nb_plays__=__nb_plays__,
                                                                           loss=loss_name)
 
-    if mc_mode is True:
+    if mc_mode is True and do_trend is True:
         trends_list_fname = constants.DATASET_PATH[trends_list_file_key].format(interp=interp,
                                                                                 method=method,
                                                                                 activation=activation,
@@ -416,12 +417,10 @@ if __name__ == "__main__":
                                                                                 loss=loss_name)
 
     # try:
+    #     import ipdb; ipdb.set_trace()
     #     a, b = tdata.DatasetLoader.load_data(predicted_fname)
     #     inp, trend_list = tdata.DatasetLoader.load_data(trends_list_fname)
     #     assert np.allclose(a, inp, atol=1e-5)
-    #     # a = a[:20]
-    #     # b = b[:20]
-    #     # trend_list = trend_list[:20, :]
     #     confusion = confusion_matrix(a, b)
     #     LOG.debug(colors.purple("confusion matrix is: {}".format(confusion)))
 

@@ -1,4 +1,4 @@
-% Created 2019-03-21 Thu 10:53
+% Created 2019-04-28 Sun 23:02
 % Intended LaTeX compiler: pdflatex
 \documentclass[11pt]{article}
 \usepackage[utf8]{inputenc}
@@ -28,7 +28,7 @@
 \tableofcontents
 
 \section{formula}
-\label{sec:org33f038c}
+\label{sec:org7fa5d38}
 First we only consider \textbf{one play}
 \begin{eqnarray}
 G(P_{n}, w^{1}) = \sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} P_{n} + \theta_{i0}) + \tilde{\theta_{0}}
@@ -76,12 +76,21 @@ and
 \begin{eqnarray}
 \Phi(x) =
         \begin{cases}
-        x, x > 0 \\
-        0, -1 < x < 0 \\
-        x-1, x < -1 \\
+        x - 1/2, & x > 1/2 \\
+        0, & -1/2 < x < -1/2 \\
+        x + 1/2, & x < -1/2 \\
         \end{cases}
-
 \end{eqnarray}
+
+\begin{eqnarray}
+\Phi(x) =
+        \begin{cases}
+        x + 1/2, & x > 1/2 \\
+        0, & -1/2 < x < -1/2 \\
+        x - 1/2, & x < -1/2 \\
+        \end{cases}
+\end{eqnarray}
+
 
 Using chain rule, we obtain
 \begin{eqnarray}
@@ -117,7 +126,7 @@ our derivation is:
 \end{eqnarray}
 
 \section{RNN gradients}
-\label{sec:orgf03c4d2}
+\label{sec:orgeae9d28}
 \begin{eqnarray}
 \frac{\partial p_j}{\partial x_j} &=& \Phi'(\sigma_j) \frac{\partial \sigma_j}{\partial x_j} \\
 &=& \Phi'(\sigma_j) w^{1} \\
@@ -136,12 +145,12 @@ our derivation is:
 \end{eqnarray}
 
 \section{Implementation}
-\label{sec:orgd74a973}
+\label{sec:orgf94c44f}
 
 Consider \(\mathcal{P}_{n} = [p_{1}, p_{2}, p_{3}, ..., p_{n}]\), \(G(\mathcal{P}_{n}, w^{1}) = [y_{1}, y_{2}, y_{3}, ..., y_{n}]\)
 
 \section{Trading}
-\label{sec:orgcc44e28}
+\label{sec:org9e99024}
 Assume, we observe prices \(p_1, p_2, ..., p_N\) for a fixed \(N > 0\). Based on Dima's paper,
 assume that the price \(p_{n}\) hysteretically depends on the underlying noise \(b_n\), with \(b_n\) being a
 Brownian motion. Using the notation
@@ -166,7 +175,7 @@ plays and nonlinear functions**
 
 
 \section{Direct Learning}
-\label{sec:org70ad23b}
+\label{sec:org31a8072}
 We learn the parameters \(W_b, \mu_b, \sigma_b\) and the initial state \(p_0\) of the network \(G\) by maximizing
 the likelihood of \(\mathcal{P}\). Since \(\mathcal{P}\) is the determenistic function of a random variable
 \(mathcal{B}\), its probability density is given by
@@ -198,18 +207,30 @@ L = \ln p(\mathcal{P}) &\thicksim& \sum_{n=1}^{N} \left(- \frac{(b_n-b_{n-1}-\mu
   &=& - \frac{1}{2} \sum_{n=1}^{N} \left[\left(\frac{b_n - b_{n-1} - \mu_{b}}{\sigma_b} \right)^2 + 2 \ln \sigma_{b} - 2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right]
 \end{eqnarray}
 
-It's also equivalent to mimizing the loss function as following:
+It's also equivalent to minimize the loss function as following:
 \begin{eqnarray}
-\min L &=& \min \sum_{n=1}^{N} \left[\left(\frac{b_n - b_{n-1} - \mu_{b}}{\sigma_b} \right)^2 - 2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right] \\
-       &=& \min \sum_{n=1}^{N} \left[\left( b_n - b_{n-1} - \mu_{b}\right)^2 - 2 \sigma_{b}^2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right]
+\min_{W_b, p_0} L &=& \min_{W_b, p_0} \sum_{n=1}^{N} \left[\left(\frac{b_n - b_{n-1} - \mu_{b}}{\sigma_b} \right)^2 - 2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right] \\
+       &=& \min_{W_b, p_0} \sum_{n=1}^{N} \left[\left( b_n - b_{n-1} - \mu_{b}\right)^2 - 2 \sigma_{b}^2 \ln \left|\frac{\partial b_n}{\partial p_n}\right|\right]
 \end{eqnarray}
-\section{MSE and MLE}
-\label{sec:org9b87db9}
-\begin{eqnarray}
 
-y &\thicksim& \mathcal{N} \left( y | G(x, w), \sigma^2 \right) \\
-p(y) &=& \frac{1}{\sqrt{2 \pi} \sigma} \exp \left(-\frac{(y-G(x, w))^2}{\sigma^2} \right) \\
-p(\mathcal{Y}) &=& \prod_{i} p(y_i) \\
+From the target loss function, the only parameters we need to known is \(\mu_b\).
+\section{MSE and MLE}
+\label{sec:org63f4234}
+
+\begin{eqnarray}
+y &\thicksim& \mathcal{N} \left( y | G(x, w), \sigma^2 \right)
+\end{eqnarray}
+
+\begin{eqnarray}
+p(y) &=& \frac{1}{\sqrt{2 \pi} \sigma} \exp \left(-\frac{(y-G(x, w))^2}{\sigma^2} \right)
+\end{eqnarray}
+
+\begin{eqnarray}
+p(\mathcal{Y}) &=& p (y_1, y_2, ..., y_N) \\
+               &=& \prod_{i}^N p(y_i) \\
+\end{eqnarray}
+
+\begin{eqnarray}
 \ln p(\mathcal{Y}) &=& \sum_{i} \left( -\frac{1}{2}\ln 2 \pi - \ln \sigma - \frac{(y_i - G(x_i, w)^2}{\sigma^2} \right)
 \end{eqnarray}
 
@@ -217,5 +238,16 @@ Assume \(z_i = f(y_i)\), we obtain
 \begin{eqnarray}
 p(z_i) = p(f(y_i)) \left(\frac{\partial f}{\partial y_i}\right)^{-1} f^{-1}(z_i)
 \end{eqnarray}
-\(\max (\mu, \sigma, w)\) s.t. \(p(z_i)\) is maximal \\
+\(\max (\mu, \sigma, w)\) s.t. \(p(z_i)\) is maximal
+
+\section{How to determine undetermined direction of random walk ?}
+\label{sec:org42ba02d}
+If external agents buy stocks from the market, then the total number of stocks in market descreases, leading to increasing the prices.
+
+In other words, the amount of stocks in market descreases if price rises. And the amount of stocks increases if prices go down.
+
+The root cause of amount chaging in our assumption is the behavior of external agents.
+We model the behavior of external agents as markov chain(random walk).
+
+Since we observe a series of prices in advance, we can determine the direction of random walk.
 \end{document}

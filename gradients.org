@@ -26,15 +26,15 @@ So \(\sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} P_{n} + \theta_{i0}) + \
 
 Take \(y_{j}\), where \(j \in [1, ..., n]\) for example
 
-Let \(z_j=\theta_i p_j + \theta_{i0}\) and \(f(z_j) = \tanh(\theta_i p_j + \theta_{i0})\), we obtain
+Let \(z_{i, j}=\theta_i p_j + \theta_{i0}\) and \(f(z_{i, j}) = \tanh(\theta_i p_j + \theta_{i0})\), we obtain
 \begin{eqnarray}
 y_{j}  &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} p_{j} + \theta_{i0}) + \tilde{\theta_{0}}  \\
-       &=& \sum_{i=1}^{S} \tilde{\theta_{i}} f(z_j) + \tilde{\theta_{i0}}
+       &=& \sum_{i=1}^{S} \tilde{\theta_{i}} f(z_{i, j}) + \tilde{\theta_{i0}}
 \end{eqnarray}
 
 Calculate derivation for \(y_{j}\),
 \begin{eqnarray}
-\frac{\partial y_{j}}{\partial p_{j}} &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} \frac{\partial f(z_j)}{\partial z_{j}}
+\frac{\partial y_{j}}{\partial p_{j}} &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} \frac{\partial f(z_{i, j})}{\partial z_{i, j}}
 \end{eqnarray}
 
                                       # &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} \frac{\partial{}}{\partial{}} \\
@@ -69,7 +69,7 @@ and
 Using chain rule, we obtain
 \begin{eqnarray}
 \frac{\partial y_{j}}{\partial x_{j}} &=& \frac{\partial y_{j}}{\partial p_{j}} \frac{\partial p_{j}}{\partial x_{j}} \\
-                                      &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} w^{1} \frac{\partial f(z_j)}{\partial z_{j}} \frac{\partial{\Phi(\sigma_{j})}}{\partial{\sigma_{j}}}
+                                      &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} w^{1} \frac{\partial f(z_{i, j})}{\partial z_{i, j}} \frac{\partial{\Phi(\sigma_{j})}}{\partial{\sigma_{j}}}
 \end{eqnarray}
 
                                       # &=& \begin{cases}
@@ -82,7 +82,7 @@ To consider *multiple plays* case, we reformulate the derivation as following:
 
 \begin{eqnarray}
 \frac{\partial {y_{j}^{1}}}{\partial x_{j}} &=& \frac{\partial{y_{j}^{1}}}{\partial{p_{j}^{1}}} \frac{\partial{ p_{j}}^{1}}{\partial x_{j}} \\
-                                      &=& \sum_{i=1}^{S} \tilde{\theta_{i}^{1}} \theta_{i}^{1} w^{1} \frac{\partial f(z_{j}^{1})}{\partial z_{j}^{1}} \frac{\partial{\Phi(\sigma_{j}^{1})}}{\partial{\sigma_{j}^{1}}}
+                                      &=& \sum_{i=1}^{S} \tilde{\theta_{i}^{1}} \theta_{i}^{1} w^{1} \frac{\partial f(z_{i, j}^{1})}{\partial z_{i, j}^{1}} \frac{\partial{\Phi(\sigma_{j}^{1})}}{\partial{\sigma_{j}^{1}}}
 \end{eqnarray}
                                       # &=& \sum_{i=1}^{S} \tilde{\theta_{i}^{1}} \frac{\partial \tanh(\theta_{i}^{1} p_{j}^{1} + \theta_{i0})}{\partial p_{j}^{1}} \frac{\partial{\Phi(w^{1} x_{j} - p_{j-1}^{1})}}{\partial{x_{j}}} \\
 #                                       &=& \begin{cases}
@@ -106,7 +106,7 @@ our derivation is:
 \begin{eqnarray}
 \frac{\partial f_{j}}{\partial x_{j}} &=& \frac{1}{P} \sum_{k=1}^{P} \frac{\partial {{y_{j}^{k}}}}{\partial {{x_{j}}}} \\
                &=& \frac{1}{P} \sum_{k=1}^{P} \frac{\partial {y_{j}^{k}}}{\partial {p_{j}^{k}}} \frac{\partial {p_{j}^{k}}}{\partial {x_{j}}} \\
-               &=& \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \theta_{i}^{k} w^{k} \frac{\partial f(z_{j}^{k})}{\partial z_{j}^{k}} \frac{\partial{\Phi(\sigma_{j}^{k})}}{\partial{\sigma_{j}^{k}}}
+               &=& \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \theta_{i}^{k} w^{k} \frac{\partial f(z_{i, j}^{k})}{\partial z_{i, j}^{k}} \frac{\partial{\Phi(\sigma_{j}^{k})}}{\partial{\sigma_{j}^{k}}}
 \end{eqnarray}
                # &=& \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \frac{\partial \tanh(\theta_{i}^{k} p_{j}^{k} + \theta_{i0})}{\partial p_{j}^{k}} \frac{\partial{\Phi(w^{k} x_{j} - p_{j-1}^{k})}}{\partial{x_{j}}} \\
                # &=&                        \frac{1}{P} \sum_{k=1}^{P}  \sum_{i=1}^{S} \tilde{\theta_{i}^{k}} \theta_{i}^{k} (1 - \tanh^{2}(\theta_{i}^{k} p_{j}^{k} + \theta_{i0}^{k})) w^{k}
@@ -196,6 +196,14 @@ our derivation is:
   \end{eqnarray}
 
   From the target loss function, the only parameters we need to known is \(\mu_b\).
+
+
+  Consider second part of loss function, \(\ln \frac{\partial b_{n}}{\partial p_{n}}\), we reformulate it to \(\ln \frac{\partial f_{j}}{\partial x_{j}} = \ln h_{j}\)
+
+  \begin{eqnarray}
+  \frac{ \partial \ln h_j}{\partial w^{k}} &=& \frac{1}{h_j} * \frac{\partial h_j} { \partial w^k}
+  \end{eqnarray}
+
 * MSE and MLE
 
   \begin{eqnarray}
