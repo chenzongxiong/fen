@@ -236,8 +236,8 @@ if __name__ == "__main__":
     activation = 'tanh'
     activation = None
     ############################## predicitons #############################
-    __nb_plays__ = 50
-    __units__ = 50
+    __nb_plays__ = 20
+    __units__ = 20
     # __nb_plays__ = 50
     # __units__ = 50
 
@@ -246,7 +246,7 @@ if __name__ == "__main__":
     __activation__ = 'relu'
     __activation__ = None
     __mu__ = 0
-    __sigma__ = 50
+    __sigma__ = 70
     # __sigma__ = 5
     # __sigma__ = 20
     if method == 'noise':

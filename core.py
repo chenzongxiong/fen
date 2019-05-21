@@ -1058,7 +1058,7 @@ class MyModel(object):
             # sigma = 6.9357114
             # sigma = 8.4
             # sigma = 0.5
-            sigma = 50
+            sigma = 70
             mu = 0
             # self.loss_a = tf.keras.backend.square(self.diff - mu)
             self.loss_a = tf.keras.backend.square((self.diff - mu)/sigma) / 2
