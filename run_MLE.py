@@ -27,7 +27,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 300
+    epochs = 800
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -202,7 +202,7 @@ if __name__ == "__main__":
 
     # Hyper Parameters
     # learning_rate = 0.003
-    learning_rate = 0.01
+    learning_rate = 0.02
 
     loss_name = 'mse'
     loss_name = 'mle'
@@ -236,8 +236,8 @@ if __name__ == "__main__":
     activation = 'tanh'
     activation = None
     ############################## predicitons #############################
-    __nb_plays__ = 50
-    __units__ = 500
+    __nb_plays__ = 100
+    __units__ = 100
     # __nb_plays__ = 50
     # __units__ = 50
 
