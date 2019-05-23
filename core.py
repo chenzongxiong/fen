@@ -1302,7 +1302,7 @@ class MyModel(object):
                 if bk > predict_noise_seq[-1]:
                     direction = -1
                 elif bk < predict_noise_seq[-1]:
-                    direction = 1
+                    direction = +1
                 else:
                     direction = 0
 
@@ -1362,7 +1362,8 @@ class MyModel(object):
 
                 interval += 1
 
-            import ipdb; ipdb.set_trace()
+            # import ipdb; ipdb.set_trace()
+
             return guess_price_seq[1:]
 
 
@@ -1383,7 +1384,7 @@ class MyModel(object):
 
         k = start_pos
         seq = 1
-        iteration = 10
+        iteration = 100
         for s in range(seq-1):
             guess_prices.append(0)
             guess_prices_list[k-start_pos+s] = [0]*iteration
@@ -1391,7 +1392,7 @@ class MyModel(object):
         while True:
             avg_guess = repeat(k, seq=seq, iteration=iteration)
             guess_prices.append(avg_guess)
-            # import ipdb; ipdb.set_trace()
+
             LOG.debug(colors.red("================ Guess k: {} successfully, predict price: {:.5f}, grouth-truth price: {:.5f} prev gt price: {:.5f} =====================".format(k+seq-1,
                                                                                                                                                                                    float(avg_guess),
                                                                                                                                                                                    float(prices[k]),

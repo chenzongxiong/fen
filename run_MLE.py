@@ -212,10 +212,9 @@ if __name__ == "__main__":
     # method = 'noise'
     interp = 1
     do_prediction = False
-    do_trend = False
+    do_trend = True
     do_confusion_matrix = True
     mc_mode = True
-    do_trend = False
 
     with_noise = True
 
@@ -243,7 +242,7 @@ if __name__ == "__main__":
 
     __state__ = 0
     __activation__ = 'tanh'
-    # __activation__ = 'relu'
+    __activation__ = 'relu'
     # __activation__ = None
     __mu__ = 0
     __sigma__ = 70
@@ -362,9 +361,9 @@ if __name__ == "__main__":
         # inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(200, mu1, sigma1)
 
         pass
-    import ipdb; ipdb.set_trace()
+
     # inputs, outputs = outputs, inputs
-    # inputs, outputs = inputs[:1100], outputs[:1100]
+    inputs, outputs = inputs[:1100], outputs[:1100]
     import ipdb; ipdb.set_trace()
 
     loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
