@@ -242,7 +242,7 @@ if __name__ == "__main__":
 
     __state__ = 0
     __activation__ = 'tanh'
-    __activation__ = 'relu'
+    # __activation__ = 'relu'
     # __activation__ = None
     __mu__ = 0
     __sigma__ = 70

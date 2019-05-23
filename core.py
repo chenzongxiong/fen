@@ -1346,7 +1346,7 @@ class MyModel(object):
                         direction,
                         delta))
 
-                    if step >= 300:
+                    if step >= 500:
                         LOG.warn(colors.red("Not a good guess"))
                         good_guess = False
                         break
