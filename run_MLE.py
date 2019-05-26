@@ -254,10 +254,10 @@ if __name__ == "__main__":
     activation = 'tanh'
     activation = None
     ############################## predicitons #############################
-    __nb_plays__ = 100
-    __units__ = 100
-    # __nb_plays__ = 50
-    # __units__ = 50
+    # __nb_plays__ = 100
+    # __units__ = 100
+    __nb_plays__ = 20
+    __units__ = 20
 
     __state__ = 0
     __activation__ = 'tanh'
