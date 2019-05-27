@@ -1,5 +1,6 @@
 import sys
 import time
+import scipy
 import numpy as np
 
 import log as logging
@@ -27,7 +28,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 200
+    epochs = 600
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -197,12 +198,30 @@ def plot(a, b, trend_list):
     fig.savefig(fname, dpi=400)
 
 
+def ttest_rel(method1, method2):
+    # outputs = np.array(outputs).reshape(-1)
+    # guess_prices = np.array(guess_prices).reshape(-1)
+
+    # loss1 =  ((guess_prices - prices[start_pos:end_pos]) ** 2)
+    # loss2 = np.abs(guess_prices - prices[start_pos:end_pos])
+    # loss3 = (prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1]) ** 2
+    # loss4 = np.abs(prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1])
+
+    # LOG.debug("root sum square loss1: {}".format((loss1.sum()/(end_pos-start_pos))**(0.5)))
+    # LOG.debug("root sum square loss2: {}".format((loss3.sum()/(end_pos-start_pos))**(0.5)))
+    # LOG.debug("total abs loss1: {}".format((loss2.sum()/(end_pos-start_pos))))
+    # LOG.debug("total abs loss2: {}".format((loss4.sum()/(end_pos-start_pos))))
+
+    # guess_prices_list = np.array(guess_prices_list)
+    pass
+
+
 if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
     # Hyper Parameters
     # learning_rate = 0.003
-    learning_rate = 0.01
+    learning_rate = 0.02
 
     loss_name = 'mse'
     loss_name = 'mle'
@@ -212,10 +231,9 @@ if __name__ == "__main__":
     # method = 'noise'
     interp = 1
     do_prediction = False
-    do_trend = False
+    do_trend = True
     do_confusion_matrix = True
     mc_mode = True
-    do_trend = False
 
     with_noise = True
 
@@ -236,17 +254,17 @@ if __name__ == "__main__":
     activation = 'tanh'
     activation = None
     ############################## predicitons #############################
-    # __nb_plays__ = 20
-    # __units__ = 20
+    # __nb_plays__ = 100
+    # __units__ = 100
     __nb_plays__ = 20
     __units__ = 20
 
     __state__ = 0
     __activation__ = 'tanh'
-    __activation__ = 'relu'
+    # __activation__ = 'relu'
     # __activation__ = None
     __mu__ = 0
-    __sigma__ = 50
+    __sigma__ = 70
     # __sigma__ = 5
     # __sigma__ = 20
     if method == 'noise':
@@ -362,9 +380,9 @@ if __name__ == "__main__":
         # inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(200, mu1, sigma1)
 
         pass
-    import ipdb; ipdb.set_trace()
+
     # inputs, outputs = outputs, inputs
-    # inputs, outputs = inputs[:1100], outputs[:1100]
+    inputs, outputs = inputs[:1100], outputs[:1100]
     import ipdb; ipdb.set_trace()
 
     loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
@@ -416,6 +434,11 @@ if __name__ == "__main__":
                                                                                 __nb_plays__=__nb_plays__,
                                                                                 loss=loss_name)
 
+
+    try:
+        pass
+    except FileNotFoundError:
+        sys.exit(0)
     # try:
     #     import ipdb; ipdb.set_trace()
     #     a, b = tdata.DatasetLoader.load_data(predicted_fname)

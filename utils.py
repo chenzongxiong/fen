@@ -223,6 +223,49 @@ def plot_graph(G):
     plt.show()
 
 
+def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None):
+    fig = plt.figure()
+    colors = ['magenta']
+
+    for index, info in enumerate(hysteresis_info):
+        guess_hysteresis_list = info[0]
+        prices = np.array([g[0] for g in guess_hysteresis_list])
+        noise = np.array([g[1] for g in guess_hysteresis_list])
+        l = len(prices)
+        prev_original_prediction = np.array([info[1]] * l)
+        curr_original_prediction = np.array([info[2]] * l)
+        bk = np.array([info[3]] * l)
+        prev_price = np.array([info[4]] * l)
+        curr_price = np.array([info[5]] * l)
+        _predicted_price = np.array([predicted_price] * l)
+        vertical_line = np.linspace(noise.min(), noise.max(), l)
+        if index == 0:
+            plt.plot(prices, noise, color=colors[index % len(colors)], marker='o', markersize=4, label='steps finding root')
+            plt.plot(prices, prev_original_prediction, color='red', label='start position')
+            plt.plot(prices, bk, color='black', label='random walk')
+            plt.plot(prices, curr_original_prediction, color='blue', label='target position')
+            plt.plot(prev_price, vertical_line, color='red', label='previous price')
+            plt.plot(curr_price, vertical_line, color='blue', label='current price')
+            plt.plot(_predicted_price, vertical_line, color='black', label='predicted price')
+        else:
+            plt.plot(prices, noise, color=colors[index % len(colors)], marker='o', markersize=4, label=None)
+            plt.plot(prices, prev_original_prediction, color='red', label=None)
+            plt.plot(prices, bk, color='black', label=None)
+            plt.plot(prices, curr_original_prediction, color='blue', label=None)
+            plt.plot(prev_price, vertical_line, color='red', label=None)
+            plt.plot(curr_price, vertical_line, color='blue', label=None)
+            plt.plot(_predicted_price, vertical_line, color='black', label=None)
+
+    plt.xlabel("prices")
+    plt.ylabel("noise")
+    plt.legend()
+    # plt.show()
+    fname = './frames/{}.png'.format(i)
+    os.makedirs(os.path.dirname(fname), exist_ok=True)
+    fig.savefig(fname, dpi=400)
+
+
+
 if __name__ == "__main__":
     import numpy as np
     arr = np.arange(100)

@@ -1,5 +1,6 @@
 import os
 import time
+import copy
 
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
@@ -262,7 +263,7 @@ class PhiCell(Layer):
     def build(self, input_shape):
 
         if input_shape[-1] <= 20:
-            self.unroll = True
+            self.unroll = False
 
         if self.debug:
             LOG.debug("Initialize *weight* as pre-defined: {} ....".format(self._weight))
@@ -325,7 +326,6 @@ class PhiCell(Layer):
 
         assert self._state.shape.ndims == 2, colors.red("PhiCell states must be 2 dimensions")
         states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
-        self.unroll = True
         last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
         return outputs_, list(states_x)
 
@@ -790,7 +790,7 @@ class MyModel(object):
             else:
                 weight = 1.0
 
-            weight = 5 * (nb_play + 1)# width range from (0.1, ... 0.1 * nb_plays)
+            weight = 10 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
             LOG.debug("MyModel geneartes {} with Weight: {}".format(colors.red("Play #{}".format(nb_play+1)), weight))
 
             play = Play(units=units,
@@ -1058,7 +1058,7 @@ class MyModel(object):
             # sigma = 6.9357114
             # sigma = 8.4
             # sigma = 0.5
-            sigma = 50
+            sigma = 70
             mu = 0
             # self.loss_a = tf.keras.backend.square(self.diff - mu)
             self.loss_a = tf.keras.backend.square((self.diff - mu)/sigma) / 2
@@ -1223,6 +1223,7 @@ class MyModel(object):
               start_pos=1000, end_pos=1100,
               delta=0.001, max_iteration=10000):
         # end_pos = 1020
+        assert start_pos > 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
         assert len(prices.shape) == 1, colors.red("Prices should be a vector")
         if not hasattr(self, '_batch_input_shape'):
@@ -1233,19 +1234,42 @@ class MyModel(object):
         elif isinstance(self._batch_input_shape, (list, tuple)):
             input_dim = self._batch_input_shape[-1]
         else:
-            raise Exception(colors.red("Unknown error occurs in trend"))
+            raise Exception(colors.red("Unknown **input_dim** error occurs in trend"))
 
         timestep = prices.shape[0] // input_dim
-        shape = [1, timestep, input_dim]
-        _ppp = ops.convert_to_tensor(prices, dtype=tf.float32)
-        _ppp = tf.reshape(_ppp, shape=shape)
-
+        shape = (1, timestep, input_dim)
+        ################################################################################
+        #                  Re-play the noise                                           #
+        # original_prediction:                                                         #
+        #   - expect the same size of prices                                           #
+        # mu: use empirical mean                                                       #
+        # sigma: use empirical standard derviation                                     #
+        ################################################################################
         original_prediction = self.predict(prices)
         mu = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).mean()
         sigma = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).std()
-
+        LOG.debug(colors.cyan("emprical mean: {}, emprical standard dervation: {}".format(mu, sigma)))
+        ################################################################################
+        #                Collect weights and Operator outputs                          #
+        # weights:                                                                     #
+        #   - weights[0]: the weights of operator layers                               #
+        #   - weights[1]: the weights of non-linear layers, with activation            #
+        #   - weights[2]: the bias of non-linear layers                                #
+        #   - weights[3]: the weights of linear layers                                 #
+        #   - weights[4]: the bias of linear layers                                    #
+        # opeartor_outputs:                                                            #
+        #   - output of operator layers, used in intermediate layer states tracking    #
+        # individual_p_list:                                                           #
+        #   - list of intermediate states of each play we are insterested in           #
+        #   - individual_p_list[0]: list of intermediate state of play-0               #
+        #   - individual_p_list[1]: list of intermediate state of play-1               #
+        #   - ...                                                                      #
+        #   - individual_p_list[N]: list of intermediate state of play-N               #
+        ################################################################################
         weights_ = [[], [], [], [], []]
         operator_outputs_ = []
+        _ppp = ops.convert_to_tensor(prices, dtype=tf.float32)
+        _ppp = tf.reshape(_ppp, shape=shape)
 
         for play in self.plays:
             weights_[0].append(play.operator_layer.kernel)
@@ -1255,27 +1279,39 @@ class MyModel(object):
             weights_[4].append(play.linear_layer.bias)
             operator_outputs_.append(play.operator_layer(_ppp))
 
-        weights, operator_outputs = sess.run([weights_, operator_outputs_])
+        weights, operator_outputs = utils.get_session().run([weights_, operator_outputs_])
 
         for i in range(len(weights)):
             for j in range(len(weights[i])):
                 weights[i][j] = weights[i][j].reshape(-1)
 
-        # if start_pos == 0:
-        #     individual_p_list = [[0] for operator_output in operator_outputs]
-        # else:
-        #     individual_p_list = [[operator_output.reshape(-1)[start_pos-1]] for operator_output in operator_outputs]
-        # individual_p_list = [operator_output.reshape(-1)[start_pos-1:end_pos-1] for operator_output in operator_outputs]
-        individual_p_list = [[operator_output.reshape(-1)[start_pos-1]] for operator_output in operator_outputs]
+        operator_outputs = [o.reshape(-1) for o in operator_outputs]
+        individual_p_list = [[operator_output[start_pos-1]] for operator_output in operator_outputs]
         # import ipdb; ipdb.set_trace()
-        outputs = []
-
-        def do_guess_helper(k, step=1, direction=1, guess_flag=True, input_p=None, base_price=0):
+        ################################################################################
+        #                Helper Functions                                              #
+        # do_guess_helper: predict the price at given timestamp                        #
+        # do_guess_seq: predict the price sequence start from given timestamp          #
+        # repeat: repeat do_guess_seq N times                                          #
+        ################################################################################
+        def do_guess_helper(k, step=1, direction=1, guess_flag=True, input_p=None, base_price=0, individual_p_list=None):
+            '''
+            Parameters:
+            --------------------
+            k: the index of price needs to predict, must be larger than `start_pos`
+            step: current step
+            direction: in which direction the price should change
+            Returns:
+            --------------------
+            guess_price: the price guess, scalar
+            predict_noise: the noise correpsonding to guess price, scalar
+            '''
             predict_noise_list = []
             guess = base_price + direction * step * delta
 
             for i in range(self._nb_plays):
-                p = phi(weights[0][i] * guess - individual_p_list[i][k-start_pos]) + individual_p_list[i][k-start_pos]
+                prev_state = individual_p_list[i][-1]
+                p = phi(weights[0][i] * guess - prev_state) + prev_state
                 pp = weights[1][i] * p + weights[2][i]
                 if self._activation is None:
                     pass
@@ -1291,121 +1327,143 @@ class MyModel(object):
 
             return guess, predict_noise
 
+        def do_guess_seq(start, seq=1, max_iteration=500, individual_p_list=None, hysteresis_info=None):
+            '''
+            Parameters:
+            --------------------
+            start: the start position of the prices going to do prediction
+            seq: the length of prices going to do prediction
+            max_iteration: the max iterations during trying to find a root for the price
+            Returns:
+            --------------------
+            guess_price_seq: a list of guess price, the length of it is equal to `seq`
+            '''
+            logger_string1 = "Step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, prev true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}"
+            logger_string2 = "Step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}"
+            ####################################################################################################
+            # guess_price_seq: the first value in it is the start point of price in prediction                 #
+            # predict_noise_seq: the first value in it is the start point of gt-noise in prediction            #
+            ####################################################################################################
+            individual_p_list = copy.deepcopy(individual_p_list)
+            LOG.debug("Before do_guess_helper, len(individual_p_list): {}, len(individual_p_list[0]): {}".format(len(individual_p_list), len(individual_p_list[0])))
 
-        def do_guess_seq(start, seq=1):
             guess_price_seq = [prices[start-1]]
             predict_noise_seq = [original_prediction[start-1]]
             interval = 0
+
             while interval < seq:
                 k = start + interval
                 bk = np.random.normal(loc=mu, scale=sigma) + predict_noise_seq[-1]
-
                 if bk > predict_noise_seq[-1]:
                     direction = -1
                 elif bk < predict_noise_seq[-1]:
-                    direction = 1
+                    direction = +1
                 else:
                     direction = 0
 
                 step = 1
-                guess, guess_noise = do_guess_helper(k, step, direction, base_price=guess_price_seq[-1])
-                curr_diff = guess_noise - bk
-                prev_diff = None
-                good_guess = True
-                # import ipdb; ipdb.set_trace()
-                while True:
-                    prev_diff = curr_diff
+                guess_hysteresis_list = [(guess_price_seq[-1], predict_noise_seq[-1])]
+                _, gt_noise = do_guess_helper(k, 0, direction, base_price=guess_price_seq[-1], individual_p_list=individual_p_list)
+                if np.allclose(predict_noise_seq[-1], gt_noise) is False:
+                    # sanity checking
+                    import ipdb; ipdb.set_trace()
 
+                guess, guess_noise = do_guess_helper(k, step, direction, base_price=guess_price_seq[-1], individual_p_list=individual_p_list)
+                prev_diff, curr_diff = None, guess_noise - bk
+                good_guess = False
+                guess_hysteresis_list.append((guess, guess_noise))
+                # guess_hysteresis_list = [(guess, guess_noise)]
+                while step <= max_iteration:
                     step += 1
-                    guess, guess_noise = do_guess_helper(k, step, direction, base_price=guess_price_seq[-1])
+                    prev_diff = curr_diff
+                    guess, guess_noise = do_guess_helper(k, step, direction, base_price=guess_price_seq[-1], individual_p_list=individual_p_list)
+                    guess_hysteresis_list.append((guess, guess_noise))
                     curr_diff = guess_noise - bk
-
                     if curr_diff * prev_diff < 0:
-                        LOG.debug(colors.yellow("step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, prev true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}".format(
-                            step,
-                            float(prices[k]),
-                            float(guess),
-                            float(guess_noise),
-                            float(bk),
-                            float(original_prediction[k]),
-                            float(original_prediction[k-1]),
-                            float(curr_diff),
-                            float(prev_diff),
-                            direction,
-                            delta)))
+                        LOG.debug(colors.yellow(logger_string1.format(step, float(prices[k]), float(guess), float(guess_noise), float(bk), float(original_prediction[k]), float(original_prediction[k-1]), float(curr_diff), float(prev_diff), direction, delta)))
+                        good_guess = True
                         break
 
-                    LOG.debug("step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}".format(
-                        step,
-                        float(prices[k]),
-                        float(guess),
-                        float(guess_noise),
-                        float(bk),
-                        float(original_prediction[k]),
-                        float(curr_diff),
-                        float(prev_diff),
-                        direction,
-                        delta))
+                    LOG.debug(logger_string2.format(step, float(prices[k]), float(guess), float(guess_noise), float(bk), float(original_prediction[k]), float(curr_diff), float(prev_diff), direction, delta))
 
-                    if step >= 300:
-                        LOG.warn(colors.red("Not a good guess"))
-                        good_guess = False
-                        break
+                #########################################################################################################################
+                # hysteresis_info:                                                                                                      #
+                #   guess_hysteresis_list    -> hysteresis_info[0]: a list of (price, noise) tuples                                     #
+                #   original_prediction[k-1] -> hysteresis_info[1]: the ground truth of noise in previous step                          #
+                #   original_prediction[k]   -> hysteresis_info[2]: the ground truth of noise in current step                           #
+                #   bk                       -> hysteresis_info[3]: the noise generated from random walk                                #
+                #   price[k-1]               -> hysteresis_info[4]: the ground truth of price in previous step                          #
+                #   price[k]                 -> hysteresis_info[5]: the ground truth of price in current step                           #
+                #########################################################################################################################
+                hysteresis_info.append([guess_hysteresis_list, original_prediction[k-1], original_prediction[k], bk, prices[k-1], prices[k]])
 
                 if good_guess is False:
+                    LOG.warn(colors.red("Not a good guess"))
                     continue
 
                 guess_price_seq.append(guess)
                 predict_noise_seq.append(guess_noise)
+
                 for j in range(self._nb_plays):
                     p = phi(weights[0][j] * guess - individual_p_list[j][-1]) + individual_p_list[j][-1]
                     individual_p_list[j].append(p)
 
                 interval += 1
 
-            import ipdb; ipdb.set_trace()
+                LOG.debug("After do_guess_helper, len(individual_p_list): {}, len(individual_p_list[0]): {}".format(len(individual_p_list), len(individual_p_list[0])))
             return guess_price_seq[1:]
+
+        def repeat(k, seq=1, repeating=1):
+            '''
+            Parameters:
+            --------------------
+            k: the index of the price starting to prediction
+            seq: the sequence of prices trying to predict
+            repeating: how many times this sequence should repeat
+            Returns:
+            --------------------
+            guess_price_seq: the avearge of this guess price sequence.
+            '''
+            hysteresis_info = []
+            guess_price_seq_stack = []
+            for _ in range(repeating):
+                LOG.debug("Before do_guess_seq, len(individual_p_list): {}, len(individual_p_list[0]): {}".format(len(individual_p_list), len(individual_p_list[0])))
+                guess_price_seq = do_guess_seq(k, seq=seq, individual_p_list=individual_p_list, max_iteration=max_iteration, hysteresis_info=hysteresis_info)
+                guess_price_seq_stack.append(guess_price_seq)
+                guess_prices_list[k-start_pos+seq-1].append(guess_price_seq[-1])
+                LOG.debug("After do_guess_seq, len(individual_p_list): {}, len(individual_p_list[0]): {}".format(len(individual_p_list), len(individual_p_list[0])))
+                LOG.debug("================================================================================")
+
+            ########################################
+            #     update individual_p_list         #
+            ########################################
+            for i, o in enumerate(operator_outputs):
+                individual_p_list[i].append(o[k-seq+1])
+
+            guess_price_seq_stack_ = np.array(guess_price_seq_stack)
+            avg_guess = guess_price_seq_stack_.mean(axis=0)[-1]
+            LOG.debug("********************************************************************************")
+            utils.plot_hysteresis_info(hysteresis_info, k, predicted_price=float(avg_guess))
+            return avg_guess
 
 
         guess_prices_list = [[] for _ in range(end_pos-start_pos)]
-        delta = 0.001
-
-        def repeat(k, seq=1, iteration=1):
-            guess_price_seq_stack = []
-            for i in range(iteration):
-                guess_price_seq = do_guess_seq(k, seq=seq)
-                guess_price_seq_stack.append(guess_price_seq)
-                guess_prices_list[k-start_pos+seq-1].append(guess_price_seq[-1])
-
-            guess_price_seq_stack_ = np.array(guess_price_seq_stack)
-            return guess_price_seq_stack_.mean(axis=0)[-1]
-
         guess_prices = []
-
         k = start_pos
         seq = 1
-        iteration = 10
-        for s in range(seq-1):
-            guess_prices.append(0)
-            guess_prices_list[k-start_pos+s] = [0]*iteration
+        repeating = 10
+        max_iteration = 500
 
-        while True:
-            avg_guess = repeat(k, seq=seq, iteration=iteration)
+        logger_string3 = "================ Guess k: {} successfully, predict price: {:.5f}, grouth-truth price: {:.5f} prev gt price: {:.5f} ====================="
+
+        while k + seq - 1 <= end_pos:
+            avg_guess = repeat(k, seq=seq, repeating=repeating)
             guess_prices.append(avg_guess)
-            # import ipdb; ipdb.set_trace()
-            LOG.debug(colors.red("================ Guess k: {} successfully, predict price: {:.5f}, grouth-truth price: {:.5f} prev gt price: {:.5f} =====================".format(k+seq-1,
-                                                                                                                                                                                   float(avg_guess),
-                                                                                                                                                                                   float(prices[k]),
-                                                                                                                                                                                   float(prices[k-1]))))
 
+            LOG.debug(colors.red(logger_string3.format(k+seq-1, float(avg_guess), float(prices[k]), float(prices[k-1]))))
             k += 1
-            if (k + seq - 1)>= end_pos:
-                break
-
-
 
         LOG.debug("Verifing...")
-        outputs = np.array(outputs).reshape(-1)
         guess_prices = np.array(guess_prices).reshape(-1)
 
         loss1 =  ((guess_prices - prices[start_pos:end_pos]) ** 2)
@@ -1413,16 +1471,14 @@ class MyModel(object):
         loss3 = (prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1]) ** 2
         loss4 = np.abs(prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1])
 
-        LOG.debug("root sum square loss1: {}".format((loss1.sum())**(0.5)))
-        LOG.debug("root sum square loss2: {}".format((loss3.sum())**(0.5)))
-        LOG.debug("total abs loss1: {}".format((loss2.sum())))
-        LOG.debug("total abs loss2: {}".format((loss4.sum())))
+        LOG.debug("root square loss1: {}".format((loss1.sum()/(end_pos-start_pos))**(0.5)))
+        LOG.debug("root square loss2: {}".format((loss3.sum()/(end_pos-start_pos))**(0.5)))
+        LOG.debug("abs loss1: {}".format((loss2.sum()/(end_pos-start_pos))))
+        LOG.debug("abs loss2: {}".format((loss4.sum()/(end_pos-start_pos))))
 
         guess_prices_list = np.array(guess_prices_list)
-
-        # LOG.debug()
-        # TODO: calculate confusion matrix HERE
         return guess_prices, guess_prices_list
+
 
     def save_weights(self, fname):
         suffix = fname.split(".")[-1]
