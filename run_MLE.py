@@ -27,7 +27,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 600
+    epochs = 1000
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -43,7 +43,7 @@ def fit(inputs,
                       nb_plays=nb_plays,
                       learning_rate=learning_rate)
     LOG.debug("Learning rate is {}".format(learning_rate))
-    # mymodel.load_weights(weights_fname)
+    mymodel.load_weights(weights_fname)
     if loss_name == 'mse':
         mymodel.fit(inputs,
                     outputs,
@@ -202,7 +202,7 @@ if __name__ == "__main__":
 
     # Hyper Parameters
     # learning_rate = 0.003
-    learning_rate = 0.02
+    learning_rate = 0.05
 
     loss_name = 'mse'
     loss_name = 'mle'
@@ -212,7 +212,7 @@ if __name__ == "__main__":
     # method = 'noise'
     interp = 1
     do_prediction = False
-    do_trend = True
+    do_trend = False
     do_confusion_matrix = True
     mc_mode = True
 
