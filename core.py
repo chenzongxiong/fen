@@ -1355,9 +1355,9 @@ class MyModel(object):
                 k = start + interval
                 bk = np.random.normal(loc=mu, scale=sigma) + predict_noise_seq[-1]
                 if bk > predict_noise_seq[-1]:
-                    direction = -1
-                elif bk < predict_noise_seq[-1]:
                     direction = +1
+                elif bk < predict_noise_seq[-1]:
+                    direction = -1
                 else:
                     direction = 0
 
