@@ -1452,7 +1452,7 @@ class MyModel(object):
         k = start_pos
         seq = 1
         repeating = 100
-        max_iteration = 500
+        max_iteration = 200
 
         logger_string3 = "================ Guess k: {} successfully, predict price: {:.5f}, grouth-truth price: {:.5f} prev gt price: {:.5f} ====================="
 
