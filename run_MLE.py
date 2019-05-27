@@ -234,6 +234,7 @@ if __name__ == "__main__":
     do_trend = False
     do_confusion_matrix = True
     mc_mode = True
+    do_trend = True
 
     with_noise = True
 
@@ -254,10 +255,8 @@ if __name__ == "__main__":
     activation = 'tanh'
     activation = None
     ############################## predicitons #############################
-    # __nb_plays__ = 100
-    # __units__ = 100
-    __nb_plays__ = 20
-    __units__ = 20
+    __nb_plays__ = 100
+    __units__ = 100
 
     __state__ = 0
     __activation__ = 'tanh'
