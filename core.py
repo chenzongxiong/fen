@@ -1222,7 +1222,7 @@ class MyModel(object):
     def trend(self, prices, B, mu, sigma,
               start_pos=1000, end_pos=1100,
               delta=0.001, max_iteration=10000):
-        # end_pos = 1020
+        end_pos = 1010
         assert start_pos > 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
         assert len(prices.shape) == 1, colors.red("Prices should be a vector")
@@ -1361,18 +1361,17 @@ class MyModel(object):
                 else:
                     direction = 0
 
-                step = 1
+                step = 0
                 guess_hysteresis_list = [(guess_price_seq[-1], predict_noise_seq[-1])]
-                _, gt_noise = do_guess_helper(k, 0, direction, base_price=guess_price_seq[-1], individual_p_list=individual_p_list)
-                if np.allclose(predict_noise_seq[-1], gt_noise) is False:
+                guess, guess_noise = do_guess_helper(k, step, direction, base_price=guess_price_seq[-1], individual_p_list=individual_p_list)
+                # _, gt_noise = do_guess_helper(k, 0, direction, base_price=guess_price_seq[-1], individual_p_list=individual_p_list)
+                if np.allclose(predict_noise_seq[-1], guess_noise) is False:
                     # sanity checking
                     import ipdb; ipdb.set_trace()
 
-                guess, guess_noise = do_guess_helper(k, step, direction, base_price=guess_price_seq[-1], individual_p_list=individual_p_list)
                 prev_diff, curr_diff = None, guess_noise - bk
                 good_guess = False
-                guess_hysteresis_list.append((guess, guess_noise))
-                # guess_hysteresis_list = [(guess, guess_noise)]
+                # guess_hysteresis_list.append((guess, guess_noise))
                 while step <= max_iteration:
                     step += 1
                     prev_diff = curr_diff
@@ -1455,7 +1454,7 @@ class MyModel(object):
         max_iteration = 200
 
         logger_string3 = "================ Guess k: {} successfully, predict price: {:.5f}, grouth-truth price: {:.5f} prev gt price: {:.5f} ====================="
-
+        # TODO: using multi-processing HERE
         while k + seq - 1 <= end_pos:
             avg_guess = repeat(k, seq=seq, repeating=repeating)
             guess_prices.append(avg_guess)
