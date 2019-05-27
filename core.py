@@ -1413,10 +1413,10 @@ class MyModel(object):
         loss3 = (prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1]) ** 2
         loss4 = np.abs(prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1])
 
-        LOG.debug("root sum square loss1: {}".format((loss1.sum())**(0.5)))
-        LOG.debug("root sum square loss2: {}".format((loss3.sum())**(0.5)))
-        LOG.debug("total abs loss1: {}".format((loss2.sum())))
-        LOG.debug("total abs loss2: {}".format((loss4.sum())))
+        LOG.debug("root sum square loss1: {}".format((loss1.sum()/(end_pos-start_pos))**(0.5)))
+        LOG.debug("root sum square loss2: {}".format((loss3.sum()/(end_pos-start_pos))**(0.5)))
+        LOG.debug("total abs loss1: {}".format((loss2.sum()/(end_pos-start_pos))))
+        LOG.debug("total abs loss2: {}".format((loss4.sum()/(end_pos-start_pos))))
 
         guess_prices_list = np.array(guess_prices_list)
 

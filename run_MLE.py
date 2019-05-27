@@ -1,5 +1,6 @@
 import sys
 import time
+import scipy
 import numpy as np
 
 import log as logging
@@ -195,6 +196,24 @@ def plot(a, b, trend_list):
     plt.show()
     fname = "/Users/baymax_testios/Desktop/1.png"
     fig.savefig(fname, dpi=400)
+
+
+def ttest_rel(method1, method2):
+    # outputs = np.array(outputs).reshape(-1)
+    # guess_prices = np.array(guess_prices).reshape(-1)
+
+    # loss1 =  ((guess_prices - prices[start_pos:end_pos]) ** 2)
+    # loss2 = np.abs(guess_prices - prices[start_pos:end_pos])
+    # loss3 = (prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1]) ** 2
+    # loss4 = np.abs(prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1])
+
+    # LOG.debug("root sum square loss1: {}".format((loss1.sum()/(end_pos-start_pos))**(0.5)))
+    # LOG.debug("root sum square loss2: {}".format((loss3.sum()/(end_pos-start_pos))**(0.5)))
+    # LOG.debug("total abs loss1: {}".format((loss2.sum()/(end_pos-start_pos))))
+    # LOG.debug("total abs loss2: {}".format((loss4.sum()/(end_pos-start_pos))))
+
+    # guess_prices_list = np.array(guess_prices_list)
+    pass
 
 
 if __name__ == "__main__":
@@ -415,6 +434,11 @@ if __name__ == "__main__":
                                                                                 __nb_plays__=__nb_plays__,
                                                                                 loss=loss_name)
 
+
+    try:
+        pass
+    except FileNotFoundError:
+        sys.exit(0)
     # try:
     #     import ipdb; ipdb.set_trace()
     #     a, b = tdata.DatasetLoader.load_data(predicted_fname)
