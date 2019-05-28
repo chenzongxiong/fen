@@ -1,7 +1,9 @@
 import os
 import time
 import copy
+import pickle
 import dill
+import jsonpickle
 from pathos.multiprocessing import ProcessingPool
 
 import tensorflow as tf
@@ -757,6 +759,13 @@ class Play(object):
     def linear_layer(self):
         return self.layers[2]
 
+    # def __getstate__(self):
+    #     LOG.debug("Picking {}".format(self._name))
+    #     return {'_name': self._name}
+
+    # def __setstate__(self, d):
+    #     LOG.debug("Unpicking {}, d: {}".format(self._name, d))
+
 
 class MyModel(object):
     def __init__(self, nb_plays=1,
@@ -911,17 +920,16 @@ class MyModel(object):
     def predict(self, inputs, individual=False):
         inputs = ops.convert_to_tensor(inputs, tf.float32)
 
-        for play in self.plays:
-            if not play.built:
-                play.build(inputs)
-
-        x = self.plays[0].reshape(inputs)
-
         # pool = ProcessingPool(os.cpu_count())
         # xx = [x] * self._nb_plays
         # outputs = pool.map(play.predict, xx)
         # pool.close()
         # pool.join()
+        for play in self.plays:
+            if not play.built:
+                play.build(inputs)
+
+        x = self.plays[0].reshape(inputs)
 
         outputs = []
         for play in self.plays:
@@ -1067,8 +1075,10 @@ class MyModel(object):
             # sigma = 6.9357114
             # sigma = 8.4
             # sigma = 0.5
+
             sigma = 70
             mu = 0
+
             # self.loss_a = tf.keras.backend.square(self.diff - mu)
             self.loss_a = tf.keras.backend.square((self.diff - mu)/sigma) / 2
             # import ipdb; ipdb.set_trace()
@@ -1142,6 +1152,7 @@ class MyModel(object):
         prev_cost = np.inf
 
         utils.init_tf_variables()
+        logger_string = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}"
         for i in range(epochs):
             for j in range(steps_per_epoch):
                 # cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, loss_by_hand, loss_by_tf = train_function(ins)
@@ -1163,16 +1174,8 @@ class MyModel(object):
             #                                                                                                                                                                                                     float(mu_res)))
             loss_by_hand = 0
             loss_by_tf = 0
-            LOG.debug("Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}".format(i,
-                                                                                                                                                                                                       float(cost),
-                                                                                                                                                                                                       float(mse_cost1),
-                                                                                                                                                                                                       float(mse_cost2),
-                                                                                                                                                                                                       float(diff_res.mean()),
-                                                                                                                                                                                                       float(diff_res.std()),
-                                                                                                                                                                                                       float(__mu__),
-                                                                                                                                                                                                       float(__sigma__),
-                                                                                                                                                                                                       float(loss_by_hand),
-                                                                                                                                                                                                       float(loss_by_tf)))
+            LOG.debug(logger_string.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf)))
+
             # LOG.debug("Epoch: {}, weights: {}".format(i, self.trainable_weights))
             # LOG.debug("Epoch: {}, y_pred: {}".format(i, y_pred.reshape(-1)))
             # LOG.debug("Epoch: {}, diff: {}".format(i, diff_res.reshape(-1)))
@@ -1259,6 +1262,20 @@ class MyModel(object):
         sigma = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).std()
         LOG.debug(colors.cyan("emprical mean: {}, emprical standard dervation: {}".format(mu, sigma)))
         ################################################################################
+        #                Decide the sign of predicted trends                           #
+        ################################################################################
+        counts = (((prices[1:] - prices[:-1]) >= 0) == ((original_prediction[1:]-original_prediction[:-1]) >= 0))
+        sign = None
+        if (counts.sum() / prices.shape[0]) <= 0.15:
+            sign = +1
+        elif (counts.sum() / prices.shape[0]) >= 0.85:
+            sign = -1
+        else:
+            raise Exception(colors.red("The neural network doesn't train well"))
+
+        original_prediction = original_prediction*sign
+        # Enforce prediction to make sense
+        ################################################################################
         #                Collect weights and Operator outputs                          #
         # weights:                                                                     #
         #   - weights[0]: the weights of operator layers                               #
@@ -1297,7 +1314,7 @@ class MyModel(object):
 
         operator_outputs = [o.reshape(-1) for o in operator_outputs]
         individual_p_list = [[operator_output[start_pos-1]] for operator_output in operator_outputs]
-        # import ipdb; ipdb.set_trace()
+
         ################################################################################
         #                Helper Functions                                              #
         # do_guess_helper: predict the price at given timestamp                        #
@@ -1333,7 +1350,7 @@ class MyModel(object):
                 ppp = (weights[3][i] * pp).sum() + weights[4][i]
                 predict_noise_list.append(ppp[0])
 
-            predict_noise = sum(predict_noise_list) / self._nb_plays
+            predict_noise = sign * sum(predict_noise_list) / self._nb_plays
 
             return guess, predict_noise
 
@@ -1365,9 +1382,9 @@ class MyModel(object):
                 k = start + interval
                 bk = np.random.normal(loc=mu, scale=sigma) + predict_noise_seq[-1]
                 if bk > predict_noise_seq[-1]:
-                    direction = +1
-                elif bk < predict_noise_seq[-1]:
                     direction = -1
+                elif bk < predict_noise_seq[-1]:
+                    direction = +1
                 else:
                     direction = 0
 
