@@ -15,7 +15,7 @@ LOG = logging.getLogger(__name__)
 # test seed
 # np.random.seed(345)
 # LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is 345"))
-os.environ['OMP_NUM_THREADS'] = str(0)
+os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())
 
 
 def update(i, *fargs):
@@ -259,7 +259,7 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None):
     plt.xlabel("prices")
     plt.ylabel("noise")
     plt.legend()
-    plt.show()
+    # plt.show()
     fname = './frames/{}.png'.format(i)
     os.makedirs(os.path.dirname(fname), exist_ok=True)
     fig.savefig(fname, dpi=400)

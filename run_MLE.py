@@ -149,7 +149,6 @@ def trend(prices,
                       activation=activation,
                       nb_plays=nb_plays)
 
-
     mymodel.load_weights(weights_fname, extra={'shape': shape})
 
     guess_trend, guess_trend_list = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
@@ -164,6 +163,34 @@ def trend(prices,
 
     loss = float(-1.0)
     return guess_trend, loss
+
+
+def visualize(inputs,
+              units=1,
+              activation='tanh',
+              nb_plays=1,
+              weights_name='model.h5'):
+
+    with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
+        line = f.read()
+    shape = list(map(int, line.split(":")))
+
+    assert len(shape) == 3, "shape must be 3 dimensions"
+    input_dim = shape[2]
+    timestep = inputs.shape[0] // input_dim
+    shape[1] = timestep
+
+    start = time.time()
+
+    mymodel = MyModel(input_dim=input_dim,
+                      timestep=timestep,
+                      units=units,
+                      activation=activation,
+                      nb_plays=nb_plays)
+
+    mymodel.load_weights(weights_fname, extra={'shape': shape})
+    mymodel.visualize_activated_plays(inputs=inputs)
+
 
 def plot(a, b, trend_list):
     from matplotlib import pyplot as plt
@@ -257,6 +284,8 @@ if __name__ == "__main__":
     ############################## predicitons #############################
     __nb_plays__ = 100
     __units__ = 100
+    # __nb_plays__ = 20
+    # __units__ = 20
 
     __state__ = 0
     __activation__ = 'tanh'
@@ -452,6 +481,11 @@ if __name__ == "__main__":
     #     LOG.warning("Not found prediction file, no way to create confusion matrix")
 
     if mc_mode is True and do_trend is True:
+        visualize(inputs=inputs,
+                  units=__units__,
+                  activation=__activation__,
+                  nb_plays=__nb_plays__,
+                  weights_name=weights_fname)
         import ipdb; ipdb.set_trace()
         predictions, loss = trend(prices=inputs,
                                   B=outputs,

@@ -1,6 +1,8 @@
 import os
 import time
 import copy
+import dill
+from pathos.multiprocessing import ProcessingPool
 
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
@@ -35,6 +37,7 @@ session = utils.get_session()
 SESS = utils.get_session()
 SESSION = utils.get_session()
 
+once = True
 
 tf.keras.backend.set_epsilon(1e-7)
 
@@ -913,8 +916,14 @@ class MyModel(object):
                 play.build(inputs)
 
         x = self.plays[0].reshape(inputs)
-        outputs = []
 
+        # pool = ProcessingPool(os.cpu_count())
+        # xx = [x] * self._nb_plays
+        # outputs = pool.map(play.predict, xx)
+        # pool.close()
+        # pool.join()
+
+        outputs = []
         for play in self.plays:
             start = time.time()
             outputs.append(play.predict(x))
@@ -1222,7 +1231,7 @@ class MyModel(object):
     def trend(self, prices, B, mu, sigma,
               start_pos=1000, end_pos=1100,
               delta=0.001, max_iteration=10000):
-        end_pos = 1010
+        # end_pos = 1050
         assert start_pos > 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
         assert len(prices.shape) == 1, colors.red("Prices should be a vector")
@@ -1271,6 +1280,7 @@ class MyModel(object):
         _ppp = ops.convert_to_tensor(prices, dtype=tf.float32)
         _ppp = tf.reshape(_ppp, shape=shape)
 
+        # TODO: parallelism HERE
         for play in self.plays:
             weights_[0].append(play.operator_layer.kernel)
             weights_[1].append(play.nonlinear_layer.kernel)
@@ -1445,17 +1455,27 @@ class MyModel(object):
             utils.plot_hysteresis_info(hysteresis_info, k, predicted_price=float(avg_guess))
             return avg_guess
 
-
         guess_prices_list = [[] for _ in range(end_pos-start_pos)]
         guess_prices = []
         k = start_pos
         seq = 1
-        repeating = 100
+        repeating = 500
         max_iteration = 200
 
         logger_string3 = "================ Guess k: {} successfully, predict price: {:.5f}, grouth-truth price: {:.5f} prev gt price: {:.5f} ====================="
         # TODO: using multi-processing HERE
-        while k + seq - 1 <= end_pos:
+        # import multiprocess as mp
+        # pool = mp.Pool(os.cpu_count())
+        # 1. prepare for all the tasks
+        # 2. run tasks in parallel
+        # pool = ProcessingPool(os.cpu_count())
+        # args_list = [(k+seq-1, seq, repeating) for k in range(start_pos, end_pos+1)]
+        # guess_prices = pool.map(repeat, args_list)
+        # pool.close()
+        # pool.join()
+        # LOG.debug("Finish task processing")
+
+        while k + seq - 1 < end_pos:
             avg_guess = repeat(k, seq=seq, repeating=repeating)
             guess_prices.append(avg_guess)
 
@@ -1478,6 +1498,54 @@ class MyModel(object):
         guess_prices_list = np.array(guess_prices_list)
         return guess_prices, guess_prices_list
 
+    def visualize_activated_plays(self, inputs):
+        input_dim = self._batch_input_shape[-1]
+        points = inputs.shape[-1]
+        timestamp = points // input_dim
+        shape = (1, timestamp, input_dim)
+        _inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
+        _inputs = tf.reshape(_inputs, shape=shape)
+        _outputs = [play.operator_layer(_inputs) for play in self.plays]
+        outputs = utils.get_session().run(_outputs)
+        outputs = [output.reshape(-1) for output in outputs]  # self._nb_plays * intputs.shape(-1)
+        outputs = np.array(outputs)
+        assert outputs.shape == (self._nb_plays, points)
+        step = 2
+        x_size = 10
+        y_size = 10
+        vmin, vmax = outputs.min(), outputs.max()
+
+        from matplotlib import pyplot as plt
+        from matplotlib.animation import FuncAnimation
+        import seaborn as sns
+
+        fig, ax = plt.subplots(figsize=(20, 20))
+        fig.set_tight_layout(True)
+        x = np.linspace(0, x_size+1, x_size+2)
+        y = np.linspace(0, y_size+1, y_size+2)
+        xv, yv = np.meshgrid(x, y)
+        fargs = (outputs, x_size, y_size, vmin, vmax, ax)
+        global once
+        once = True
+        def update(i, *fargs):
+            global once
+            outputs = fargs[0]
+            x_size = fargs[1]
+            y_size = fargs[2]
+            vmin = fargs[3]
+            vmax = fargs[4]
+            ax = fargs[5]
+            LOG.info("Update animation frame: {}".format(i))
+            output = outputs[:, i]
+            output = output.reshape(x_size, y_size)
+            sns.heatmap(output, linewidth=0.5, vmin=vmin, vmax=vmax, ax=ax, cbar=once)
+            once = False
+
+        anim = FuncAnimation(fig, update, frames=np.arange(1, points, step),
+                             fargs=fargs, interval=400)
+        fname = './visualize/heatmap.gif'
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
+        anim.save(fname, dpi=40, writer='imagemagick')
 
     def save_weights(self, fname):
         suffix = fname.split(".")[-1]
