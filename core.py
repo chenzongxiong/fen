@@ -1,10 +1,7 @@
 import os
 import time
 import copy
-import pickle
-import dill
-import jsonpickle
-from pathos.multiprocessing import ProcessingPool
+import multiprocessing as mp
 
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
@@ -41,7 +38,17 @@ SESSION = utils.get_session()
 
 once = True
 
-tf.keras.backend.set_epsilon(1e-7)
+tf.keras.backend.set_epsilon(1e-9)
+
+
+def parallel_predict(args):
+    play = args[0]
+    inputs = args[1]
+    LOG.debug("Parallel, PID: {}, play: {}, play.model: {}".format(os.getpid(), play, play.model))
+
+    x = play.reshape(inputs)
+    output = play.predict(x)
+    return output
 
 
 def Phi(x, width=1.0):
@@ -58,7 +65,6 @@ def Phi(x, width=1.0):
     r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: x + _width, lambda: ZEROS)
     r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: x - _width, lambda: r1)
     return r2
-
 
 
 def gradient_operator(P, weights=None):
@@ -759,12 +765,43 @@ class Play(object):
     def linear_layer(self):
         return self.layers[2]
 
-    # def __getstate__(self):
-    #     LOG.debug("Picking {}".format(self._name))
-    #     return {'_name': self._name}
+    def __getstate__(self):
+        LOG.debug("PID: {}, picking {}".format(os.getpid(), self._name))
+        if not hasattr(self, '_batch_input_shape'):
+            raise Exception("_batch_input_shape must be added before pickling")
 
-    # def __setstate__(self, d):
-    #     LOG.debug("Unpicking {}, d: {}".format(self._name, d))
+        state={
+            "_weight": self._weight,
+            "_width": self._width,
+            "_debug": self._debug,
+            "activation": self.activation,
+            "loss": self.loss,
+            "optimizer": self.optimizer,
+            "_play_timestep": self._play_timestep,
+            "_play_batch_size": self._play_batch_size,
+            "_play_input_dim": self._play_input_dim,
+            "units": self.units,
+            "_network_type": self._network_type,
+            "_built": getattr(self, "_built", False),
+            "_need_compile": self._need_compile,
+            "use_bias": self.use_bias,
+            "_name": self._name,
+            "_weights_fname": getattr(self, '_weights_fname', None),
+            "_preload_weights": getattr(self, '_preload_weights', False),
+            "_batch_input_shape": getattr(self, '_batch_input_shape'),
+        }
+        return state
+
+    def __setstate__(self, d):
+        LOG.debug("PID: {}, unpicking {}".format(os.getpid(), d))
+        # tf.keras.backend.clear_session()
+        self.__dict__ = d
+        if self._built is False:
+            self.build()
+        if self._preload_weights is False and self._weights_fname is not None:
+            self._preload_weights = True
+            self.load_weights(self._weights_fname)
+        LOG.debug("PID: {}, self: {}, self.model: {}".format(os.getpid(), self, self.model))
 
 
 class MyModel(object):
@@ -918,37 +955,44 @@ class MyModel(object):
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
     def predict(self, inputs, individual=False):
+        _inputs = inputs
         inputs = ops.convert_to_tensor(inputs, tf.float32)
-
-        # pool = ProcessingPool(os.cpu_count())
-        # xx = [x] * self._nb_plays
-        # outputs = pool.map(play.predict, xx)
-        # pool.close()
-        # pool.join()
-        for play in self.plays:
-            if not play.built:
-                play.build(inputs)
-
         x = self.plays[0].reshape(inputs)
+        # import ipdb; ipdb.set_trace()
+        start = time.time()
+        pool = mp.Pool(os.cpu_count())
+        args_list = [(play, _inputs) for play in self.plays]
+        # args_list = [(self.plays[0], _inputs), (self.plays[1], _inputs)]
+        outputs = pool.map(parallel_predict, args_list)
+        pool.close()
+        pool.join()
+        end = time.time()
+        LOG.debug("Cost time {} s".format(end-start))
+        import ipdb; ipdb.set_trace()
 
-        outputs = []
-        for play in self.plays:
-            start = time.time()
-            outputs.append(play.predict(x))
-            end = time.time()
-            LOG.debug("play {} cost time {} s".format(play._name, end-start))
+        # for play in self.plays:
+        #     if not play.built:
+        #         play.build(inputs)
 
-        outputs_ = np.array(outputs)
-        prediction = outputs_.mean(axis=0)
-        prediction = prediction.reshape(-1)
-        if individual is True:
-            outputs_ = outputs_.reshape(len(self.plays), -1).T
-            # sanity checking
-            for i in range(len(self.plays)):
-                if np.all(outputs_[i, :] == outputs[i]) is False:
-                    raise
-            return prediction, outputs_
-        return prediction
+        # outputs = []
+        # for play in self.plays:
+        #     start = time.time()
+        #     outputs.append(play.predict(x))
+        #     end = time.time()
+        #     import ipdb; ipdb.set_trace()
+        #     LOG.debug("play {} cost time {} s".format(play._name, end-start))
+
+        # outputs_ = np.array(outputs)
+        # prediction = outputs_.mean(axis=0)
+        # prediction = prediction.reshape(-1)
+        # if individual is True:
+        #     outputs_ = outputs_.reshape(len(self.plays), -1).T
+        #     # sanity checking
+        #     for i in range(len(self.plays)):
+        #         if np.all(outputs_[i, :] == outputs[i]) is False:
+        #             raise
+        #     return prediction, outputs_
+        # return prediction
 
     @property
     def weights(self):
@@ -1594,14 +1638,21 @@ class MyModel(object):
 
         self._batch_input_shape = shape
 
-        for play in self.plays:
-            if not play.built:
+        if extra.get('parallelism', False) is True:
+            for play in self.plays:
                 play._batch_input_shape = tf.TensorShape(shape)
-                play._preload_weights = True
-                play.build()
-            path = "{}/{}.{}".format(dirname, play._name, suffix)
-            play.load_weights(path)
-            LOG.debug(colors.red("Set Weights for {}".format(play._name)))
+                play._preload_weights = False
+                path = "{}/{}.{}".format(dirname, play._name, suffix)
+                play._weights_fname = path
+        else:
+            for play in self.plays:
+                if not play.built:
+                    play._batch_input_shape = tf.TensorShape(shape)
+                    play._preload_weights = True
+                    play.build()
+                path = "{}/{}.{}".format(dirname, play._name, suffix)
+                play.load_weights(path)
+                LOG.debug(colors.red("Set Weights for {}".format(play._name)))
 
     @property
     def trainable_weights(self):

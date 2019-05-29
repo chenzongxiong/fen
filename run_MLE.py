@@ -149,7 +149,7 @@ def trend(prices,
                       activation=activation,
                       nb_plays=nb_plays)
 
-    mymodel.load_weights(weights_fname, extra={'shape': shape})
+    mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
 
     guess_trend, guess_trend_list = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
     # loss = ((prediction - prices) ** 2).mean()
@@ -481,11 +481,11 @@ if __name__ == "__main__":
     #     LOG.warning("Not found prediction file, no way to create confusion matrix")
 
     if mc_mode is True and do_trend is True:
-        visualize(inputs=inputs,
-                  units=__units__,
-                  activation=__activation__,
-                  nb_plays=__nb_plays__,
-                  weights_name=weights_fname)
+        # visualize(inputs=inputs,
+        #           units=__units__,
+        #           activation=__activation__,
+        #           nb_plays=__nb_plays__,
+        #           weights_name=weights_fname)
         import ipdb; ipdb.set_trace()
         predictions, loss = trend(prices=inputs,
                                   B=outputs,
