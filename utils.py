@@ -120,11 +120,11 @@ _SESSION = None
 
 def get_session(debug=False, interactive=False):
     # https://github.com/tensorflow/tensorflow/issues/5448
-    import multiprocessing as mp
-    try:
-        mp.set_start_method('spawn')
-    except RuntimeError:
-        pass
+    # import multiprocessing as mp
+    # try:
+    #     mp.set_start_method('spawn')
+    # except RuntimeError:
+    #     pass
 
     import tensorflow as tf
     from tensorflow.python import debug as tf_debug

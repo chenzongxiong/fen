@@ -168,7 +168,7 @@ FNAME_FORMAT = dict(
 
     )
 
-CPU_COUNTS = min(os.cpu_count(), 32)
+CPU_COUNTS = os.cpu_count()
 
 
 class NetworkType:

@@ -2,6 +2,7 @@ import os
 import time
 import copy
 import multiprocessing as mp
+MP_CONTEXT = mp.get_context('spawn')
 
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
@@ -49,6 +50,22 @@ def parallel_predict(args):
     x = play.reshape(inputs)
     output = play.predict(x)
     return output
+
+def parallel_extract_weights_and_operator_outputs(args):
+    play = args[0]
+    inputs = args[1]
+
+    weights_ = [play.operator_layer.kernel,
+                play.nonlinear_layer.kernel,
+                play.nonlinear_layer.bias,
+                play.linear_layer.kernel,
+                play.linear_layer.bias]
+    x = play.reshape(inputs)
+    # LOG.debug("parallel_extract_weights_and_operator_outputs.dir(play): {}".format(dir(play)))
+    operator_outputs_ = play.operator_layer(x)
+    weights, operator_outputs = utils.get_session().run([weights_, operator_outputs_])
+    weights = [w.reshape(-1) for w in weights]
+    return weights, operator_outputs
 
 
 def Phi(x, width=1.0):
@@ -803,6 +820,65 @@ class Play(object):
             self.load_weights(self._weights_fname)
         LOG.debug("PID: {}, self: {}, self.model: {}".format(os.getpid(), self, self.model))
 
+    def __hash__(self):
+        return self._name
+
+
+# CACHE = dict()
+
+# class Task(object):
+
+#     def __init__(self, play, func, func_args):
+#         self.play = play
+#         self.func = func
+#         self.func_args = func_args
+
+#     def __getstate__(self):
+#         return {
+#             'play': self.play.__getstate__(),
+#             'func': self.func,
+#             'func_args': self.func_args
+#         }
+
+#     def __setstate__(self, d):
+#         global CACHE
+#         self.__dict__ = d
+#         # build model, and cache `play` for furthur use
+#         self.play.__setstate__()
+#         CACHE[self.play.__hash__()] = self
+#         LOG.debug("Data {} cached inside process {}".format(CACHE, os.getpid()))
+
+#     def __hash__(self):
+#         return self.play.__hash__()
+
+
+# class TaskQueue(object):
+#     def __init__(self):
+#         self.queue = MP_CONTEXT .Queue()
+
+#     def put(self, task):
+#         self.queue.put(task)
+
+#     def get(self):
+#         return self.queue.get(block=True)
+
+
+# def runner(queue):
+#     task = queue.get()
+#     LOG.debug("task: ".format(task))
+
+
+# class WorkerPool(object):
+#     def __init__(self):
+#         self.policy = {}
+#         self.pool = []
+
+#     def start(self):
+#         pass
+
+#     def run(self):
+#         pass
+
 
 class MyModel(object):
     def __init__(self, nb_plays=1,
@@ -958,9 +1034,8 @@ class MyModel(object):
         _inputs = inputs
         inputs = ops.convert_to_tensor(inputs, tf.float32)
         x = self.plays[0].reshape(inputs)
-        # import ipdb; ipdb.set_trace()
         start = time.time()
-        pool = mp.Pool(os.cpu_count())
+        pool = MP_CONTEXT .Pool(constants.CPU_COUNTS)
         args_list = [(play, _inputs) for play in self.plays]
         # args_list = [(self.plays[0], _inputs), (self.plays[1], _inputs)]
         outputs = pool.map(parallel_predict, args_list)
@@ -968,7 +1043,6 @@ class MyModel(object):
         pool.join()
         end = time.time()
         LOG.debug("Cost time {} s".format(end-start))
-        import ipdb; ipdb.set_trace()
 
         # for play in self.plays:
         #     if not play.built:
@@ -982,17 +1056,17 @@ class MyModel(object):
         #     import ipdb; ipdb.set_trace()
         #     LOG.debug("play {} cost time {} s".format(play._name, end-start))
 
-        # outputs_ = np.array(outputs)
-        # prediction = outputs_.mean(axis=0)
-        # prediction = prediction.reshape(-1)
-        # if individual is True:
-        #     outputs_ = outputs_.reshape(len(self.plays), -1).T
-        #     # sanity checking
-        #     for i in range(len(self.plays)):
-        #         if np.all(outputs_[i, :] == outputs[i]) is False:
-        #             raise
-        #     return prediction, outputs_
-        # return prediction
+        outputs_ = np.array(outputs)
+        prediction = outputs_.mean(axis=0)
+        prediction = prediction.reshape(-1)
+        if individual is True:
+            outputs_ = outputs_.reshape(len(self.plays), -1).T
+            # sanity checking
+            for i in range(len(self.plays)):
+                if np.all(outputs_[i, :] == outputs[i]) is False:
+                    raise
+            return prediction, outputs_
+        return prediction
 
     @property
     def weights(self):
@@ -1342,19 +1416,34 @@ class MyModel(object):
         _ppp = tf.reshape(_ppp, shape=shape)
 
         # TODO: parallelism HERE
-        for play in self.plays:
-            weights_[0].append(play.operator_layer.kernel)
-            weights_[1].append(play.nonlinear_layer.kernel)
-            weights_[2].append(play.nonlinear_layer.bias)
-            weights_[3].append(play.linear_layer.kernel)
-            weights_[4].append(play.linear_layer.bias)
-            operator_outputs_.append(play.operator_layer(_ppp))
+        # We don't have play models inside main process, need to fetch from sub-processes
+        ################################################################################
 
-        weights, operator_outputs = utils.get_session().run([weights_, operator_outputs_])
+        # for play in self.plays:
+        #     weights_[0].append(play.operator_layer.kernel)
+        #     weights_[1].append(play.nonlinear_layer.kernel)
+        #     weights_[2].append(play.nonlinear_layer.bias)
+        #     weights_[3].append(play.linear_layer.kernel)
+        #     weights_[4].append(play.linear_layer.bias)
+        #     operator_outputs_.append(play.operator_layer(_ppp))
 
-        for i in range(len(weights)):
-            for j in range(len(weights[i])):
-                weights[i][j] = weights[i][j].reshape(-1)
+        # weights, operator_outputs = utils.get_session().run([weights_, operator_outputs_])
+
+        # for i in range(len(weights)):
+        #     for j in range(len(weights[i])):
+        #         weights[i][j] = weights[i][j].reshape(-1)
+        # TODO: re-use pools
+        import ipdb; ipdb.set_trace()
+        start = time.time()
+        pool = MP_CONTEXT .Pool(constants.CPU_COUNTS)
+        args_list = [(play, prices) for play in self.plays]
+        results = pool.map(parallel_extract_weights_and_operator_outputs, args_list)
+        pool.close()
+        pool.join()
+        end = time.time()
+        LOG.debug("Time cost during extract weights: {}".format(end-start))
+        import ipdb; ipdb.set_trace()
+        ################################################################################
 
         operator_outputs = [o.reshape(-1) for o in operator_outputs]
         individual_p_list = [[operator_output[start_pos-1]] for operator_output in operator_outputs]
@@ -1645,6 +1734,7 @@ class MyModel(object):
                 path = "{}/{}.{}".format(dirname, play._name, suffix)
                 play._weights_fname = path
         else:
+            start = time.time()
             for play in self.plays:
                 if not play.built:
                     play._batch_input_shape = tf.TensorShape(shape)
@@ -1653,7 +1743,9 @@ class MyModel(object):
                 path = "{}/{}.{}".format(dirname, play._name, suffix)
                 play.load_weights(path)
                 LOG.debug(colors.red("Set Weights for {}".format(play._name)))
-
+            end = time.time()
+            LOG.debug("Load weights cost: {} s".format(end-start))
+            import ipdb; ipdb.set_trace()
     @property
     def trainable_weights(self):
         weights = []
