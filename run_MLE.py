@@ -1,16 +1,14 @@
 import sys
 import time
-import scipy
 import numpy as np
 
 import log as logging
 from core import MyModel, confusion_matrix
-import utils
+# import utils
 import trading_data as tdata
 import constants
 import colors
 
-sess = utils.get_session()
 LOG = logging.getLogger(__name__)
 epochs = constants.EPOCHS
 EPOCHS = constants.EPOCHS
@@ -141,8 +139,6 @@ def trend(prices,
     timestep = prices.shape[0] // input_dim
     shape[1] = timestep
 
-    start = time.time()
-
     mymodel = MyModel(input_dim=input_dim,
                       timestep=timestep,
                       units=units,
@@ -201,7 +197,7 @@ def plot(a, b, trend_list):
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
     ax1.plot(x, a, color='blue')
     ax1.plot(x, b, color='black')
-    markers = ['^', 's']
+
     for index, d1, d2 in zip(x[1:], diff1, diff2):
         if d1 is True and d2 is True:
             ax1.scatter([index], [b[index-1]], marker='^', color='green')

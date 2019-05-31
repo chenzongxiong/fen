@@ -4,7 +4,7 @@ import copy
 import inspect
 import multiprocessing as mp
 MP_CONTEXT = mp.get_context('spawn')
-from pathos.multiprocessing import ProcessPool
+# from pathos.multiprocessing import ProcessPool
 
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
@@ -1137,6 +1137,8 @@ def runner(queue, results):
         results[task.play._name] = result
         queue.task_done()
 
+    tf.keras.backend.clear_session()
+
 
 class WorkerPool(object):
     def __init__(self, pool_size=None):
@@ -2138,3 +2140,4 @@ class MyModel(object):
     def __del__(self):
         LOG.debug("Start to close ProcessPool before deleting object")
         self.pool.close()
+        tf.keras.backend.clear_session()
