@@ -270,7 +270,7 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None):
     fname = './frames/{}.png'.format(i)
     os.makedirs(os.path.dirname(fname), exist_ok=True)
     fig.savefig(fname, dpi=400)
-
+    LOG.debug("Save picture into disk {}".format(fname))
 
 
 if __name__ == "__main__":
