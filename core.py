@@ -4,7 +4,6 @@ import copy
 import inspect
 import multiprocessing as mp
 MP_CONTEXT = mp.get_context('spawn')
-# from pathos.multiprocessing import ProcessPool
 
 import tensorflow as tf
 from tensorflow.python import debug as tf_debug
@@ -40,6 +39,7 @@ SESS = utils.get_session()
 SESSION = utils.get_session()
 
 once = True
+SENTINEL = utils.sentinel_marker()
 
 tf.keras.backend.set_epsilon(1e-9)
 
@@ -1058,9 +1058,6 @@ class Play(object):
         return hash(self._name)
 
 
-CACHE = dict()
-SENTINEL = 'SENTINEL'
-
 
 class Task(object):
 
@@ -1094,19 +1091,18 @@ class Task(object):
         }
 
     def __setstate__(self, d):
-        global CACHE
-        # LOG.debug("PID: {} unpickle task: {}".format(os.getpid(), d))
+        cache = utils.get_cache()
         self.__dict__ = d
         if self.id == SENTINEL:
             return
 
         play_state = copy.deepcopy(d['play'])
-        self.play = CACHE.get(play_state['_name'], None)
+        self.play = cache.get(play_state['_name'], None)
 
         if self.play is None:
             self.play = Play()
             self.play.__setstate__(play_state)
-            CACHE[play_state['_name']] = self.play
+            cache[play_state['_name']] = self.play
         else:
             LOG.debug("Reuse play inside Cache.")
 
@@ -1138,6 +1134,7 @@ def runner(queue, results):
         queue.task_done()
 
     tf.keras.backend.clear_session()
+    utils.get_cache().clear()
 
 
 class WorkerPool(object):
@@ -2136,8 +2133,8 @@ class MyModel(object):
 
         return results
 
-
     def __del__(self):
         LOG.debug("Start to close ProcessPool before deleting object")
         self.pool.close()
         tf.keras.backend.clear_session()
+        utils.get_cache().clear()

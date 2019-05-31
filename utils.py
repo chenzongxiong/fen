@@ -273,6 +273,17 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None):
     LOG.debug("Save picture into disk {}".format(fname))
 
 
+_CACHE = None
+def get_cache():
+    global _CACHE
+    if _CACHE is None:
+        _CACHE = dict()
+    return _CACHE
+
+def sentinel_marker():
+    return 'SENTINEL'
+
+
 if __name__ == "__main__":
     import numpy as np
     arr = np.arange(100)
