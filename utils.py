@@ -144,6 +144,11 @@ def get_session(debug=False, interactive=False):
     return _SESSION
 
 
+def clear_session():
+    import tensorflow as tf
+    tf.keras.backend.clear_session()
+
+
 def init_tf_variables():
     import tensorflow as tf
     sess = tf.keras.backend.get_session()

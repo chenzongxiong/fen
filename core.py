@@ -299,6 +299,15 @@ def wrapper_repeat(args):
                   weights)
 
 
+def phi(x, width=1.0):
+    if x[0] > (width/2.0):
+        return (x[0] - width/2.0)
+    elif x[0] < (-width/2.0):
+        return (x[0] + width/2.0)
+    else:
+        return float(0)
+
+
 def Phi(x, width=1.0):
     '''
     Phi(x) = x - width/2 , if x > width/2
@@ -407,13 +416,14 @@ def gradient_operator_nonlinear_layers(P,
                                        debug=False,
                                        inputs=None,
                                        reduce_sum=True,
-                                       feed_dict={}):
+                                       feed_dict=dict()):
 
     if debug is True and inputs is not None:
         LOG.debug(colors.red("Only use under unittest, not for real situation"))
         J = jacobian(P, inputs)
         g1 = tf.reshape(tf.reduce_sum(J, axis=0), shape=inputs.shape)
         calc_g = gradient_operator(P, operator_weights)
+
         utils.init_tf_variables()
         J_result, calc_g_result = session.run([J, calc_g], feed_dict=feed_dict)
         if not np.allclose(np.diag(J_result), calc_g_result.reshape(-1)):
@@ -437,7 +447,8 @@ def gradient_all_layers(P,
                         activation,
                         debug=False,
                         inputs=None,
-                        feed_dict={}):
+                        feed_dict=dict()):
+
     g1 = gradient_operator_nonlinear_layers(P, fZ,
                                             operator_weights,
                                             nonlinear_weights,
@@ -449,15 +460,6 @@ def gradient_all_layers(P,
     g2 = tf.expand_dims(tf.matmul(g1[0], linear_weights), axis=0)
     # normalized_g = tf.clip_by_value(g2, clip_value_min=-1e9, clip_value_max=1e9)
     return g2
-
-
-def phi(x, width=1.0):
-    if x[0] > (width/2.0):
-        return (x[0] - width/2.0)
-    elif x[0] < (-width/2.0):
-        return (x[0] + width/2.0)
-    else:
-        return float(0)
 
 
 def confusion_matrix(y_true, y_pred, labels=['increase', 'descrease']):
@@ -613,6 +615,7 @@ class Operator(RNN):
         LOG.debug("Operator.inputs.shape: {}".format(inputs.shape))
         output = super(Operator, self).call(inputs, initial_state=initial_state)
         assert inputs.shape.ndims == 3, colors.red("ERROR: Input from Operator must be 3 dimensions")
+        # import ipdb; ipdb.set_trace()
         shape = inputs.shape.as_list()
         output_ = tf.reshape(output, shape=(shape[0], -1, 1))
         return output_
@@ -620,6 +623,13 @@ class Operator(RNN):
     @property
     def kernel(self):
         return self.cell.kernel
+
+    # TODO: handle state between states
+    # def states(self):
+    #     pass
+
+    # def reset_states(self):
+    #     pass
 
 
 class MyDense(Layer):
@@ -630,8 +640,6 @@ class MyDense(Layer):
                  activity_regularizer=None,
                  kernel_initializer='glorot_uniform',
                  kernel_regularizer=None,
-                 # kernel_regularizer='l2',
-                 # kernel_constraint="non_neg",
                  kernel_constraint=None,
                  bias_initializer='zeros',
                  bias_regularizer=None,
@@ -697,7 +705,7 @@ class MyDense(Layer):
         self.built = True
 
     def call(self, inputs):
-
+        # import ipdb; ipdb.set_trace()
         assert inputs.shape.ndims == 3
 
         # XXX: double checked. it's correct in current model. no worried
@@ -750,6 +758,7 @@ class MySimpleDense(Dense):
         self.built = True
 
     def call(self, inputs):
+        # import ipdb; ipdb.set_trace()
         return super(MySimpleDense, self).call(inputs)
 
 
@@ -826,11 +835,8 @@ class Play(object):
         self.model.add(Operator(weight=getattr(self, "_weight", 1.0),
                                 width=getattr(self, "_width", 1.0),
                                 debug=getattr(self, "_debug", False)))
-        # # TODO/NOTE: remove in future
-        # self.model.add(tf.keras.layers.Reshape(target_shape=(length, 1)))
 
         if self._network_type == constants.NetworkType.PLAY:
-
             self.model.add(MyDense(self.units,
                                    activation=self.activation,
                                    use_bias=self.use_bias,
@@ -919,31 +925,11 @@ class Play(object):
             x = inputs
         else:
             x = self.reshape(inputs)
-        # x = inputs
+
         return self.model.predict(x, steps=steps_per_epoch, verbose=verbose)
 
     @property
     def weights(self):
-        # session = utils.get_session()
-        # if self._network_type == constants.NetworkType.OPERATOR:
-        #     _weight = self.model._layers[1].cell.kernel
-        #     return session.run(_weight)
-        # if self._network_type == constants.NetworkType.PLAY:
-        #     phi_weight = self.model._layers[1].cell.kernel
-        #     mydense_weights = self.model._layers[3].kernel
-        #     dense_weights = self.model._layers[4].kernel
-
-        #     weights = {}
-        #     weights['phi_weight'] = session.run(phi_weight)
-        #     weights['mydense_weigths'] = session.run(mydense_weights)
-        #     weights['dense_weights'] = session.run(dense_weights)
-        #     if self.use_bias is True:
-        #         mydense_bias = self.model._layers[3].bias
-        #         dense_bias = self.model._layers[4].bias
-        #         weights['mydense_bias'] = session.run(mydense_bias)
-        #         weights['dense_bias'] = session.run(dense_bias)
-
-        #     return weights
         weights_ = [self.operator_layer.kernel,
                     self.nonlinear_layer.kernel,
                     self.nonlinear_layer.bias,
@@ -1185,7 +1171,8 @@ class WorkerPool(object):
 
 
 class MyModel(object):
-    def __init__(self, nb_plays=1,
+    def __init__(self,
+                 nb_plays=1,
                  units=1,
                  batch_size=1,
                  weight=1.0,
@@ -1197,7 +1184,8 @@ class MyModel(object):
                  input_dim=1,
                  diff_weights=False,
                  network_type=constants.NetworkType.PLAY,
-                 learning_rate=0.001
+                 learning_rate=0.001,
+                 **kwargs
                  ):
         # fix random seed to 123
         seed = 123
@@ -1240,8 +1228,9 @@ class MyModel(object):
         # self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, decay=0.1)
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
         # self.optimizer = tf.keras.optimizers.SGD(lr=learning_rate)
-        self.pool = WorkerPool(constants.CPU_COUNTS)
-        self.pool.start()
+        if kwargs.get("prediction_phase", False):
+            self.pool = WorkerPool(constants.CPU_COUNTS)
+            self.pool.start()
 
     def fit(self,
             inputs,
@@ -1423,7 +1412,6 @@ class MyModel(object):
                                                               dtype=tf.float32)
 
         # TODO: not feed with self._x, can't be a bug HERE
-
         # self.feed_targets = [self.feed_mu, self.feed_sigma]
         # self.feed_targets = [self.mu_placeholder, self.sigma_placeholder]
         self.feed_targets = []
@@ -1436,12 +1424,10 @@ class MyModel(object):
             self.params_list += play.trainable_weights
 
         self._x = [play.reshape(inputs) for play in self.plays]
-        # ___x = self.plays[0].reshape(inputs)
-        # self._x = [___x for _ in self.plays]
-
         self._y = [self.feed_mu, self.feed_sigma]
         self._x_feed_dict = {self.feed_inputs[k].name : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
-
+        LOG.debug("self._x.shape: {}, x_feed_dict.names: {}, x_feed_dict.shape: {}".format([(x.name, x.shape) for x in self.feed_inputs], self._x_feed_dict.keys(), [self._x_feed_dict[name].shape for name in self._x_feed_dict.keys()]))
+        # import ipdb; ipdb.set_trace()
         ##################### Average outputs #############################
         if self._nb_plays > 1:
             self.y_pred = tf.keras.layers.Average()(self.model_outputs)
@@ -1449,7 +1435,6 @@ class MyModel(object):
             self.y_pred = self.model_outputs[0]
 
         y_pred = tf.reshape(self.y_pred, shape=(-1,))
-        # diff = tf.math.substract(self.y_pred[:, 1:, :], self.y_pred[:, :-1, :])
         self.diff = tf.math.subtract(y_pred[1:], y_pred[:-1])
 
         self.diff= tf.concat([tf.reshape(y_pred[0], shape=(1,)), self.diff], axis=0)
@@ -1457,7 +1442,6 @@ class MyModel(object):
         self.curr_sigma = tf.keras.backend.std(self.diff)
 
         with tf.name_scope('training'):
-            # import ipdb; ipdb.set_trace()
             if unittest is False:
                 ###################### Calculate J by hand ###############################
                 J_list = [gradient_all_layers(play.operator_layer.output,
@@ -1477,18 +1461,17 @@ class MyModel(object):
                                               activation=self._activation,
                                               debug=True,
                                               inputs=self.feed_inputs[i],
-                                              feed_dict=self._x_feed_dict) for i, play in enumerate(self.plays)]
+                                              feed_dict=copy.deepcopy(self._x_feed_dict)) for i, play in enumerate(self.plays)]
                 self.J_list_by_hand = J_list
                 ####################### Calculate J by Tensorflow ###############################
-                # y_pred = tf.reshape(self.y_pred, shape=self.feed_inputs[0].shape)
-                # J_by_tf = tf.keras.backend.gradients(y_pred, self.feed_inputs)
-                # J_by_tf = [tf.reshape(J_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
-                # self.J_by_tf = tf.reduce_mean(tf.concat(J_by_tf, axis=-1), axis=-1, keepdims=True)
+                y_pred = tf.reshape(self.y_pred, shape=self.feed_inputs[0].shape)
+                J_by_tf = tf.keras.backend.gradients(y_pred, self.feed_inputs)
+                J_by_tf = [tf.reshape(J_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
+                self.J_by_tf = tf.reduce_mean(tf.concat(J_by_tf, axis=-1), axis=-1, keepdims=True)
 
                 model_outputs = [tf.reshape(self.model_outputs[i], shape=self.feed_inputs[i].shape) for i in range(self._nb_plays)]
                 J_list_by_tf = tf.keras.backend.gradients(model_outputs, self.feed_inputs)
                 self.J_list_by_tf = [tf.reshape(J_list_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
-
 
             # by tf
             # model_outputs = [tf.reshape(self.model_outputs[i], shape=self.feed_inputs[i].shape) for i in range(self._nb_plays)]
@@ -1532,8 +1515,12 @@ class MyModel(object):
             self.loss_by_hand = tf.keras.backend.mean(self.loss_a+self.loss_b)
             self.loss = self.loss_by_hand
 
-            mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))
-            mse_loss2 = tf.keras.backend.mean(tf.square(self.y_pred + tf.reshape(outputs, shape=self.y_pred.shape)))
+            if outputs is not None:
+                mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))
+                mse_loss2 = tf.keras.backend.mean(tf.square(self.y_pred + tf.reshape(outputs, shape=self.y_pred.shape)))
+            else:
+                mse_loss1 = tf.constant(-1.0, dtype=tf.float32)
+                mse_loss2 = tf.constant(-1.0, dtype=tf.float32)
 
             with tf.name_scope(self.optimizer.__class__.__name__):
                 updates = self.optimizer.get_updates(params=self.params_list,
@@ -1541,8 +1528,6 @@ class MyModel(object):
 
                 # updates += self.update_inputs
             training_inputs = self.feed_inputs + self.feed_targets
-            # import ipdb; ipdb.set_trace()
-            # training_inputs = self.feed_inputs
             # train_function = tf.keras.backend.function(training_inputs,
             #                                            [self.loss, mse_loss1, mse_loss2, diff, self.curr_sigma, self.curr_mu, self.loss_by_hand, self.loss_by_tf],
             #                                            updates=updates)
@@ -1570,8 +1555,6 @@ class MyModel(object):
             __sigma__ = (outputs[1:] - outputs[:-1]).std()
             outputs = ops.convert_to_tensor(outputs, tf.float32)
 
-
-
         self.compile(inputs, mu=mu, sigma=sigma, unittest=False, outputs=outputs)
         # ins = self._x + self._y
         ins = self._x
@@ -1594,18 +1577,7 @@ class MyModel(object):
                 else:
                     prev_cost = cost
                     patience_list = []
-            # LOG.debug("Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, placeholder_sigma: {:.7f}, placeholder_mu: {:.7f}".format(i,
-            #                                                                                                                                                                                                     float(cost),
-            #                                                                                                                                                                                                     float(mse_cost1),
-            #                                                                                                                                                                                                     float(mse_cost2),
-            #                                                                                                                                                                                                     float(diff_res.mean()),
-            #                                                                                                                                                                                                     float(diff_res.std()),
-            #                                                                                                                                                                                                     float(__mu__),
-            #                                                                                                                                                                                                     float(__sigma__),
-            #                                                                                                                                                                                                     float(sigma_res),
-            #                                                                                                                                                                                                     float(mu_res)))
-            loss_by_hand = 0
-            loss_by_tf = 0
+            loss_by_hand, loss_by_tf = 0, 0
             LOG.debug(logger_string.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf)))
 
             # LOG.debug("Epoch: {}, weights: {}".format(i, self.trainable_weights))
@@ -2135,6 +2107,7 @@ class MyModel(object):
 
     def __del__(self):
         LOG.debug("Start to close ProcessPool before deleting object")
-        self.pool.close()
+        if hasattr(self, 'pool'):
+            self.pool.close()
         tf.keras.backend.clear_session()
         utils.get_cache().clear()
