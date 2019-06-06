@@ -353,7 +353,7 @@ class TestCases(unittest.TestCase):
     #     utils.init_tf_variables()
     #     operator_1.reset_states(states=states)
     #     result_2, op_states = self.session.run([output_2, operator_1.states])
-    #     import ipdb; ipdb.set_trace()
+
     #     self.assertTrue(np.allclose(result_1.reshape(-1), self.truth_with_state_zero))
     #     self.assertTrue(np.allclose(result_2.reshape(-1), self.truth_with_state_one))
     #     self.assertTrue(np.allclose(states, op_states))
@@ -365,6 +365,7 @@ class TestCases(unittest.TestCase):
         units = 5
         activation = None
         timestep = self.inputs.shape[0] // input_dim
+
         mymodel = core.MyModel(nb_plays=nb_plays,
                                units=units,
                                input_dim=input_dim,
@@ -374,14 +375,58 @@ class TestCases(unittest.TestCase):
         mymodel.compile(self.inputs, mu=0, sigma=1, test_stateful=True)
         ins = mymodel._x
         utils.init_tf_variables()
+
+        states_list = [0] * mymodel._nb_plays
+        mymodel.reset_states(states_list=states_list)
         output_1 = mymodel.train_function(ins)[0]
 
-        for i, play in enumerate(mymodel.plays):
-            states = np.array([1]*batch_size).reshape((batch_size, input_dim))
-            play.operator_layer.reset_states(states=states)
+        states_list = [1] * mymodel._nb_plays
+        mymodel.reset_states(states_list=states_list)
         output_2 = mymodel.train_function(ins)[0]
+
         self.assertTrue(np.allclose(output_1.reshape(-1), self.truth_with_state_zero))
         self.assertTrue(np.allclose(output_2.reshape(-1), self.truth_with_state_one))
+
+    def test_stateful_model(self):
+        self._test_stateful_model(nb_plays=1)
+        self._test_stateful_model(nb_plays=2)
+
+    def _test_stateful_model(self, nb_plays):
+        units = 5
+        input_dim = 1
+        activation = None
+        input_1, input_2 = self.inputs[:10], self.inputs[10:]
+        timestep = input_1.shape[0] // input_dim
+
+        mymodel = core.MyModel(nb_plays=nb_plays,
+                               units=units,
+                               input_dim=input_dim,
+                               timestep=timestep,
+                               activation=activation,
+                               debug=True)
+
+        mymodel.compile(input_1, mu=0, sigma=1, test_stateful=True)
+        ins = [input_1.reshape((1, timestep, input_dim))] * mymodel._nb_plays
+        utils.init_tf_variables()
+
+        states_list = [0] * mymodel._nb_plays
+        mymodel.reset_states(states_list=states_list)
+        output_1 = mymodel.train_function(ins)
+
+        ins = [input_2.reshape((1, timestep, input_dim))] * mymodel._nb_plays
+        states_list = [o.reshape(-1)[-1] for o in output_1]
+        mymodel.reset_states(states_list=states_list)
+        output_2 = mymodel.train_function(ins)
+
+        results = []
+        for o1, o2 in zip(output_1, output_2):
+            result = np.hstack([o1.reshape(-1), o2.reshape(-1)])
+            results.append(result)
+
+        truth = [self.truth_with_state_zero] * mymodel._nb_plays
+        for r, t in zip(results, truth):
+            self.assertTrue(np.allclose(r, t))
+
 
     # def test_keras_set_value(self):
     #     v = tf.Variable(1.0)

@@ -854,7 +854,6 @@ class Play(object):
         if inputs is None and self._batch_input_shape is None:
             raise Exception("Unknown input shape")
         if inputs is not None:
-
             _inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
 
             if _inputs.shape.ndims == 1:
@@ -2170,10 +2169,21 @@ class MyModel(object):
         tf.keras.backend.clear_session()
         utils.get_cache().clear()
 
-    @property
-    def states(self):
-        return [play.operator_layer.states for play in self.plays]
+    # @property
+    # def states(self):
+    #     'NOTE: doesn't work properly
+    #     return utils.get_session().run([play.operator_layer.states for play in self.plays])
 
-    @property
-    def op_states(self):
-        return self.states
+    # @property
+    # def op_states(self):
+    #     return self.states
+
+
+    def reset_states(self, states_list=None):
+        if not isinstance(states_list[0], np.ndarray):
+            states_list = [np.array([s]).reshape(1, 1) for s in states_list]
+        else:
+            states_list = [s.reshape(1, 1) for s in states_list]
+
+        for i, play in enumerate(self.plays):
+            play.operator_layer.reset_states(states_list[i])
