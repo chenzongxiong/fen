@@ -556,7 +556,7 @@ class PhiCell(Layer):
         self._state = ops.convert_to_tensor(states[-1], dtype=tf.float32)
         LOG.debug("inputs.shape: {}".format(inputs.shape))
         LOG.debug("self._inputs.shape: {}".format(self._inputs))
-
+        LOG.debug("self._state.shape: {}".format(self._state))
         ############### IMPL from Scratch #####################
         # outputs_ = tf.multiply(self._inputs, self.kernel)
         # outputs = [self._state]
@@ -574,8 +574,9 @@ class PhiCell(Layer):
         # return outputs, [state]
 
         ################ IMPL via RNN ###########################
-        def steps(inputs, states):
+        def inner_steps(inputs, states):
             outputs = Phi(inputs - states[-1], self._width) + states[-1]
+            # import ipdb; ipdb.set_trace()
             return outputs, [outputs]
 
         self._inputs = tf.multiply(self._inputs, self.kernel)
@@ -587,7 +588,10 @@ class PhiCell(Layer):
 
         assert self._state.shape.ndims == 2, colors.red("PhiCell states must be 2 dimensions")
         states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
-        last_outputs_, outputs_, states_x = tf.keras.backend.rnn(steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
+        last_outputs_, outputs_, states_x = tf.keras.backend.rnn(inner_steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
+
+        LOG.debug("outputs_.shape: {}".format(outputs_))
+        LOG.debug("states_x.shape: {}".format(states_x))
         return outputs_, list(states_x)
 
 
@@ -615,7 +619,6 @@ class Operator(RNN):
         LOG.debug("Operator.inputs.shape: {}".format(inputs.shape))
         output = super(Operator, self).call(inputs, initial_state=initial_state)
         assert inputs.shape.ndims == 3, colors.red("ERROR: Input from Operator must be 3 dimensions")
-        # import ipdb; ipdb.set_trace()
         shape = inputs.shape.as_list()
         output_ = tf.reshape(output, shape=(shape[0], -1, 1))
         return output_
@@ -628,8 +631,56 @@ class Operator(RNN):
     # def states(self):
     #     pass
 
-    # def reset_states(self):
-    #     pass
+    def reset_states(self, states=None):
+        if not self.stateful:
+            raise AttributeError('Layer must be stateful.')
+        batch_size = self.input_spec[0].shape[0]
+        if not batch_size:
+            raise ValueError('If a RNN is stateful, it needs to know '
+                             'its batch size. Specify the batch size '
+                             'of your input tensors: \n'
+                             '- If using a Sequential model, '
+                             'specify the batch size by passing '
+                             'a `batch_input_shape` '
+                             'argument to your first layer.\n'
+                             '- If using the functional API, specify '
+                             'the batch size by passing a '
+                             '`batch_shape` argument to your Input layer.')
+        # initialize state if None
+        if self.states[0] is None:
+            self.states = [
+                           tf.keras.backend.zeros([batch_size] + tensor_shape.as_shape(dim).as_list())
+                           for dim in self.cell.state_size
+                           ]
+
+        # elif states is None:
+        #     for state, dim in zip(self.states, self.cell.state_size):
+        #         tf.keras.backend.set_value(state,
+        #                                    np.zeros([batch_size] +
+        #                                             tensor_shape.as_shape(dim).as_list()))
+        else:
+            if not isinstance(states, (list, tuple)):
+                states = [states]
+            if len(states) != len(self.states):
+                raise ValueError('Layer ' + self.name + ' expects ' +
+                                 str(len(self.states)) + ' states, '
+                                 'but it received ' + str(len(states)) +
+                                 ' state values. Input received: ' + str(states))
+            for index, (value, state) in enumerate(zip(states, self.states)):
+                dim = self.cell.state_size[index]
+                if value.shape != tuple([batch_size] +
+                                        tensor_shape.as_shape(dim).as_list()):
+                    raise ValueError(
+                        'State ' + str(index) + ' is incompatible with layer ' +
+                        self.name + ': expected shape=' + str(
+                            (batch_size, dim)) + ', found shape=' + str(value.shape))
+                # TODO(fchollet): consider batch calls to `set_value`.
+                # utils.init_tf_variables()
+                # import ipdb; ipdb.set_trace()
+                tf.keras.backend.set_value(state, value)
+                # s, ss = sess.run([state, self.states])
+                # print("state: {}, states: {}".format(s, ss))
+
 
 
 class MyDense(Layer):
@@ -1566,7 +1617,6 @@ class MyModel(object):
         patience_list = []
         prev_cost = np.inf
 
-        utils.init_tf_variables()
         logger_string = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}"
         for i in range(epochs):
             for j in range(steps_per_epoch):

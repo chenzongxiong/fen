@@ -1,6 +1,8 @@
 import unittest
 import numpy as np
 import tensorflow as tf
+# tf.enable_eager_execution()
+
 from tensorflow.python.framework import ops
 from tensorflow.python.ops.parallel_for.gradients import jacobian
 import pickle
@@ -12,14 +14,18 @@ import utils
 
 class TestCases(unittest.TestCase):
     def setUp(self):
-        self.session = utils.get_session()
+        self.session = utils.get_session(interactive=True)
         self.inputs = np.array([1, 1.5, 2.5, 2.5, -0.5, -0.25, -1, 0.25, 1/3.0, 0.1,
                                 0, 0.21, -1.5, 0.7, 0.9, 1.5, -0.4, 1, -0.15, 2])
         self.truth = np.array([0.5, 1, 2, 2, 0, 0, -0.5, -0.25, -1/6, -1/6,
                                -1/6, -1/6, -1, 0.2, 0.4, 1, 0.1, 0.5, 0.35, 1.5])
 
-    # def tearDown(self):
-    #     utils.clear_session()
+        self.truth_with_state_zero = self.truth
+        self.truth_with_state_one = np.array([1, 1, 2, 2, 0, 0, -0.5, -0.25, -1/6, -1/6,
+                                              -1/6, -1/6, -1, 0.2, 0.4, 1, 0.1, 0.5, 0.35, 1.5])
+
+    def tearDown(self):
+        utils.clear_session()
 
     # def test_Phi(self):
     #     a = tf.constant([[1]], dtype=tf.float32, name="a")
@@ -280,53 +286,82 @@ class TestCases(unittest.TestCase):
     #     result_by_tf, result_by_hand = self.session.run([gradient_by_tf, gradient_by_hand])
     #     self.assertTrue(np.allclose(result_by_tf, result_by_hand))
 
-    def test_multiple_plays(self):
-        # Note: test one by one, uncomment the case you want to test
-        # self._test_multiple_plays_helper(1, None, 1)
-        # self._test_multiple_plays_helper(1, None, 5)
-        # self._test_multiple_plays_helper(2, None, 1)
-        # self._test_multiple_plays_helper(2, None, 5)
-        # self._test_multiple_plays_helper(1, 'tanh', 1)
-        # self._test_multiple_plays_helper(1, 'tanh', 5)
-        # self._test_multiple_plays_helper(2, 'tanh', 1)
-        # self._test_multiple_plays_helper(2, 'tanh', 5)
-        # self._test_multiple_plays_helper(1, 'relu', 1)
-        # self._test_multiple_plays_helper(1, 'relu', 5)
-        # self._test_multiple_plays_helper(2, 'relu', 1)
-        # self._test_multiple_plays_helper(2, 'relu', 5)
-        pass
+    # def test_multiple_plays(self):
+    #     # Note: test one by one, uncomment the case you want to test
+    #     # self._test_multiple_plays_helper(1, None, 1)
+    #     # self._test_multiple_plays_helper(1, None, 5)
+    #     # self._test_multiple_plays_helper(2, None, 1)
+    #     # self._test_multiple_plays_helper(2, None, 5)
+    #     # self._test_multiple_plays_helper(1, 'tanh', 1)
+    #     # self._test_multiple_plays_helper(1, 'tanh', 5)
+    #     # self._test_multiple_plays_helper(2, 'tanh', 1)
+    #     # self._test_multiple_plays_helper(2, 'tanh', 5)
+    #     # self._test_multiple_plays_helper(1, 'relu', 1)
+    #     # self._test_multiple_plays_helper(1, 'relu', 5)
+    #     # self._test_multiple_plays_helper(2, 'relu', 1)
+    #     # self._test_multiple_plays_helper(2, 'relu', 5)
+    #     pass
 
-    def _test_multiple_plays_helper(self, nb_plays, activation, input_dim):
-        units = 5
-        timestep = self.inputs.shape[0] // input_dim
-        mymodel = core.MyModel(nb_plays=nb_plays,
-                               units=units,
-                               input_dim=input_dim,
-                               timestep=timestep,
-                               activation=activation,
-                               debug=True)
-        mymodel.compile(self.inputs, mu=0, sigma=1, unittest=True)
-        utils.init_tf_variables()
-        result_by_tf, result_by_hand, result_J_list_by_tf, result_J_list_by_hand = self.session.run([mymodel.J_by_tf, mymodel.J_by_hand,
-                                                                                                     mymodel.J_list_by_tf, mymodel.J_list_by_hand],
-                                                                                                    feed_dict=mymodel._x_feed_dict)
-        for by_tf, by_hand in zip(result_J_list_by_tf, result_J_list_by_hand):
-            if not np.allclose(by_hand, by_tf, atol=1e-7):
-                print("ERROR: ")
-                import ipdb; ipdb.set_trace()
+    # def _test_multiple_plays_helper(self, nb_plays, activation, input_dim):
+    #     units = 5
+    #     timestep = self.inputs.shape[0] // input_dim
+    #     mymodel = core.MyModel(nb_plays=nb_plays,
+    #                            units=units,
+    #                            input_dim=input_dim,
+    #                            timestep=timestep,
+    #                            activation=activation,
+    #                            debug=True)
+    #     mymodel.compile(self.inputs, mu=0, sigma=1, unittest=True)
+    #     utils.init_tf_variables()
+    #     result_by_tf, result_by_hand, result_J_list_by_tf, result_J_list_by_hand = self.session.run([mymodel.J_by_tf, mymodel.J_by_hand,
+    #                                                                                                  mymodel.J_list_by_tf, mymodel.J_list_by_hand],
+    #                                                                                                 feed_dict=mymodel._x_feed_dict)
+    #     for by_tf, by_hand in zip(result_J_list_by_tf, result_J_list_by_hand):
+    #         if not np.allclose(by_hand, by_tf, atol=1e-7):
+    #             print("ERROR: ")
+    #             import ipdb; ipdb.set_trace()
 
-        self.assertTrue(np.allclose(result_by_tf, result_by_hand, atol=1e-7))
-        del mymodel
+    #     self.assertTrue(np.allclose(result_by_tf, result_by_hand, atol=1e-7))
+    #     del mymodel
 
-    def test_confusion_matrix(self):
-        y_true = np.array([1, 2, 3, 1, 6, 3, 2, 7, 8, 9], dtype=np.float32)
-        y_pred = np.array([2, 4, 1, 4, 6, 9, 3, 12, 2, 9], dtype=np.float32)
-        confusion = core.confusion_matrix(y_true, y_pred)
-        correct = np.array([[4, 3], [2, 0]], dtype=np.int32)
-        self.assertTrue(np.all(confusion == correct))
+    # def test_confusion_matrix(self):
+    #     y_true = np.array([1, 2, 3, 1, 6, 3, 2, 7, 8, 9], dtype=np.float32)
+    #     y_pred = np.array([2, 4, 1, 4, 6, 9, 3, 12, 2, 9], dtype=np.float32)
+    #     confusion = core.confusion_matrix(y_true, y_pred)
+    #     correct = np.array([[4, 3], [2, 0]], dtype=np.int32)
+    #     self.assertTrue(np.all(confusion == correct))
 
     def test_stateful(self):
-        pass
+        dim = 1
+        batch_size = 1
+        states = np.array([1]).reshape((batch_size, dim))
+        input_1 = ops.convert_to_tensor(self.inputs.reshape([batch_size, 1, -1]), dtype=tf.float32)
+        operator_1 = core.Operator(debug=True)
+
+        output_1 = operator_1(input_1)
+        # init operator_1.state first, or it cannot assign by keras.set_value
+        utils.init_tf_variables()
+        result_1 = self.session.run(output_1)
+
+        operator_1.reset_states(states=states)
+        output_2 = operator_1(input_1)
+        utils.init_tf_variables()
+        operator_1.reset_states(states=states)
+        result_2, op_states = self.session.run([output_2, operator_1.states])
+
+        self.assertTrue(np.allclose(result_1.reshape(-1), self.truth_with_state_zero))
+        self.assertTrue(np.allclose(result_2.reshape(-1), self.truth_with_state_one))
+        self.assertTrue(np.allclose(states, op_states))
+
+    def test_keras_set_value(self):
+        v = tf.Variable(1.0)
+        utils.init_tf_variables()
+        tf.keras.backend.set_value(v, 0.0)
+        # uncomment the following line, cause error
+        # utils.init_tf_variables()
+        r = self.session.run(v)
+        self.assertEqual(r, 0)
+
 
 
 if __name__ == '__main__':
