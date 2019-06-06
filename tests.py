@@ -14,7 +14,7 @@ import utils
 
 class TestCases(unittest.TestCase):
     def setUp(self):
-        self.session = utils.get_session(interactive=True)
+        self.session = utils.get_session()
         self.inputs = np.array([1, 1.5, 2.5, 2.5, -0.5, -0.25, -1, 0.25, 1/3.0, 0.1,
                                 0, 0.21, -1.5, 0.7, 0.9, 1.5, -0.4, 1, -0.15, 2])
         self.truth = np.array([0.5, 1, 2, 2, 0, 0, -0.5, -0.25, -1/6, -1/6,
@@ -25,7 +25,8 @@ class TestCases(unittest.TestCase):
                                               -1/6, -1/6, -1, 0.2, 0.4, 1, 0.1, 0.5, 0.35, 1.5])
 
     def tearDown(self):
-        utils.clear_session()
+        # utils.clear_session()
+        pass
 
     # def test_Phi(self):
     #     a = tf.constant([[1]], dtype=tf.float32, name="a")
@@ -331,36 +332,65 @@ class TestCases(unittest.TestCase):
     #     correct = np.array([[4, 3], [2, 0]], dtype=np.int32)
     #     self.assertTrue(np.all(confusion == correct))
 
+    # def test_simple_stateful(self):
+    #     '''
+    #     Given a state, compute the results corresponding to the state
+    #     '''
+    #     dim = 1
+    #     batch_size = 1
+
+    #     states = np.array([1]*batch_size).reshape((batch_size, dim))
+    #     input_1 = ops.convert_to_tensor(self.inputs.reshape([batch_size, 1, -1]), dtype=tf.float32)
+    #     operator_1 = core.Operator(debug=True)
+
+    #     output_1 = operator_1(input_1)
+    #     # init operator_1.state first, or it cannot assign by keras.set_value
+    #     utils.init_tf_variables()
+    #     result_1 = self.session.run(output_1)
+
+    #     operator_1.reset_states(states=states)
+    #     output_2 = operator_1(input_1)
+    #     utils.init_tf_variables()
+    #     operator_1.reset_states(states=states)
+    #     result_2, op_states = self.session.run([output_2, operator_1.states])
+    #     import ipdb; ipdb.set_trace()
+    #     self.assertTrue(np.allclose(result_1.reshape(-1), self.truth_with_state_zero))
+    #     self.assertTrue(np.allclose(result_2.reshape(-1), self.truth_with_state_one))
+    #     self.assertTrue(np.allclose(states, op_states))
+
     def test_stateful(self):
-        dim = 1
         batch_size = 1
-        states = np.array([1]).reshape((batch_size, dim))
-        input_1 = ops.convert_to_tensor(self.inputs.reshape([batch_size, 1, -1]), dtype=tf.float32)
-        operator_1 = core.Operator(debug=True)
-
-        output_1 = operator_1(input_1)
-        # init operator_1.state first, or it cannot assign by keras.set_value
+        nb_plays = 1
+        input_dim = 1
+        units = 5
+        activation = None
+        timestep = self.inputs.shape[0] // input_dim
+        mymodel = core.MyModel(nb_plays=nb_plays,
+                               units=units,
+                               input_dim=input_dim,
+                               timestep=timestep,
+                               activation=activation,
+                               debug=True)
+        mymodel.compile(self.inputs, mu=0, sigma=1, test_stateful=True)
+        ins = mymodel._x
         utils.init_tf_variables()
-        result_1 = self.session.run(output_1)
+        output_1 = mymodel.train_function(ins)[0]
 
-        operator_1.reset_states(states=states)
-        output_2 = operator_1(input_1)
-        utils.init_tf_variables()
-        operator_1.reset_states(states=states)
-        result_2, op_states = self.session.run([output_2, operator_1.states])
+        for i, play in enumerate(mymodel.plays):
+            states = np.array([1]*batch_size).reshape((batch_size, input_dim))
+            play.operator_layer.reset_states(states=states)
+        output_2 = mymodel.train_function(ins)[0]
+        self.assertTrue(np.allclose(output_1.reshape(-1), self.truth_with_state_zero))
+        self.assertTrue(np.allclose(output_2.reshape(-1), self.truth_with_state_one))
 
-        self.assertTrue(np.allclose(result_1.reshape(-1), self.truth_with_state_zero))
-        self.assertTrue(np.allclose(result_2.reshape(-1), self.truth_with_state_one))
-        self.assertTrue(np.allclose(states, op_states))
-
-    def test_keras_set_value(self):
-        v = tf.Variable(1.0)
-        utils.init_tf_variables()
-        tf.keras.backend.set_value(v, 0.0)
-        # uncomment the following line, cause error
-        # utils.init_tf_variables()
-        r = self.session.run(v)
-        self.assertEqual(r, 0)
+    # def test_keras_set_value(self):
+    #     v = tf.Variable(1.0)
+    #     utils.init_tf_variables()
+    #     tf.keras.backend.set_value(v, 0.0)
+    #     # uncomment the following line, cause error
+    #     # utils.init_tf_variables()
+    #     r = self.session.run(v)
+    #     self.assertEqual(r, 0)
 
 
 

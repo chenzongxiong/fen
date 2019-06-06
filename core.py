@@ -497,7 +497,6 @@ class PhiCell(Layer):
                  kernel_regularizer=None,
                  activity_regularizer=None,
                  kernel_constraint="non_neg",
-                 # kernel_constraint=None,
                  **kwargs):
         self.debug = kwargs.pop("debug", False)
 
@@ -575,10 +574,11 @@ class PhiCell(Layer):
 
         ################ IMPL via RNN ###########################
         def inner_steps(inputs, states):
+            LOG.debug("inputs: {}, states: {}".format(inputs, states))
             outputs = Phi(inputs - states[-1], self._width) + states[-1]
-            # import ipdb; ipdb.set_trace()
             return outputs, [outputs]
 
+        # import ipdb; ipdb.set_trace()
         self._inputs = tf.multiply(self._inputs, self.kernel)
         inputs_ = tf.reshape(self._inputs, shape=(1, self._inputs.shape[0].value*self._inputs.shape[1].value, 1))
         if isinstance(states, list) or isinstance(states, tuple):
@@ -652,12 +652,11 @@ class Operator(RNN):
                            tf.keras.backend.zeros([batch_size] + tensor_shape.as_shape(dim).as_list())
                            for dim in self.cell.state_size
                            ]
-
-        # elif states is None:
-        #     for state, dim in zip(self.states, self.cell.state_size):
-        #         tf.keras.backend.set_value(state,
-        #                                    np.zeros([batch_size] +
-        #                                             tensor_shape.as_shape(dim).as_list()))
+        elif states is None:
+            for state, dim in zip(self.states, self.cell.state_size):
+                tf.keras.backend.set_value(state,
+                                           np.zeros([batch_size] +
+                                                    tensor_shape.as_shape(dim).as_list()))
         else:
             if not isinstance(states, (list, tuple)):
                 states = [states]
@@ -1260,6 +1259,8 @@ class MyModel(object):
 
             weight = 10 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
             LOG.debug("MyModel geneartes {} with Weight: {}".format(colors.red("Play #{}".format(nb_play+1)), weight))
+            if debug is True:
+                weight = 1.0
 
             play = Play(units=units,
                         batch_size=batch_size,
@@ -1579,12 +1580,19 @@ class MyModel(object):
 
                 # updates += self.update_inputs
             training_inputs = self.feed_inputs + self.feed_targets
-            # train_function = tf.keras.backend.function(training_inputs,
-            #                                            [self.loss, mse_loss1, mse_loss2, diff, self.curr_sigma, self.curr_mu, self.loss_by_hand, self.loss_by_tf],
-            #                                            updates=updates)
-            self.train_function = tf.keras.backend.function(training_inputs,
-                                                            [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred],
-                                                            updates=updates)
+
+            self.updates = updates
+            self.training_inputs = training_inputs
+            if kwargs.get('test_stateful', False):
+                outputs = [play.operator_layer.output for play in self.plays]
+                self.train_function = tf.keras.backend.function(self.training_inputs,
+                                                                outputs,
+                                                                updates=self.updates)
+            else:
+                outputs = [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred]
+                self.train_function = tf.keras.backend.function(training_inputs,
+                                                                outputs,
+                                                                updates=updates)
 
     def fit2(self,
              inputs,
@@ -2161,3 +2169,11 @@ class MyModel(object):
             self.pool.close()
         tf.keras.backend.clear_session()
         utils.get_cache().clear()
+
+    @property
+    def states(self):
+        return [play.operator_layer.states for play in self.plays]
+
+    @property
+    def op_states(self):
+        return self.states
