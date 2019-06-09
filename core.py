@@ -1471,6 +1471,7 @@ class MyModel(object):
                                                               dtype=tf.float32)
 
         # TODO: not feed with self._x, can't be a bug HERE
+
         self._batch_input_shape = utils.get_cache()['play_input_layer'].input.shape
         self.feed_inputs = [utils.get_cache()['play_input_layer'].input]
         self.feed_targets = []
@@ -1483,13 +1484,14 @@ class MyModel(object):
             self.update_inputs += play.model.get_updates_for(play.input)
             self.params_list += play.trainable_weights
 
-        # self._x = [play.reshape(inputs) for play in self.plays]
-        # self._x_feed_dict = {self.feed_inputs[k].name : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
-        self._x = [tf.reshape(inputs, shape=self._batch_input_shape.as_list())]
-        self._x_feed_dict = { self.feed_inputs[0].name : _inputs.reshape(self._batch_input_shape.as_list()) }
+
+        # TODO: Need to fix self._x, self._x_feed_dict later
+        # self._x = [tf.reshape(inputs, shape=self._batch_input_shape.as_list())]
+        # self._x_feed_dict = { self.feed_inputs[0].name : _inputs.reshape(self._batch_input_shape.as_list()) }
+
         self._y = [self.feed_mu, self.feed_sigma]
 
-        LOG.debug("self._x.shape: {}, x_feed_dict.names: {}, x_feed_dict.shape: {}".format([(x.name, x.shape) for x in self.feed_inputs], self._x_feed_dict.keys(), [self._x_feed_dict[name].shape for name in self._x_feed_dict.keys()]))
+        # LOG.debug("self._x.shape: {}, x_feed_dict.names: {}, x_feed_dict.shape: {}".format([(x.name, x.shape) for x in self.feed_inputs], self._x_feed_dict.keys(), [self._x_feed_dict[name].shape for name in self._x_feed_dict.keys()]))
 
         assert len(self.feed_inputs) == 1, colors.red("ERROR: only one input layers")
         ##################### Average outputs #############################
@@ -1616,7 +1618,8 @@ class MyModel(object):
              steps_per_epoch=1,
              loss_file_name="./tmp/mymodel_loss_history.csv",
              learning_rate=0.001,
-             decay=0.):
+             decay=0.,
+             **kwargs):
 
         writer = utils.get_tf_summary_writer("./log/mle")
 
@@ -1626,9 +1629,11 @@ class MyModel(object):
             __sigma__ = (outputs[1:] - outputs[:-1]).std()
             outputs = ops.convert_to_tensor(outputs, tf.float32)
 
-        self.compile(inputs, mu=mu, sigma=sigma, unittest=False, outputs=outputs)
+        self.compile(inputs, mu=mu, sigma=sigma, unittest=False, outputs=outputs, **kwargs)
         # ins = self._x + self._y
-        ins = self._x
+        # ins = self._x
+        input_dim =  self.batch_input_shape[-1]
+        ins = inputs.reshape(-1, 1, input_dim)
         utils.init_tf_variables()
 
         writer.add_graph(tf.get_default_graph())
@@ -1637,48 +1642,43 @@ class MyModel(object):
         patience_list = []
         prev_cost = np.inf
 
+        if kwargs.get('test_stateful', False):
+            outputs_list = [[] for _ in range(self._nb_plays)]
+            assert epochs == 1, 'only epochs == 1 in unittest'
+            for i in range(epochs):
+                self.reset_states()
+                for j in range(steps_per_epoch):
+                    output = self.train_function([ins[j:j+1, :, :]])
+                    states_list = [o.reshape(-1)[-1] for o in output]
+                    self.reset_states(states_list=states_list)
+                    for k, o in enumerate(output):
+                        outputs_list[k].append(o.reshape(-1))
+
+            results = []
+            for output in outputs_list:
+                results.append(np.hstack(output))
+            assert len(results) == self._nb_plays
+            return results
+
+
         logger_string = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}"
-        for i in range(epochs):
-            for j in range(steps_per_epoch):
-                # cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, loss_by_hand, loss_by_tf = train_function(ins)
-                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred = self.train_function(ins)
-                if prev_cost <= cost:
-                    patience_list.append(cost)
-                else:
-                    prev_cost = cost
-                    patience_list = []
-            loss_by_hand, loss_by_tf = 0, 0
-            LOG.debug(logger_string.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf)))
+        # for i in range(epochs):
+        #     for j in range(steps_per_epoch):
+                # cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred = self.train_function(ins)
+                # if prev_cost <= cost:
+                #     patience_list.append(cost)
+                # else:
+                #     prev_cost = cost
+                #     patience_list = []
 
-            # LOG.debug("Epoch: {}, weights: {}".format(i, self.trainable_weights))
-            # LOG.debug("Epoch: {}, y_pred: {}".format(i, y_pred.reshape(-1)))
-            # LOG.debug("Epoch: {}, diff: {}".format(i, diff_res.reshape(-1)))
-            # if i % 10 == 0 and i > 300:
-            # import ipdb; ipdb.set_trace()
+            # loss_by_hand, loss_by_tf = 0, 0
+            # LOG.debug(logger_string.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf)))
+            # LOG.debug("================================================================================")
 
-            # LOG.debug("Epoch: {}, max(loss_a): {:.7f}, min(loss_a): {:.7f}, max(loss_b): {:.7f}, min(loss_b): {:.7f}".format(i,
-            #                                                                                                                  float(np.max(loss_a)),
-            #                                                                                                                  float(np.min(loss_a)),
-            #                                                                                                                  float(np.max(loss_b)),
-            #                                                                                                                  float(np.min(loss_b))))
-            # LOG.debug("Epoch: {}, loss_a: {}".format(i,
-            #                                          loss_a.reshape(-1)))
+            # self.cost_history.append([i, cost])
 
-            # LOG.debug("Epoch: {}, loss_b: {}".format(i,
-            #                                          loss_b.reshape(-1)))
-
-            # LOG.debug("Epoch: {}, J_by_hand: {}".format(i,
-            #                                             J_by_hand.reshape(-1)))
-            LOG.debug("================================================================================")
-
-
-            self.cost_history.append([i, cost])
-            # if len(patience_list) >= 50:
-            #     LOG.debug(colors.yellow("Lost patience...."))
-            #     break
-
-        cost_history = np.array(self.cost_history)
-        tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
+        # cost_history = np.array(self.cost_history)
+        # tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
     def predict2(self, inputs):
         _inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
@@ -2193,11 +2193,15 @@ class MyModel(object):
 
 
     def reset_states(self, states_list=None):
+        if states_list is None:
+            for i, play in enumerate(self.plays):
+                play.operator_layer.reset_states()
+            return
+
         if not isinstance(states_list[0], np.ndarray):
             states_list = [np.array([s]).reshape(1, 1) for s in states_list]
         else:
             states_list = [s.reshape(1, 1) for s in states_list]
-
         for i, play in enumerate(self.plays):
             play.operator_layer.reset_states(states_list[i])
 
