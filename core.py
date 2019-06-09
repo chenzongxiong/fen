@@ -553,9 +553,9 @@ class PhiCell(Layer):
         """
         self._inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
         self._state = ops.convert_to_tensor(states[-1], dtype=tf.float32)
-        LOG.debug("inputs.shape: {}".format(inputs.shape))
-        LOG.debug("self._inputs.shape: {}".format(self._inputs))
-        LOG.debug("self._state.shape: {}".format(self._state))
+        LOG.debug("PhiCellinputs.shape: {}".format(inputs.shape))
+        LOG.debug("PhiCell._inputs.shape: {}".format(self._inputs.shape))
+        LOG.debug("PhiCell._state.shape: {}".format(self._state.shape))
         ############### IMPL from Scratch #####################
         # outputs_ = tf.multiply(self._inputs, self.kernel)
         # outputs = [self._state]
@@ -864,8 +864,9 @@ class Play(object):
                                                                                        self._play_timestep))
                     raise Exception("The batch size cannot be divided by the length of input sequence.")
 
-                self.batch_size = length // (self._play_timestep * self._play_input_dim)
+                # self.batch_size = length // (self._play_timestep * self._play_input_dim)
                 self._play_batch_size = length // (self._play_timestep * self._play_input_dim)
+                self.batch_size = 1
                 self._batch_input_shape = tf.TensorShape([self.batch_size, self._play_timestep, self._play_input_dim])
 
             else:
@@ -874,13 +875,20 @@ class Play(object):
         length = self._batch_input_shape[1].value * self._batch_input_shape[2].value
         self.batch_size = self._batch_input_shape[0].value
         assert self.batch_size == 1, colors.red("only support batch_size is 1")
-
-        timesteps = self._batch_input_shape[1].value
+        assert self._play_timestep == 1, colors.red("only support outter-timestep 1")
 
         self.model = tf.keras.models.Sequential()
 
-        self.model.add(tf.keras.layers.InputLayer(batch_size=self.batch_size,
-                                                  input_shape=self._batch_input_shape[1:]))
+        CACHE = utils.get_cache()
+        input_layer = CACHE.get('play_input_layer', None)
+
+        if input_layer is None:
+            input_layer = tf.keras.layers.InputLayer(batch_size=self.batch_size,
+                                                     input_shape=self._batch_input_shape[1:])
+            CACHE['play_input_layer'] = input_layer
+
+        self.model.add(input_layer)
+
         self.model.add(Operator(weight=getattr(self, "_weight", 1.0),
                                 width=getattr(self, "_width", 1.0),
                                 debug=getattr(self, "_debug", False)))
@@ -1463,22 +1471,27 @@ class MyModel(object):
                                                               dtype=tf.float32)
 
         # TODO: not feed with self._x, can't be a bug HERE
-        # self.feed_targets = [self.feed_mu, self.feed_sigma]
-        # self.feed_targets = [self.mu_placeholder, self.sigma_placeholder]
+        self._batch_input_shape = utils.get_cache()['play_input_layer'].input.shape
+        self.feed_inputs = [utils.get_cache()['play_input_layer'].input]
         self.feed_targets = []
         self.update_inputs = []
+
         for play in self.plays:
-            self.feed_inputs.append(play.input)
+            # self.feed_inputs.append(play.input)
             self.model_outputs.append(play.output)
             # TODO: figure out the function of get_updates_for
             self.update_inputs += play.model.get_updates_for(play.input)
             self.params_list += play.trainable_weights
 
-        self._x = [play.reshape(inputs) for play in self.plays]
+        # self._x = [play.reshape(inputs) for play in self.plays]
+        # self._x_feed_dict = {self.feed_inputs[k].name : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
+        self._x = [tf.reshape(inputs, shape=self._batch_input_shape.as_list())]
+        self._x_feed_dict = { self.feed_inputs[0].name : _inputs.reshape(self._batch_input_shape.as_list()) }
         self._y = [self.feed_mu, self.feed_sigma]
-        self._x_feed_dict = {self.feed_inputs[k].name : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
+
         LOG.debug("self._x.shape: {}, x_feed_dict.names: {}, x_feed_dict.shape: {}".format([(x.name, x.shape) for x in self.feed_inputs], self._x_feed_dict.keys(), [self._x_feed_dict[name].shape for name in self._x_feed_dict.keys()]))
-        # import ipdb; ipdb.set_trace()
+
+        assert len(self.feed_inputs) == 1, colors.red("ERROR: only one input layers")
         ##################### Average outputs #############################
         if self._nb_plays > 1:
             self.y_pred = tf.keras.layers.Average()(self.model_outputs)
@@ -1511,8 +1524,8 @@ class MyModel(object):
                                               play.linear_layer.kernel,
                                               activation=self._activation,
                                               debug=True,
-                                              inputs=self.feed_inputs[i],
-                                              feed_dict=copy.deepcopy(self._x_feed_dict)) for i, play in enumerate(self.plays)]
+                                              inputs=self.feed_inputs[0],
+                                              feed_dict=copy.deepcopy(self._x_feed_dict))]
                 self.J_list_by_hand = J_list
                 ####################### Calculate J by Tensorflow ###############################
                 y_pred = tf.reshape(self.y_pred, shape=self.feed_inputs[0].shape)
@@ -1520,7 +1533,7 @@ class MyModel(object):
                 J_by_tf = [tf.reshape(J_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
                 self.J_by_tf = tf.reduce_mean(tf.concat(J_by_tf, axis=-1), axis=-1, keepdims=True)
 
-                model_outputs = [tf.reshape(self.model_outputs[i], shape=self.feed_inputs[i].shape) for i in range(self._nb_plays)]
+                model_outputs = [tf.reshape(self.model_outputs[i], shape=self.feed_inputs[0].shape) for i in range(self._nb_plays)]
                 J_list_by_tf = tf.keras.backend.gradients(model_outputs, self.feed_inputs)
                 self.J_list_by_tf = [tf.reshape(J_list_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
 
@@ -2187,3 +2200,10 @@ class MyModel(object):
 
         for i, play in enumerate(self.plays):
             play.operator_layer.reset_states(states_list[i])
+
+    @property
+    def batch_input_shape(self):
+        '''
+        return a list
+        '''
+        return self._batch_input_shape.as_list()
