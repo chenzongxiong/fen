@@ -1388,7 +1388,7 @@ class MyModel(object):
         _inputs = inputs
         inputs = ops.convert_to_tensor(inputs, tf.float32)
         x = self.plays[0].reshape(inputs)
-        start = time.time()
+
         ##########################################################################
         #     multiprocessing.Pool
         ##########################################################################
@@ -1401,6 +1401,7 @@ class MyModel(object):
         ##########################################################################
         #     myImplementation.Pool
         ##########################################################################
+        start = time.time()
         for play in self.plays:
             LOG.debug("{}".format(play._name))
             task = Task(play, 'predict', (_inputs,))
@@ -1422,9 +1423,9 @@ class MyModel(object):
         #     start = time.time()
         #     outputs.append(play.predict(x))
         #     end = time.time()
-        #     import ipdb; ipdb.set_trace()
         #     LOG.debug("play {} cost time {} s".format(play._name, end-start))
         ##########################################################################
+
         outputs_ = np.array(outputs)
         prediction = outputs_.mean(axis=0)
         prediction = prediction.reshape(-1)
@@ -1581,12 +1582,12 @@ class MyModel(object):
             self.loss_by_hand = tf.keras.backend.mean(self.loss_a+self.loss_b)
             self.loss = self.loss_by_hand
 
-            if outputs is not None:
-                mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))
-                mse_loss2 = tf.keras.backend.mean(tf.square(self.y_pred + tf.reshape(outputs, shape=self.y_pred.shape)))
-            else:
-                mse_loss1 = tf.constant(-1.0, dtype=tf.float32)
-                mse_loss2 = tf.constant(-1.0, dtype=tf.float32)
+            # if outputs is not None:
+            #     mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))
+            #     mse_loss2 = tf.keras.backend.mean(tf.square(self.y_pred + tf.reshape(outputs, shape=self.y_pred.shape)))
+            # else:
+            mse_loss1 = tf.constant(-1.0, dtype=tf.float32)
+            mse_loss2 = tf.constant(-1.0, dtype=tf.float32)
 
             with tf.name_scope(self.optimizer.__class__.__name__):
                 updates = self.optimizer.get_updates(params=self.params_list,
@@ -1599,14 +1600,12 @@ class MyModel(object):
             self.training_inputs = training_inputs
             if kwargs.get('test_stateful', False):
                 outputs = [play.operator_layer.output for play in self.plays]
-                self.train_function = tf.keras.backend.function(self.training_inputs,
-                                                                outputs,
-                                                                updates=self.updates)
             else:
-                outputs = [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred]
-                self.train_function = tf.keras.backend.function(training_inputs,
-                                                                outputs,
-                                                                updates=updates)
+                outputs = [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred] + [play.operator_layer.output for play in self.plays]
+
+            self.train_function = tf.keras.backend.function(training_inputs,
+                                                            outputs,
+                                                            updates=updates)
 
     def fit2(self,
              inputs,
@@ -1633,7 +1632,7 @@ class MyModel(object):
         # ins = self._x + self._y
         # ins = self._x
         input_dim =  self.batch_input_shape[-1]
-        ins = inputs.reshape(-1, 1, input_dim)
+        # ins = inputs.reshape(-1, 1, input_dim)
         utils.init_tf_variables()
 
         writer.add_graph(tf.get_default_graph())
@@ -1648,7 +1647,8 @@ class MyModel(object):
             for i in range(epochs):
                 self.reset_states()
                 for j in range(steps_per_epoch):
-                    output = self.train_function([ins[j:j+1, :, :]])
+                    ins = inputs[j*input_dim:(j+1)*input_dim]
+                    output = self.train_function([ins.reshape(1, 1, -1)])
                     states_list = [o.reshape(-1)[-1] for o in output]
                     self.reset_states(states_list=states_list)
                     for k, o in enumerate(output):
@@ -1660,25 +1660,31 @@ class MyModel(object):
             assert len(results) == self._nb_plays
             return results
 
+        logger_string_epoch = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}"
+        logger_string_step = "Steps: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}"
+        for i in range(epochs):
+            self.reset_states()
+            for j in range(steps_per_epoch):
+                ins = inputs[j*input_dim:(j+1)*input_dim]
+                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, *operator_outputs = self.train_function([ins.reshape(1, 1, -1)])
+                states_list = [o.reshape(-1)[-1] for o in operator_outputs]
+                self.reset_states(states_list=states_list)
 
-        logger_string = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}"
-        # for i in range(epochs):
-        #     for j in range(steps_per_epoch):
-                # cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred = self.train_function(ins)
-                # if prev_cost <= cost:
-                #     patience_list.append(cost)
-                # else:
-                #     prev_cost = cost
-                #     patience_list = []
+                if prev_cost <= cost:
+                    patience_list.append(cost)
+                else:
+                    prev_cost = cost
+                    patience_list = []
+                loss_by_hand, loss_by_tf = 0, 0
+                # LOG.debug(logger_string_step.format(j, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf)))
+            LOG.debug(logger_string_epoch.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf)))
 
-            # loss_by_hand, loss_by_tf = 0, 0
-            # LOG.debug(logger_string.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf)))
-            # LOG.debug("================================================================================")
+            LOG.debug("================================================================================")
 
-            # self.cost_history.append([i, cost])
+            self.cost_history.append([i, cost])
 
-        # cost_history = np.array(self.cost_history)
-        # tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
+        cost_history = np.array(self.cost_history)
+        tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
     def predict2(self, inputs):
         _inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
@@ -1687,11 +1693,21 @@ class MyModel(object):
             if not play.built:
                 play.build(_inputs)
 
-        outputs = []
-        for play in self.plays:
-            x = play.reshape(inputs)
-            outputs.append(play.predict(x))
-        outputs_ = np.array(outputs)
+        outputs = [[] for _ in range(self._nb_plays)]
+        input_dim = self.batch_input_shape[-1]
+        steps_per_epoch = inputs.shape[-1] // input_dim
+        parallelism = False
+        for i, play in enumerate(self.plays):
+            for j in range(steps_per_epoch):
+                x = inputs[j*input_dim:(j+1)*input_dim].reshape(1, 1, -1)
+                outputs[i].append(play.predict(x).reshape(-1))
+
+        results = []
+        for o in outputs:
+            results.append(np.hstack(o))
+
+        # outputs_ = np.array(outputs)
+        outputs_ = np.array(results)
         prediction = outputs_.mean(axis=0)
         prediction = prediction.reshape(-1)
 
@@ -2124,7 +2140,8 @@ class MyModel(object):
 
         LOG.debug(colors.cyan("Writing input shape into disk..."))
         with open("{}/{}plays/input_shape.txt".format(fname[:-3], len(self.plays)), "w") as f:
-            f.write(":".join(map(str, self.plays[0]._batch_input_shape.as_list())))
+            # f.write(":".join(map(str, self.plays[0]._batch_input_shape.as_list())))
+            f.write(":".join(map(str, self.batch_input_shape)))
 
     def load_weights(self, fname, extra={}):
         LOG.debug(colors.cyan("Trying to Load Weights first..."))
