@@ -973,17 +973,18 @@ class Play(object):
         return self.model.evaluate(x, y, steps=steps_per_epoch)
 
     def predict(self, inputs, steps_per_epoch=1, verbose=0):
-        inputs = ops.convert_to_tensor(inputs, tf.float32)
+        # inputs = ops.convert_to_tensor(inputs, tf.float32)
 
         if not self.built:
             self.build(inputs)
 
-        if inputs.shape.as_list() == self._batch_input_shape.as_list():
-            x = inputs
-        else:
-            x = self.reshape(inputs)
+        # if inputs.shape.as_list() == self._batch_input_shape.as_list():
+        #     x = inputs
+        # else:
+        #     x = self.reshape(inputs)
 
-        return self.model.predict(x, steps=steps_per_epoch, verbose=verbose)
+        # return self.model.predict(x, steps=steps_per_epoch, verbose=verbose)
+        return self.model.predict(inputs, steps=steps_per_epoch, verbose=verbose)
 
     @property
     def weights(self):
@@ -1689,6 +1690,7 @@ class MyModel(object):
 
     def predict2(self, inputs):
         _inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
+
         for play in self.plays:
             self._need_compile = False
             if not play.built:
@@ -1697,17 +1699,17 @@ class MyModel(object):
         outputs = [[] for _ in range(self._nb_plays)]
         input_dim = self.batch_input_shape[-1]
         steps_per_epoch = inputs.shape[-1] // input_dim
-        parallelism = False
+
         for i, play in enumerate(self.plays):
             for j in range(steps_per_epoch):
                 x = inputs[j*input_dim:(j+1)*input_dim].reshape(1, 1, -1)
                 outputs[i].append(play.predict(x).reshape(-1))
 
+        # import ipdb; ipdb.set_trace()
         results = []
         for o in outputs:
             results.append(np.hstack(o))
 
-        # outputs_ = np.array(outputs)
         outputs_ = np.array(results)
         prediction = outputs_.mean(axis=0)
         prediction = prediction.reshape(-1)
@@ -2140,9 +2142,12 @@ class MyModel(object):
             play.save_weights(path)
 
         LOG.debug(colors.cyan("Writing input shape into disk..."))
+        start = time.time()
         with open("{}/{}plays/input_shape.txt".format(fname[:-3], len(self.plays)), "w") as f:
             # f.write(":".join(map(str, self.plays[0]._batch_input_shape.as_list())))
             f.write(":".join(map(str, self.batch_input_shape)))
+        end = time.time()
+        LOG.debug("Time cost during writing shape: {} s".format(end-start))
 
     def load_weights(self, fname, extra={}):
         LOG.debug(colors.cyan("Trying to Load Weights first..."))
@@ -2159,7 +2164,7 @@ class MyModel(object):
         if 'shape' in extra:
             shape = extra['shape']
 
-        self._batch_input_shape = shape
+        self._batch_input_shape = tf.TensorShape(shape)
 
         if extra.get('parallelism', False) is True:
             for play in self.plays:
@@ -2179,7 +2184,8 @@ class MyModel(object):
                 LOG.debug(colors.red("Set Weights for {}".format(play._name)))
             end = time.time()
             LOG.debug("Load weights cost: {} s".format(end-start))
-            import ipdb; ipdb.set_trace()
+            # import ipdb; ipdb.set_trace()
+
     @property
     def trainable_weights(self):
         weights = []

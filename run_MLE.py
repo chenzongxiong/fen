@@ -70,8 +70,11 @@ def fit(inputs,
     LOG.debug("print weights info")
     # mymodel.weights
     mymodel.save_weights(weights_fname)
-
+    start = time.time()
     predictions, mu, sigma = mymodel.predict2(inputs)
+    # predictions = mymodel.predict(inputs)
+    end = time.time()
+    LOG.debug("Time cost in prediction: {}s".format(end-start))
 
     loss = ((predictions - outputs) ** 2).mean()
     loss = float(loss)
@@ -105,15 +108,19 @@ def predict(inputs,
                       nb_plays=nb_plays)
 
     mymodel.load_weights(weights_fname)
-    for i in range(num_samples):
-        LOG.debug("Predict on #{} sample".format(i+1))
-        pred, mu, sigma = mymodel.predict2(inputs[i*(input_dim*timestep): (i+1)*(input_dim*timestep)])
-        predictions_list.append(pred)
+    # for i in range(num_samples):
+    #     LOG.debug("Predict on #{} sample".format(i+1))
+    #     pred, mu, sigma = mymodel.predict2(inputs[i*(input_dim*timestep): (i+1)*(input_dim*timestep)])
+    #     predictions_list.append(pred)
+    # predictions, mu, sigma = mymodel.predict2(inputs)
+
+    # mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
+    predictions, _, _ = mymodel.predict2(inputs)
 
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
 
-    predictions = np.hstack(predictions_list)
+    # predictions = np.hstack(predictions_list)
     outputs = outputs[:predictions.shape[-1]]
     loss = ((predictions - outputs) ** 2).mean()
     loss = float(loss)
@@ -256,7 +263,7 @@ if __name__ == "__main__":
     # method = 'mixed'
     # method = 'noise'
     interp = 1
-    do_prediction = False
+    do_prediction = True
     do_trend = False
     do_confusion_matrix = True
     mc_mode = True

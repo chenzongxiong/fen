@@ -396,6 +396,10 @@ class TestCases(unittest.TestCase):
         self._test_stateful_model(1, 5)
         self._test_stateful_model(2, 5)
 
+
+        self._test_stateful_model(1, 20)
+        self._test_stateful_model(2, 20)
+
     def _test_stateful_model_simple(self, nb_plays):
         units = 5
         input_dim = 10          # it's batch_size
