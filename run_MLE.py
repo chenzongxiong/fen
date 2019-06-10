@@ -269,7 +269,7 @@ if __name__ == "__main__":
     run_test = False
 
     mu = 0
-    sigma = 50
+    sigma = 110
 
     points = 1000
     input_dim = 1
@@ -291,7 +291,7 @@ if __name__ == "__main__":
     # __activation__ = 'relu'
     # __activation__ = None
     __mu__ = 0
-    __sigma__ = 70
+    __sigma__ = 110
     # __sigma__ = 5
     # __sigma__ = 20
     if method == 'noise':
