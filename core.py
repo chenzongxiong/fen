@@ -1200,7 +1200,8 @@ class MyModel(object):
                  input_dim=1,
                  diff_weights=False,
                  network_type=constants.NetworkType.PLAY,
-                 learning_rate=0.001
+                 learning_rate=0.001,
+                 parallel_predict=False
                  ):
         # fix random seed to 123
         seed = 123
@@ -1243,8 +1244,9 @@ class MyModel(object):
         # self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, decay=0.1)
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
         # self.optimizer = tf.keras.optimizers.SGD(lr=learning_rate)
-        self.pool = WorkerPool(constants.CPU_COUNTS)
-        self.pool.start()
+        if parallel_predict is True:
+            self.pool = WorkerPool(constants.CPU_COUNTS)
+            self.pool.start()
 
     def fit(self,
             inputs,
@@ -2123,6 +2125,7 @@ class MyModel(object):
             end = time.time()
             LOG.debug("Load weights cost: {} s".format(end-start))
             import ipdb; ipdb.set_trace()
+
     @property
     def trainable_weights(self):
         weights = []
@@ -2139,5 +2142,8 @@ class MyModel(object):
 
     def __del__(self):
         LOG.debug("Start to close ProcessPool before deleting object")
-        self.pool.close()
+        if hasattr(self, 'pool'):
+            self.pool.close()
         tf.keras.backend.clear_session()
+        global CACHE
+        CACHE.clear()

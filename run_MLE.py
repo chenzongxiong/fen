@@ -26,7 +26,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 1000
+    epochs = 10
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -42,7 +42,7 @@ def fit(inputs,
                       nb_plays=nb_plays,
                       learning_rate=learning_rate)
     LOG.debug("Learning rate is {}".format(learning_rate))
-    mymodel.load_weights(weights_fname)
+    # mymodel.load_weights(weights_fname)
     if loss_name == 'mse':
         mymodel.fit(inputs,
                     outputs,
@@ -258,7 +258,7 @@ if __name__ == "__main__":
     do_trend = False
     do_confusion_matrix = True
     mc_mode = True
-    do_trend = True
+    # do_trend = True
 
     with_noise = True
 
@@ -267,7 +267,7 @@ if __name__ == "__main__":
     run_test = False
 
     mu = 0
-    sigma = 50
+    sigma = 110
 
     points = 1000
     input_dim = 1
@@ -281,15 +281,15 @@ if __name__ == "__main__":
     ############################## predicitons #############################
     __nb_plays__ = 100
     __units__ = 100
-    # __nb_plays__ = 20
-    # __units__ = 20
+    __nb_plays__ = 2
+    __units__ = 5
 
     __state__ = 0
     __activation__ = 'tanh'
     # __activation__ = 'relu'
     # __activation__ = None
     __mu__ = 0
-    __sigma__ = 70
+    __sigma__ = 110
     # __sigma__ = 5
     # __sigma__ = 20
     if method == 'noise':
