@@ -149,14 +149,16 @@ def trend(prices,
 
     assert len(shape) == 3, "shape must be 3 dimensions"
     input_dim = shape[2]
-    timestep = prices.shape[0] // input_dim
+    # timestep = prices.shape[0] // input_dim
+    timestep = 1
     shape[1] = timestep
 
     mymodel = MyModel(input_dim=input_dim,
                       timestep=timestep,
                       units=units,
                       activation=activation,
-                      nb_plays=nb_plays)
+                      nb_plays=nb_plays,
+                      parallel_prediction=True)
 
     mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
 
@@ -267,8 +269,8 @@ if __name__ == "__main__":
     # method = 'mixed'
     # method = 'noise'
     interp = 1
-    do_prediction = True
-    do_trend = False
+    do_prediction = False
+    do_trend = True
     do_confusion_matrix = True
     mc_mode = True
     # do_trend = True

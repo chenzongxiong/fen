@@ -1740,13 +1740,14 @@ class MyModel(object):
         assert start_pos > 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
         assert len(prices.shape) == 1, colors.red("Prices should be a vector")
+
         if not hasattr(self, '_batch_input_shape'):
             if hasattr(self.plays[0], '_batch_input_shape'):
                 input_dim = self._batch_input_shape.as_list()[-1]
             else:
                 raise Exception(colors.red("Not found batch_input_shape"))
-        elif isinstance(self._batch_input_shape, (list, tuple)):
-            input_dim = self._batch_input_shape[-1]
+        elif isinstance(self._batch_input_shape, (tf.TensorShape, )):
+            input_dim = self._batch_input_shape[-1].value
         else:
             raise Exception(colors.red("Unknown **input_dim** error occurs in trend"))
 
@@ -1768,6 +1769,7 @@ class MyModel(object):
         ################################################################################
         counts = (((prices[1:] - prices[:-1]) >= 0) == ((original_prediction[1:]-original_prediction[:-1]) >= 0))
         sign = None
+        import ipdb; ipdb.set_trace()
         if (counts.sum() / prices.shape[0]) <= 0.15:
             sign = +1
         elif (counts.sum() / prices.shape[0]) >= 0.85:
