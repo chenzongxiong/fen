@@ -105,7 +105,8 @@ def predict(inputs,
                       timestep=timestep,
                       units=units,
                       activation=activation,
-                      nb_plays=nb_plays)
+                      nb_plays=nb_plays,
+                      parallel_prediction=True)
 
     mymodel.load_weights(weights_fname)
     # for i in range(num_samples):
@@ -114,8 +115,11 @@ def predict(inputs,
     #     predictions_list.append(pred)
     # predictions, mu, sigma = mymodel.predict2(inputs)
 
-    # mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
-    predictions, _, _ = mymodel.predict2(inputs)
+    # predictions = mymodel.predict(inputs)
+    # import ipdb; ipdb.set_trace()
+    # predictions, _, _ = mymodel.predict2(inputs)
+    mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
+    predictions = mymodel.predict(inputs)
 
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))

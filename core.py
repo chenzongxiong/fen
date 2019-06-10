@@ -984,7 +984,16 @@ class Play(object):
         #     x = self.reshape(inputs)
 
         # return self.model.predict(x, steps=steps_per_epoch, verbose=verbose)
-        return self.model.predict(inputs, steps=steps_per_epoch, verbose=verbose)
+
+        outputs = []
+        input_dim = self._batch_input_shape[-1].value
+        samples = inputs.shape[-1] // input_dim
+        for j in range(samples):
+            x = inputs[j*input_dim:(j+1)*input_dim].reshape(1, 1, -1)
+            output = self.model.predict(x, steps=steps_per_epoch, verbose=verbose)
+            outputs.append(output.reshape(-1))
+
+        return np.hstack(outputs)
 
     @property
     def weights(self):
@@ -1288,7 +1297,7 @@ class MyModel(object):
         # self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, decay=0.1)
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
         # self.optimizer = tf.keras.optimizers.SGD(lr=learning_rate)
-        if kwargs.get("prediction_phase", False):
+        if kwargs.get("parallel_prediction", False):
             self.pool = WorkerPool(constants.CPU_COUNTS)
             self.pool.start()
 
@@ -1387,8 +1396,6 @@ class MyModel(object):
 
     def predict(self, inputs, individual=False):
         _inputs = inputs
-        inputs = ops.convert_to_tensor(inputs, tf.float32)
-        x = self.plays[0].reshape(inputs)
 
         ##########################################################################
         #     multiprocessing.Pool
@@ -1415,6 +1422,8 @@ class MyModel(object):
         ##########################################################################
         #  Serial execution
         ##########################################################################
+        # inputs = ops.convert_to_tensor(inputs, tf.float32)
+        # x = self.plays[0].reshape(inputs)
         # for play in self.plays:
         #     if not play.built:
         #         play.build(inputs)
@@ -1701,9 +1710,9 @@ class MyModel(object):
         steps_per_epoch = inputs.shape[-1] // input_dim
 
         for i, play in enumerate(self.plays):
-            for j in range(steps_per_epoch):
-                x = inputs[j*input_dim:(j+1)*input_dim].reshape(1, 1, -1)
-                outputs[i].append(play.predict(x).reshape(-1))
+            # for j in range(steps_per_epoch):
+            #     x = inputs[j*input_dim:(j+1)*input_dim].reshape(1, 1, -1)
+            outputs[i].append(play.predict(inputs))
 
         # import ipdb; ipdb.set_trace()
         results = []
@@ -2203,6 +2212,7 @@ class MyModel(object):
         LOG.debug("Start to close ProcessPool before deleting object")
         if hasattr(self, 'pool'):
             self.pool.close()
+
         tf.keras.backend.clear_session()
         utils.get_cache().clear()
 
