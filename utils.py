@@ -15,7 +15,7 @@ LOG = logging.getLogger(__name__)
 # test seed
 # np.random.seed(345)
 # LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is 345"))
-os.environ['OMP_NUM_THREADS'] = str(0)
+os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())
 
 
 def update(i, *fargs):
@@ -119,6 +119,13 @@ def get_tf_summary_writer(fpath):
 _SESSION = None
 
 def get_session(debug=False, interactive=False):
+    # https://github.com/tensorflow/tensorflow/issues/5448
+    # import multiprocessing as mp
+    # try:
+    #     mp.set_start_method('spawn')
+    # except RuntimeError:
+    #     pass
+
     import tensorflow as tf
     from tensorflow.python import debug as tf_debug
 
@@ -240,21 +247,21 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None):
         _predicted_price = np.array([predicted_price] * l)
         vertical_line = np.linspace(noise.min(), noise.max(), l)
         if index == 0:
-            plt.plot(prices, noise, color=colors[index % len(colors)], marker='o', markersize=4, label='steps finding root')
-            plt.plot(prices, prev_original_prediction, color='red', label='start position')
-            plt.plot(prices, bk, color='black', label='random walk')
-            plt.plot(prices, curr_original_prediction, color='blue', label='target position')
-            plt.plot(prev_price, vertical_line, color='red', label='previous price')
-            plt.plot(curr_price, vertical_line, color='blue', label='current price')
-            plt.plot(_predicted_price, vertical_line, color='black', label='predicted price')
+            plt.plot(prices, prev_original_prediction, color='red', label='start position', linewidth=1)
+            plt.plot(prices, bk, color='black', label='random walk', linewidth=1)
+            plt.plot(prices, curr_original_prediction, color='blue', label='target position', linewidth=1)
+            plt.plot(prev_price, vertical_line, color='red', label='previous price', linewidth=1, linestyle='dashed')
+            plt.plot(curr_price, vertical_line, color='blue', label='current price', linewidth=1, linestyle='dashed')
+            plt.plot(_predicted_price, vertical_line, color='black', label='predicted price', linewidth=1, linestyle='dashed')
+            plt.plot(prices, noise, color=colors[index % len(colors)], marker='o', markersize=4, label='steps finding root', linewidth=1)
         else:
-            plt.plot(prices, noise, color=colors[index % len(colors)], marker='o', markersize=4, label=None)
-            plt.plot(prices, prev_original_prediction, color='red', label=None)
-            plt.plot(prices, bk, color='black', label=None)
-            plt.plot(prices, curr_original_prediction, color='blue', label=None)
-            plt.plot(prev_price, vertical_line, color='red', label=None)
-            plt.plot(curr_price, vertical_line, color='blue', label=None)
-            plt.plot(_predicted_price, vertical_line, color='black', label=None)
+            plt.plot(prices, prev_original_prediction, color='red', label=None, linewidth=1)
+            plt.plot(prices, bk, color='black', label=None, linewidth=1)
+            plt.plot(prices, curr_original_prediction, color='blue', label=None, linewidth=1)
+            plt.plot(prev_price, vertical_line, color='red', label=None, linewidth=1, linestyle='dashed')
+            plt.plot(curr_price, vertical_line, color='blue', label=None, linewidth=1, linestyle='dashed')
+            plt.plot(_predicted_price, vertical_line, color='black', label=None, linewidth=1, linestyle='dashed')
+            plt.plot(prices, noise, color=colors[index % len(colors)], marker='o', markersize=4, label=None, linewidth=1)
 
     plt.xlabel("prices")
     plt.ylabel("noise")
@@ -263,7 +270,7 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None):
     fname = './frames/{}.png'.format(i)
     os.makedirs(os.path.dirname(fname), exist_ok=True)
     fig.savefig(fname, dpi=400)
-
+    LOG.debug("Save picture into disk {}".format(fname))
 
 
 if __name__ == "__main__":

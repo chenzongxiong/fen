@@ -1,16 +1,14 @@
 import sys
 import time
-import scipy
 import numpy as np
 
 import log as logging
 from core import MyModel, confusion_matrix
-import utils
+# import utils
 import trading_data as tdata
 import constants
 import colors
 
-sess = utils.get_session()
 LOG = logging.getLogger(__name__)
 epochs = constants.EPOCHS
 EPOCHS = constants.EPOCHS
@@ -28,7 +26,7 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 1000
+    epochs = 10
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -44,7 +42,7 @@ def fit(inputs,
                       nb_plays=nb_plays,
                       learning_rate=learning_rate)
     LOG.debug("Learning rate is {}".format(learning_rate))
-    mymodel.load_weights(weights_fname)
+    # mymodel.load_weights(weights_fname)
     if loss_name == 'mse':
         mymodel.fit(inputs,
                     outputs,
@@ -141,6 +139,44 @@ def trend(prices,
     timestep = prices.shape[0] // input_dim
     shape[1] = timestep
 
+    mymodel = MyModel(input_dim=input_dim,
+                      timestep=timestep,
+                      units=units,
+                      activation=activation,
+                      nb_plays=nb_plays)
+
+    mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
+
+    # guess_trend, guess_trend_list = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
+    guess_trend = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
+    # loss = ((prediction - prices) ** 2).mean()
+    # loss = float(loss)
+    # LOG.debug("loss: {}".format(loss))
+    # import ipdb; ipdb.set_trace()
+    # if trends_list_fname is not None:
+    #     inputs = prices[1000:1000+guess_trend.shape[-1]]
+    #     outputs = guess_trend_list
+    #     tdata.DatasetSaver.save_data(inputs, outputs, trends_list_fname)
+
+    loss = float(-1.0)
+    return guess_trend, loss
+
+
+def visualize(inputs,
+              units=1,
+              activation='tanh',
+              nb_plays=1,
+              weights_name='model.h5'):
+
+    with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
+        line = f.read()
+    shape = list(map(int, line.split(":")))
+
+    assert len(shape) == 3, "shape must be 3 dimensions"
+    input_dim = shape[2]
+    timestep = inputs.shape[0] // input_dim
+    shape[1] = timestep
+
     start = time.time()
 
     mymodel = MyModel(input_dim=input_dim,
@@ -149,21 +185,9 @@ def trend(prices,
                       activation=activation,
                       nb_plays=nb_plays)
 
-
     mymodel.load_weights(weights_fname, extra={'shape': shape})
+    mymodel.visualize_activated_plays(inputs=inputs)
 
-    guess_trend, guess_trend_list = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
-    # loss = ((prediction - prices) ** 2).mean()
-    # loss = float(loss)
-    # LOG.debug("loss: {}".format(loss))
-    # import ipdb; ipdb.set_trace()
-    if trends_list_fname is not None:
-        inputs = prices[1000:1000+guess_trend.shape[-1]]
-        outputs = guess_trend_list
-        tdata.DatasetSaver.save_data(inputs, outputs, trends_list_fname)
-
-    loss = float(-1.0)
-    return guess_trend, loss
 
 def plot(a, b, trend_list):
     from matplotlib import pyplot as plt
@@ -173,7 +197,7 @@ def plot(a, b, trend_list):
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True)
     ax1.plot(x, a, color='blue')
     ax1.plot(x, b, color='black')
-    markers = ['^', 's']
+
     for index, d1, d2 in zip(x[1:], diff1, diff2):
         if d1 is True and d2 is True:
             ax1.scatter([index], [b[index-1]], marker='^', color='green')
@@ -234,6 +258,7 @@ if __name__ == "__main__":
     do_trend = False
     do_confusion_matrix = True
     mc_mode = True
+    # do_trend = True
 
     with_noise = True
 
@@ -242,7 +267,7 @@ if __name__ == "__main__":
     run_test = False
 
     mu = 0
-    sigma = 50
+    sigma = 110
 
     points = 1000
     input_dim = 1
@@ -254,17 +279,17 @@ if __name__ == "__main__":
     activation = 'tanh'
     activation = None
     ############################## predicitons #############################
-    # __nb_plays__ = 100
-    # __units__ = 100
-    __nb_plays__ = 20
-    __units__ = 20
+    __nb_plays__ = 100
+    __units__ = 100
+    __nb_plays__ = 2
+    __units__ = 5
 
     __state__ = 0
     __activation__ = 'tanh'
     # __activation__ = 'relu'
     # __activation__ = None
     __mu__ = 0
-    __sigma__ = 70
+    __sigma__ = 110
     # __sigma__ = 5
     # __sigma__ = 20
     if method == 'noise':
@@ -453,6 +478,11 @@ if __name__ == "__main__":
     #     LOG.warning("Not found prediction file, no way to create confusion matrix")
 
     if mc_mode is True and do_trend is True:
+        # visualize(inputs=inputs,
+        #           units=__units__,
+        #           activation=__activation__,
+        #           nb_plays=__nb_plays__,
+        #           weights_name=weights_fname)
         import ipdb; ipdb.set_trace()
         predictions, loss = trend(prices=inputs,
                                   B=outputs,
