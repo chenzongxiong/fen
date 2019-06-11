@@ -1,0 +1,133 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Medium Length Professional CV
+% LaTeX Template
+% Version 2.0 (8/5/13)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% Rishi Shah
+%
+% Important note:
+% This template requires the resume.cls file to be in the same directory as the
+% .tex file. The resume.cls file provides the resume style used for structuring the
+% document.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% ----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+% ----------------------------------------------------------------------------------------
+
+\documentclass{resume} % Use the custom resume.cls style
+
+\usepackage[left=0.75in,top=0.6in,right=0.75in,bottom=0.6in]{geometry} % Document margins
+\usepackage{hyperref}
+\newcommand{\tab}[1]{\hspace{.2667\textwidth}\rlap{#1}}
+\newcommand{\itab}[1]{\hspace{0em}\rlap{#1}}
+\name{Zongxiong Chen} % Your name
+% \address{156 Kasturi, Balajinagar, Sangli 416416} % Your address
+% \address{123 Pleasant Lane \\ City, State 12345} % Your secondary addess (optional)
+\address{(+49)1747228831 \\ czxczf@gmail.com} % Your phone number and email
+
+\begin{document}
+
+% ----------------------------------------------------------------------------------------
+%	EDUCATION SECTION
+% ----------------------------------------------------------------------------------------
+
+\begin{rSection}{Education}
+
+  {\bf Technische Universität Berlin} \hfill {\em April 2017 - Present}
+  \\ Master in Computer Science Department \\
+
+  {\bf Southeast University, China} \hfill {\em Sep. 2011 - June 2017}
+  \\ Bachelor of Automation Department. \hfill { GPA: 3.63/4.0 } \\
+
+\end{rSection}
+
+% ----------------------------------------------------------------------------------------
+%	WORK EXPERIENCE SECTION
+% ----------------------------------------------------------------------------------------
+
+\begin{rSection}{Work Experiences}
+  {\ }\hfill{\em Apr. 2018-Present} \\ % use leading space to avoid error message
+  \begin{rSubsection}{Deutsches Forschungszentrum für Künstliche Intelligenz}{}{Research Assistant}
+  \item Implementing several benchmarks (Yahoo Streaming Benchmark, Linear Road Benchmark, New york taxi Benchmark) for different streaming systems, such as \href{https://www.usenix.org/system/files/conference/atc17/atc17-miao.pdf}{StreamBox}, \href{https://www.matthiasweidlich.com/paper/saber_SIGMOD_2016.pdf}{Saber}
+  \end{rSubsection}
+
+  {\ }\hfill{\em Jan. 2019-Present} \\
+  \begin{rSubsection}{Baymax, Berlin}{}{Software Engineer}
+  \item Developing an cross-platform APP to help company to improve competition and reputation in medical market.
+  \end{rSubsection}
+
+  {\ }\hfill{\em Jul. 2015-Sep. 2016} \\
+  \begin{rSubsection}{Ctrip Computer Technology(Shanghai) CO. LTD, China}{}{System Development Engineer}{}
+  \item Setting up a docker hub to store private docker images.
+  \item Packing source code from private gitlab and generating docker images automatically.
+  \item Collecting logs of docker running containers and transferring useful logs to ELK.
+  \item Developing a project to migrate the storage from one IDC(Internet Data Center) to another IDC for backup, using CEPH as distributed file system.
+  \item Developing a project to record the the reasons why projects accidently fail to upgrade in production.
+  \end{rSubsection}
+
+\end{rSection}
+
+% ----------------------------------------------------------------------------------------
+%	Computer Skills
+% ----------------------------------------------------------------------------------------
+\begin{rSection}{Computer Skills}
+
+  \begin{tabular}{ @{} >{\bfseries}l @{\hspace{6ex}} l }
+    Programming Languages  & python, c++, nodejs, java, shell \\
+    Databasae  & mySQL, redis, sqlite \\
+    Web framework & django, flask, express \\
+    DevOps Tools  & ELK, Grafana, Prometheus \\
+    Miscellaneous & git, docker, restful, design pattern, react native
+  \end{tabular}
+\end{rSection}
+
+\newpage
+% --------------------------------------------------------------------------------
+% Projects
+% -----------------------------------------------------------------------------------------------
+\begin{rSection}{Projects}
+  \begin{tabular}{ @{} >{\bfseries}l @{\hspace{6ex}} l }
+
+    {\em Sep. 2014 – Dec. 2014} &  Collecting logs of physical machines generated during deployment and \\
+    {\ }  & sending all useful logs to ELK for further debug. \\
+
+    {\em May 2014} & Developing a program to recognize LED characters and the accuracy \\
+    {\ } & of the recognition system achieved 97.66\%. \\
+
+    {\em Oct. 2013 – Dec. 2013} &  Developing a program to correct the dramatic distortion causing by \\
+    {\ } & by fisheye lens referring to the paper \'A Flexible Technique for \\
+    {\ } & Accurate Omnidirectional Camera Calibration and Structure from \\
+    {\ } & Motion\' of Davide Scaramuzza. \\
+
+    {\em Sep. 2012 – Oct. 2012} & Developing an auto-obstacle-detection system for vehicles. \\
+
+  \end{tabular}
+
+\end{rSection}
+
+
+%	EXAMPLE SECTION
+% ----------------------------------------------------------------------------------------
+
+% \begin{rSection}{Academic Achievements}
+%   Runners up in B.G.Shirke Vidyarthi Competition for Innovative Project organized by Pune Construction Engineering Research Foundation in January 2018
+% \item Won First Prize in Model Making Competition Organized by Symbiosis Institute of Technology, Pune.
+% \end{rSection}
+
+% \newpage
+
+% ----------------------------------------------------------------------------------------
+% Extra Curricular
+% ----------------------------------------------------------------------------------------
+\begin{rSection}{Awards} \itemsep -3pt
+  \item 3rd Place, Efficient Architectures for Data Science, 1st Fall School of the HPI Future SOC Lab, HPI for Digital Engineering, University of Potsdam, 2017
+  \item 2nd Place, Hella Cup, 3rd competition of intelligent information processing system software design, Southeast University, 2012
+\end{rSection}
+
+\end{document}
