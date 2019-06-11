@@ -1498,7 +1498,8 @@ class MyModel(object):
 
         # TODO: Need to fix self._x, self._x_feed_dict later
         # self._x = [tf.reshape(inputs, shape=self._batch_input_shape.as_list())]
-        # self._x_feed_dict = { self.feed_inputs[0].name : _inputs.reshape(self._batch_input_shape.as_list()) }
+        if unittest is True:
+            self._x_feed_dict = { self.feed_inputs[0].name : _inputs.reshape(self._batch_input_shape.as_list()) }
 
         self._y = [self.feed_mu, self.feed_sigma]
 
