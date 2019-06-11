@@ -26,13 +26,15 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse'):
 
-    epochs = 10
+    epochs = 1000
+    epochs = 1
     # steps_per_epoch = batch_size
 
     start = time.time()
     input_dim = 10
-    timestep = inputs.shape[0] // input_dim
-    steps_per_epoch = input_dim
+    # timestep = inputs.shape[0] // input_dim
+    timestep = 1
+    steps_per_epoch = inputs.shape[0] // input_dim
     # steps_per_epoch = 1
 
     mymodel = MyModel(input_dim=input_dim,
@@ -68,8 +70,11 @@ def fit(inputs,
     LOG.debug("print weights info")
     # mymodel.weights
     mymodel.save_weights(weights_fname)
-
+    start = time.time()
     predictions, mu, sigma = mymodel.predict2(inputs)
+    # predictions = mymodel.predict(inputs)
+    end = time.time()
+    LOG.debug("Time cost in prediction: {}s".format(end-start))
 
     loss = ((predictions - outputs) ** 2).mean()
     loss = float(loss)
@@ -100,18 +105,26 @@ def predict(inputs,
                       timestep=timestep,
                       units=units,
                       activation=activation,
-                      nb_plays=nb_plays)
+                      nb_plays=nb_plays,
+                      parallel_prediction=True)
 
     mymodel.load_weights(weights_fname)
-    for i in range(num_samples):
-        LOG.debug("Predict on #{} sample".format(i+1))
-        pred, mu, sigma = mymodel.predict2(inputs[i*(input_dim*timestep): (i+1)*(input_dim*timestep)])
-        predictions_list.append(pred)
+    # for i in range(num_samples):
+    #     LOG.debug("Predict on #{} sample".format(i+1))
+    #     pred, mu, sigma = mymodel.predict2(inputs[i*(input_dim*timestep): (i+1)*(input_dim*timestep)])
+    #     predictions_list.append(pred)
+    # predictions, mu, sigma = mymodel.predict2(inputs)
+
+    # predictions = mymodel.predict(inputs)
+    # import ipdb; ipdb.set_trace()
+    # predictions, _, _ = mymodel.predict2(inputs)
+    mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
+    predictions = mymodel.predict(inputs)
 
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
 
-    predictions = np.hstack(predictions_list)
+    # predictions = np.hstack(predictions_list)
     outputs = outputs[:predictions.shape[-1]]
     loss = ((predictions - outputs) ** 2).mean()
     loss = float(loss)
@@ -136,14 +149,16 @@ def trend(prices,
 
     assert len(shape) == 3, "shape must be 3 dimensions"
     input_dim = shape[2]
-    timestep = prices.shape[0] // input_dim
+    # timestep = prices.shape[0] // input_dim
+    timestep = 1
     shape[1] = timestep
 
     mymodel = MyModel(input_dim=input_dim,
                       timestep=timestep,
                       units=units,
                       activation=activation,
-                      nb_plays=nb_plays)
+                      nb_plays=nb_plays,
+                      parallel_prediction=True)
 
     mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
 
@@ -255,7 +270,7 @@ if __name__ == "__main__":
     # method = 'noise'
     interp = 1
     do_prediction = False
-    do_trend = False
+    do_trend = True
     do_confusion_matrix = True
     mc_mode = True
     # do_trend = True
@@ -383,7 +398,7 @@ if __name__ == "__main__":
         raise Exception("both do predictions and do_trend are True")
 
 
-    inputs, outputs= tdata.DatasetLoader.load_data(fname)
+    inputs, outputs = tdata.DatasetLoader.load_data(fname)
     if do_trend is False:
         inputs, outputs = inputs[:points], outputs[:points]
     if mc_mode is True:

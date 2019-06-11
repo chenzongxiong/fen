@@ -144,6 +144,11 @@ def get_session(debug=False, interactive=False):
     return _SESSION
 
 
+def clear_session():
+    import tensorflow as tf
+    tf.keras.backend.clear_session()
+
+
 def init_tf_variables():
     import tensorflow as tf
     sess = tf.keras.backend.get_session()
@@ -271,6 +276,17 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None):
     os.makedirs(os.path.dirname(fname), exist_ok=True)
     fig.savefig(fname, dpi=400)
     LOG.debug("Save picture into disk {}".format(fname))
+
+
+_CACHE = None
+def get_cache():
+    global _CACHE
+    if _CACHE is None:
+        _CACHE = dict()
+    return _CACHE
+
+def sentinel_marker():
+    return 'SENTINEL'
 
 
 if __name__ == "__main__":
