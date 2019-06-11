@@ -359,15 +359,12 @@ class TestCases(unittest.TestCase):
     #     self.assertTrue(np.allclose(states, op_states))
 
     # def test_stateful(self):
-    #     batch_size = 1
-    #     nb_plays = 1
-    #     input_dim = 1
-    #     units = 5
+    #     input_dim = self.inputs.shape[-1]
     #     activation = None
     #     timestep = self.inputs.shape[0] // input_dim
 
-    #     mymodel = core.MyModel(nb_plays=nb_plays,
-    #                            units=units,
+    #     mymodel = core.MyModel(nb_plays=1,
+    #                            units=5,
     #                            input_dim=input_dim,
     #                            timestep=timestep,
     #                            activation=activation,
@@ -387,18 +384,90 @@ class TestCases(unittest.TestCase):
     #     self.assertTrue(np.allclose(output_1.reshape(-1), self.truth_with_state_zero))
     #     self.assertTrue(np.allclose(output_2.reshape(-1), self.truth_with_state_one))
 
-    # def test_stateful_model(self):
-    #     self._test_stateful_model(nb_plays=1)
-    #     self._test_stateful_model(nb_plays=2)
 
-    # def _test_stateful_model(self, nb_plays):
+    def test_stateful_model(self):
+        self._test_stateful_model_simple(nb_plays=1)
+        self._test_stateful_model_simple(nb_plays=2)
+
+        self._test_stateful_model(1)
+        self._test_stateful_model(2)
+
+        self._test_stateful_model(1, 2)
+        self._test_stateful_model(2, 2)
+
+        self._test_stateful_model(1, 5)
+        self._test_stateful_model(2, 5)
+
+
+        self._test_stateful_model(1, 20)
+        self._test_stateful_model(2, 20)
+
+    def _test_stateful_model_simple(self, nb_plays):
+        units = 5
+        input_dim = 10          # it's batch_size
+
+        activation = None
+        input_1, input_2 = self.inputs[:10], self.inputs[10:]
+
+        mymodel = core.MyModel(nb_plays=nb_plays,
+                               units=units,
+                               input_dim=input_dim,
+                               timestep=1,
+                               activation=activation,
+                               debug=True)
+
+        mymodel.compile(input_1, mu=0, sigma=1, test_stateful=True)
+
+        ins = [input_1.reshape(mymodel.batch_input_shape)]
+        utils.init_tf_variables()
+
+        states_list = [0] * mymodel._nb_plays
+        mymodel.reset_states(states_list=states_list)
+        output_1 = mymodel.train_function(ins)
+
+        ins = [input_2.reshape(mymodel.batch_input_shape)]
+        states_list = [o.reshape(-1)[-1] for o in output_1]
+        mymodel.reset_states(states_list=states_list)
+        output_2 = mymodel.train_function(ins)
+
+        results = []
+        for o1, o2 in zip(output_1, output_2):
+            result = np.hstack([o1.reshape(-1), o2.reshape(-1)])
+            results.append(result)
+
+        truth = [self.truth_with_state_zero] * mymodel._nb_plays
+        for r, t in zip(results, truth):
+            self.assertTrue(np.allclose(r, t))
+
+    def _test_stateful_model(self, nb_plays, input_dim=10):
+        length = self.inputs.shape[-1]
+        units = 5
+        activation = None
+        steps_per_epoch = length // input_dim
+
+        mymodel = core.MyModel(nb_plays=nb_plays,
+                               units=units,
+                               input_dim=input_dim,
+                               timestep=1,
+                               activation=activation,
+                               debug=True)
+
+        outputs = mymodel.fit2(self.inputs, mu=0, sigma=1, epochs=1, steps_per_epoch=steps_per_epoch, test_stateful=True)
+        for o in outputs:
+            self.assertTrue(np.allclose(o, self.truth))
+
+
+    # def test_stateful_model_with_batch_size(self):
+    #     self._test_stateful_model_with_batch_size(2)
+
+    # def _test_stateful_model_with_batch_size(self, batch_size):
     #     units = 5
     #     input_dim = 1
     #     activation = None
     #     input_1, input_2 = self.inputs[:10], self.inputs[10:]
     #     timestep = input_1.shape[0] // input_dim
 
-    #     mymodel = core.MyModel(nb_plays=nb_plays,
+    #     mymodel = core.MyModel(nb_plays=1,
     #                            units=units,
     #                            input_dim=input_dim,
     #                            timestep=timestep,
@@ -406,14 +475,14 @@ class TestCases(unittest.TestCase):
     #                            debug=True)
 
     #     mymodel.compile(input_1, mu=0, sigma=1, test_stateful=True)
-    #     ins = [input_1.reshape((1, timestep, input_dim))] * mymodel._nb_plays
+    #     ins = [input_1.reshape((batch_size, timestep, input_dim))] * mymodel._nb_plays
     #     utils.init_tf_variables()
 
     #     states_list = [0] * mymodel._nb_plays
     #     mymodel.reset_states(states_list=states_list)
     #     output_1 = mymodel.train_function(ins)
 
-    #     ins = [input_2.reshape((1, timestep, input_dim))] * mymodel._nb_plays
+    #     ins = [input_2.reshape((batch_size, timestep, input_dim))] * mymodel._nb_plays
     #     states_list = [o.reshape(-1)[-1] for o in output_1]
     #     mymodel.reset_states(states_list=states_list)
     #     output_2 = mymodel.train_function(ins)
@@ -471,12 +540,12 @@ class TestCases(unittest.TestCase):
     #     model.fit(inputs, outputs, verbose=1, epochs=1, steps_per_epoch=2)
 
 
-    def test_play_with_lstm_model(self):
-        size = [1, 1, 64]
-        x = np.random.normal(size=size).reshape(1, -1, 1)
-        y = np.random.normal(size=size).reshape(1, -1, 1)
-        play = core.Play(rnn_units=1)
-        print("Evaluated results: {}".format(play.fit(x, y, epochs=1, verbose=1).evaluate(x, y)))
+    # def test_play_with_lstm_model(self):
+    #     size = [1, 1, 64]
+    #     x = np.random.normal(size=size).reshape(1, -1, 1)
+    #     y = np.random.normal(size=size).reshape(1, -1, 1)
+    #     play = core.Play(rnn_units=1)
+    #     print("Evaluated results: {}".format(play.fit(x, y, epochs=1, verbose=1).evaluate(x, y)))
 
 if __name__ == '__main__':
     unittest.main()

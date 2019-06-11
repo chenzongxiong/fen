@@ -553,9 +553,9 @@ class PhiCell(Layer):
         """
         self._inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
         self._state = ops.convert_to_tensor(states[-1], dtype=tf.float32)
-        LOG.debug("inputs.shape: {}".format(inputs.shape))
-        LOG.debug("self._inputs.shape: {}".format(self._inputs))
-        LOG.debug("self._state.shape: {}".format(self._state))
+        LOG.debug("PhiCellinputs.shape: {}".format(inputs.shape))
+        LOG.debug("PhiCell._inputs.shape: {}".format(self._inputs.shape))
+        LOG.debug("PhiCell._state.shape: {}".format(self._state.shape))
         ############### IMPL from Scratch #####################
         # outputs_ = tf.multiply(self._inputs, self.kernel)
         # outputs = [self._state]
@@ -864,8 +864,9 @@ class Play(object):
                                                                                        self._play_timestep))
                     raise Exception("The batch size cannot be divided by the length of input sequence.")
 
-                self.batch_size = length // (self._play_timestep * self._play_input_dim)
+                # self.batch_size = length // (self._play_timestep * self._play_input_dim)
                 self._play_batch_size = length // (self._play_timestep * self._play_input_dim)
+                self.batch_size = 1
                 self._batch_input_shape = tf.TensorShape([self.batch_size, self._play_timestep, self._play_input_dim])
 
             else:
@@ -874,13 +875,20 @@ class Play(object):
         length = self._batch_input_shape[1].value * self._batch_input_shape[2].value
         self.batch_size = self._batch_input_shape[0].value
         assert self.batch_size == 1, colors.red("only support batch_size is 1")
-
-        timesteps = self._batch_input_shape[1].value
+        assert self._play_timestep == 1, colors.red("only support outter-timestep 1")
 
         self.model = tf.keras.models.Sequential()
 
-        self.model.add(tf.keras.layers.InputLayer(batch_size=self.batch_size,
-                                                  input_shape=self._batch_input_shape[1:]))
+        CACHE = utils.get_cache()
+        input_layer = CACHE.get('play_input_layer', None)
+
+        if input_layer is None:
+            input_layer = tf.keras.layers.InputLayer(batch_size=self.batch_size,
+                                                     input_shape=self._batch_input_shape[1:])
+            CACHE['play_input_layer'] = input_layer
+
+        self.model.add(input_layer)
+
         self.model.add(Operator(weight=getattr(self, "_weight", 1.0),
                                 width=getattr(self, "_width", 1.0),
                                 debug=getattr(self, "_debug", False)))
@@ -965,17 +973,27 @@ class Play(object):
         return self.model.evaluate(x, y, steps=steps_per_epoch)
 
     def predict(self, inputs, steps_per_epoch=1, verbose=0):
-        inputs = ops.convert_to_tensor(inputs, tf.float32)
+        # inputs = ops.convert_to_tensor(inputs, tf.float32)
 
         if not self.built:
             self.build(inputs)
 
-        if inputs.shape.as_list() == self._batch_input_shape.as_list():
-            x = inputs
-        else:
-            x = self.reshape(inputs)
+        # if inputs.shape.as_list() == self._batch_input_shape.as_list():
+        #     x = inputs
+        # else:
+        #     x = self.reshape(inputs)
 
-        return self.model.predict(x, steps=steps_per_epoch, verbose=verbose)
+        # return self.model.predict(x, steps=steps_per_epoch, verbose=verbose)
+
+        outputs = []
+        input_dim = self._batch_input_shape[-1].value
+        samples = inputs.shape[-1] // input_dim
+        for j in range(samples):
+            x = inputs[j*input_dim:(j+1)*input_dim].reshape(1, 1, -1)
+            output = self.model.predict(x, steps=steps_per_epoch, verbose=verbose)
+            outputs.append(output.reshape(-1))
+
+        return np.hstack(outputs)
 
     @property
     def weights(self):
@@ -1279,7 +1297,7 @@ class MyModel(object):
         # self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, decay=0.1)
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
         # self.optimizer = tf.keras.optimizers.SGD(lr=learning_rate)
-        if kwargs.get("prediction_phase", False):
+        if kwargs.get("parallel_prediction", False):
             self.pool = WorkerPool(constants.CPU_COUNTS)
             self.pool.start()
 
@@ -1378,9 +1396,7 @@ class MyModel(object):
 
     def predict(self, inputs, individual=False):
         _inputs = inputs
-        inputs = ops.convert_to_tensor(inputs, tf.float32)
-        x = self.plays[0].reshape(inputs)
-        start = time.time()
+
         ##########################################################################
         #     multiprocessing.Pool
         ##########################################################################
@@ -1393,6 +1409,7 @@ class MyModel(object):
         ##########################################################################
         #     myImplementation.Pool
         ##########################################################################
+        start = time.time()
         for play in self.plays:
             LOG.debug("{}".format(play._name))
             task = Task(play, 'predict', (_inputs,))
@@ -1405,6 +1422,8 @@ class MyModel(object):
         ##########################################################################
         #  Serial execution
         ##########################################################################
+        # inputs = ops.convert_to_tensor(inputs, tf.float32)
+        # x = self.plays[0].reshape(inputs)
         # for play in self.plays:
         #     if not play.built:
         #         play.build(inputs)
@@ -1414,9 +1433,9 @@ class MyModel(object):
         #     start = time.time()
         #     outputs.append(play.predict(x))
         #     end = time.time()
-        #     import ipdb; ipdb.set_trace()
         #     LOG.debug("play {} cost time {} s".format(play._name, end-start))
         ##########################################################################
+
         outputs_ = np.array(outputs)
         prediction = outputs_.mean(axis=0)
         prediction = prediction.reshape(-1)
@@ -1463,22 +1482,29 @@ class MyModel(object):
                                                               dtype=tf.float32)
 
         # TODO: not feed with self._x, can't be a bug HERE
-        # self.feed_targets = [self.feed_mu, self.feed_sigma]
-        # self.feed_targets = [self.mu_placeholder, self.sigma_placeholder]
+
+        self._batch_input_shape = utils.get_cache()['play_input_layer'].input.shape
+        self.feed_inputs = [utils.get_cache()['play_input_layer'].input]
         self.feed_targets = []
         self.update_inputs = []
+
         for play in self.plays:
-            self.feed_inputs.append(play.input)
+            # self.feed_inputs.append(play.input)
             self.model_outputs.append(play.output)
             # TODO: figure out the function of get_updates_for
             self.update_inputs += play.model.get_updates_for(play.input)
             self.params_list += play.trainable_weights
 
-        self._x = [play.reshape(inputs) for play in self.plays]
+
+        # TODO: Need to fix self._x, self._x_feed_dict later
+        # self._x = [tf.reshape(inputs, shape=self._batch_input_shape.as_list())]
+        # self._x_feed_dict = { self.feed_inputs[0].name : _inputs.reshape(self._batch_input_shape.as_list()) }
+
         self._y = [self.feed_mu, self.feed_sigma]
-        self._x_feed_dict = {self.feed_inputs[k].name : _inputs.reshape(1, -1, self._input_dim) for k in range(self._nb_plays)}
-        LOG.debug("self._x.shape: {}, x_feed_dict.names: {}, x_feed_dict.shape: {}".format([(x.name, x.shape) for x in self.feed_inputs], self._x_feed_dict.keys(), [self._x_feed_dict[name].shape for name in self._x_feed_dict.keys()]))
-        # import ipdb; ipdb.set_trace()
+
+        # LOG.debug("self._x.shape: {}, x_feed_dict.names: {}, x_feed_dict.shape: {}".format([(x.name, x.shape) for x in self.feed_inputs], self._x_feed_dict.keys(), [self._x_feed_dict[name].shape for name in self._x_feed_dict.keys()]))
+
+        assert len(self.feed_inputs) == 1, colors.red("ERROR: only one input layers")
         ##################### Average outputs #############################
         if self._nb_plays > 1:
             self.y_pred = tf.keras.layers.Average()(self.model_outputs)
@@ -1511,8 +1537,8 @@ class MyModel(object):
                                               play.linear_layer.kernel,
                                               activation=self._activation,
                                               debug=True,
-                                              inputs=self.feed_inputs[i],
-                                              feed_dict=copy.deepcopy(self._x_feed_dict)) for i, play in enumerate(self.plays)]
+                                              inputs=self.feed_inputs[0],
+                                              feed_dict=copy.deepcopy(self._x_feed_dict))]
                 self.J_list_by_hand = J_list
                 ####################### Calculate J by Tensorflow ###############################
                 y_pred = tf.reshape(self.y_pred, shape=self.feed_inputs[0].shape)
@@ -1520,7 +1546,7 @@ class MyModel(object):
                 J_by_tf = [tf.reshape(J_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
                 self.J_by_tf = tf.reduce_mean(tf.concat(J_by_tf, axis=-1), axis=-1, keepdims=True)
 
-                model_outputs = [tf.reshape(self.model_outputs[i], shape=self.feed_inputs[i].shape) for i in range(self._nb_plays)]
+                model_outputs = [tf.reshape(self.model_outputs[i], shape=self.feed_inputs[0].shape) for i in range(self._nb_plays)]
                 J_list_by_tf = tf.keras.backend.gradients(model_outputs, self.feed_inputs)
                 self.J_list_by_tf = [tf.reshape(J_list_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
 
@@ -1566,12 +1592,12 @@ class MyModel(object):
             self.loss_by_hand = tf.keras.backend.mean(self.loss_a+self.loss_b)
             self.loss = self.loss_by_hand
 
-            if outputs is not None:
-                mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))
-                mse_loss2 = tf.keras.backend.mean(tf.square(self.y_pred + tf.reshape(outputs, shape=self.y_pred.shape)))
-            else:
-                mse_loss1 = tf.constant(-1.0, dtype=tf.float32)
-                mse_loss2 = tf.constant(-1.0, dtype=tf.float32)
+            # if outputs is not None:
+            #     mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))
+            #     mse_loss2 = tf.keras.backend.mean(tf.square(self.y_pred + tf.reshape(outputs, shape=self.y_pred.shape)))
+            # else:
+            mse_loss1 = tf.constant(-1.0, dtype=tf.float32)
+            mse_loss2 = tf.constant(-1.0, dtype=tf.float32)
 
             with tf.name_scope(self.optimizer.__class__.__name__):
                 updates = self.optimizer.get_updates(params=self.params_list,
@@ -1584,14 +1610,12 @@ class MyModel(object):
             self.training_inputs = training_inputs
             if kwargs.get('test_stateful', False):
                 outputs = [play.operator_layer.output for play in self.plays]
-                self.train_function = tf.keras.backend.function(self.training_inputs,
-                                                                outputs,
-                                                                updates=self.updates)
             else:
-                outputs = [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred]
-                self.train_function = tf.keras.backend.function(training_inputs,
-                                                                outputs,
-                                                                updates=updates)
+                outputs = [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred] + [play.operator_layer.output for play in self.plays]
+
+            self.train_function = tf.keras.backend.function(training_inputs,
+                                                            outputs,
+                                                            updates=updates)
 
     def fit2(self,
              inputs,
@@ -1603,7 +1627,8 @@ class MyModel(object):
              steps_per_epoch=1,
              loss_file_name="./tmp/mymodel_loss_history.csv",
              learning_rate=0.001,
-             decay=0.):
+             decay=0.,
+             **kwargs):
 
         writer = utils.get_tf_summary_writer("./log/mle")
 
@@ -1613,9 +1638,11 @@ class MyModel(object):
             __sigma__ = (outputs[1:] - outputs[:-1]).std()
             outputs = ops.convert_to_tensor(outputs, tf.float32)
 
-        self.compile(inputs, mu=mu, sigma=sigma, unittest=False, outputs=outputs)
+        self.compile(inputs, mu=mu, sigma=sigma, unittest=False, outputs=outputs, **kwargs)
         # ins = self._x + self._y
-        ins = self._x
+        # ins = self._x
+        input_dim =  self.batch_input_shape[-1]
+        # ins = inputs.reshape(-1, 1, input_dim)
         utils.init_tf_variables()
 
         writer.add_graph(tf.get_default_graph())
@@ -1624,61 +1651,75 @@ class MyModel(object):
         patience_list = []
         prev_cost = np.inf
 
-        logger_string = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}"
+        if kwargs.get('test_stateful', False):
+            outputs_list = [[] for _ in range(self._nb_plays)]
+            assert epochs == 1, 'only epochs == 1 in unittest'
+            for i in range(epochs):
+                self.reset_states()
+                for j in range(steps_per_epoch):
+                    ins = inputs[j*input_dim:(j+1)*input_dim]
+                    output = self.train_function([ins.reshape(1, 1, -1)])
+                    states_list = [o.reshape(-1)[-1] for o in output]
+                    self.reset_states(states_list=states_list)
+                    for k, o in enumerate(output):
+                        outputs_list[k].append(o.reshape(-1))
+
+            results = []
+            for output in outputs_list:
+                results.append(np.hstack(output))
+            assert len(results) == self._nb_plays
+            return results
+
+        logger_string_epoch = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}"
+        logger_string_step = "Steps: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}"
+
         for i in range(epochs):
+            self.reset_states()
             for j in range(steps_per_epoch):
-                # cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, loss_by_hand, loss_by_tf = train_function(ins)
-                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred = self.train_function(ins)
+                ins = inputs[j*input_dim:(j+1)*input_dim]
+                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, *operator_outputs = self.train_function([ins.reshape(1, 1, -1)])
+                states_list = [o.reshape(-1)[-1] for o in operator_outputs]
+                self.reset_states(states_list=states_list)
+
                 if prev_cost <= cost:
                     patience_list.append(cost)
                 else:
                     prev_cost = cost
                     patience_list = []
-            loss_by_hand, loss_by_tf = 0, 0
-            LOG.debug(logger_string.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf)))
+                loss_by_hand, loss_by_tf = 0, 0
+                # LOG.debug(logger_string_step.format(j, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf)))
+            LOG.debug(logger_string_epoch.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf)))
 
-            # LOG.debug("Epoch: {}, weights: {}".format(i, self.trainable_weights))
-            # LOG.debug("Epoch: {}, y_pred: {}".format(i, y_pred.reshape(-1)))
-            # LOG.debug("Epoch: {}, diff: {}".format(i, diff_res.reshape(-1)))
-            # if i % 10 == 0 and i > 300:
-            # import ipdb; ipdb.set_trace()
-
-            # LOG.debug("Epoch: {}, max(loss_a): {:.7f}, min(loss_a): {:.7f}, max(loss_b): {:.7f}, min(loss_b): {:.7f}".format(i,
-            #                                                                                                                  float(np.max(loss_a)),
-            #                                                                                                                  float(np.min(loss_a)),
-            #                                                                                                                  float(np.max(loss_b)),
-            #                                                                                                                  float(np.min(loss_b))))
-            # LOG.debug("Epoch: {}, loss_a: {}".format(i,
-            #                                          loss_a.reshape(-1)))
-
-            # LOG.debug("Epoch: {}, loss_b: {}".format(i,
-            #                                          loss_b.reshape(-1)))
-
-            # LOG.debug("Epoch: {}, J_by_hand: {}".format(i,
-            #                                             J_by_hand.reshape(-1)))
             LOG.debug("================================================================================")
 
-
             self.cost_history.append([i, cost])
-            # if len(patience_list) >= 50:
-            #     LOG.debug(colors.yellow("Lost patience...."))
-            #     break
 
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
     def predict2(self, inputs):
         _inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
+
         for play in self.plays:
             self._need_compile = False
             if not play.built:
                 play.build(_inputs)
 
-        outputs = []
-        for play in self.plays:
-            x = play.reshape(inputs)
-            outputs.append(play.predict(x))
-        outputs_ = np.array(outputs)
+        outputs = [[] for _ in range(self._nb_plays)]
+        input_dim = self.batch_input_shape[-1]
+        steps_per_epoch = inputs.shape[-1] // input_dim
+
+        for i, play in enumerate(self.plays):
+            # for j in range(steps_per_epoch):
+            #     x = inputs[j*input_dim:(j+1)*input_dim].reshape(1, 1, -1)
+            outputs[i].append(play.predict(inputs))
+
+        # import ipdb; ipdb.set_trace()
+        results = []
+        for o in outputs:
+            results.append(np.hstack(o))
+
+        outputs_ = np.array(results)
         prediction = outputs_.mean(axis=0)
         prediction = prediction.reshape(-1)
 
@@ -1699,13 +1740,14 @@ class MyModel(object):
         assert start_pos > 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
         assert len(prices.shape) == 1, colors.red("Prices should be a vector")
+
         if not hasattr(self, '_batch_input_shape'):
             if hasattr(self.plays[0], '_batch_input_shape'):
                 input_dim = self._batch_input_shape.as_list()[-1]
             else:
                 raise Exception(colors.red("Not found batch_input_shape"))
-        elif isinstance(self._batch_input_shape, (list, tuple)):
-            input_dim = self._batch_input_shape[-1]
+        elif isinstance(self._batch_input_shape, (tf.TensorShape, )):
+            input_dim = self._batch_input_shape[-1].value
         else:
             raise Exception(colors.red("Unknown **input_dim** error occurs in trend"))
 
@@ -1727,6 +1769,7 @@ class MyModel(object):
         ################################################################################
         counts = (((prices[1:] - prices[:-1]) >= 0) == ((original_prediction[1:]-original_prediction[:-1]) >= 0))
         sign = None
+        import ipdb; ipdb.set_trace()
         if (counts.sum() / prices.shape[0]) <= 0.15:
             sign = +1
         elif (counts.sum() / prices.shape[0]) >= 0.85:
@@ -2110,8 +2153,12 @@ class MyModel(object):
             play.save_weights(path)
 
         LOG.debug(colors.cyan("Writing input shape into disk..."))
+        start = time.time()
         with open("{}/{}plays/input_shape.txt".format(fname[:-3], len(self.plays)), "w") as f:
-            f.write(":".join(map(str, self.plays[0]._batch_input_shape.as_list())))
+            # f.write(":".join(map(str, self.plays[0]._batch_input_shape.as_list())))
+            f.write(":".join(map(str, self.batch_input_shape)))
+        end = time.time()
+        LOG.debug("Time cost during writing shape: {} s".format(end-start))
 
     def load_weights(self, fname, extra={}):
         LOG.debug(colors.cyan("Trying to Load Weights first..."))
@@ -2128,7 +2175,7 @@ class MyModel(object):
         if 'shape' in extra:
             shape = extra['shape']
 
-        self._batch_input_shape = shape
+        self._batch_input_shape = tf.TensorShape(shape)
 
         if extra.get('parallelism', False) is True:
             for play in self.plays:
@@ -2148,7 +2195,8 @@ class MyModel(object):
                 LOG.debug(colors.red("Set Weights for {}".format(play._name)))
             end = time.time()
             LOG.debug("Load weights cost: {} s".format(end-start))
-            import ipdb; ipdb.set_trace()
+            # import ipdb; ipdb.set_trace()
+
     @property
     def trainable_weights(self):
         weights = []
@@ -2166,6 +2214,7 @@ class MyModel(object):
         LOG.debug("Start to close ProcessPool before deleting object")
         if hasattr(self, 'pool'):
             self.pool.close()
+
         tf.keras.backend.clear_session()
         utils.get_cache().clear()
 
@@ -2180,10 +2229,21 @@ class MyModel(object):
 
 
     def reset_states(self, states_list=None):
+        if states_list is None:
+            for i, play in enumerate(self.plays):
+                play.operator_layer.reset_states()
+            return
+
         if not isinstance(states_list[0], np.ndarray):
             states_list = [np.array([s]).reshape(1, 1) for s in states_list]
         else:
             states_list = [s.reshape(1, 1) for s in states_list]
-
         for i, play in enumerate(self.plays):
             play.operator_layer.reset_states(states_list[i])
+
+    @property
+    def batch_input_shape(self):
+        '''
+        return a list
+        '''
+        return self._batch_input_shape.as_list()
