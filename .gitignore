@@ -6,3 +6,6 @@ tmp/*
 *.log
 *.aux
 *.out
+*.lot
+*.lof
+*.html
