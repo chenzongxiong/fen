@@ -12,6 +12,7 @@ def _get_formatter():
 def getLogger(name="unknown"):
     formatter = _get_formatter()
     handler = logging.StreamHandler()
+    # handler = logging.FileHandler(name)
     handler.setFormatter(formatter)
 
     logger = logging.getLogger(name)

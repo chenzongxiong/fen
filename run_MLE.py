@@ -1,4 +1,6 @@
 import sys
+import argparse
+
 import time
 import numpy as np
 
@@ -24,14 +26,15 @@ def fit(inputs,
         learning_rate=0.001,
         loss_file_name="./tmp/my_model_loss_history.csv",
         weights_name='model.h5',
-        loss_name='mse'):
+        loss_name='mse',
+        batch_size=10):
 
-    epochs = 1000
-    epochs = 1
+    epochs = 10000
+    # epochs = 1
     # steps_per_epoch = batch_size
 
     start = time.time()
-    input_dim = 10
+    input_dim = batch_size
     # timestep = inputs.shape[0] // input_dim
     timestep = 1
     steps_per_epoch = inputs.shape[0] // input_dim
@@ -227,7 +230,7 @@ def plot(a, b, trend_list):
     min_trend_list = trend_list.min(axis=1)
     max_trend_list = trend_list.max(axis=1)
     ax2.fill_between(x, min_trend_list, max_trend_list, facecolor='gray', alpha=0.5, interpolate=True)
-    import ipdb; ipdb.set_trace()
+    # import ipdb; ipdb.set_trace()
     ax3.plot(x, a, color='blue')
     trend_list_ = [trend for trend in  trend_list]
     ax3.boxplot(trend_list_)
@@ -258,9 +261,30 @@ def ttest_rel(method1, method2):
 if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
+    parser = argparse.ArgumentParser()
+    # parser.add_argument("--neural-type", dest="neural_type",
+    #                     required=False, default="simple_rnn",
+    #                     type=str,
+    #                     help="select which rnn neural network to evaluate")
+    parser.add_argument("--batch_size", dest="batch_size",
+                        default=1,
+                        type=int)
+    parser.add_argument("--__nb_plays__", dest="__nb_plays__",
+                        default=2,
+                        type=int)
+    parser.add_argument("--__units__", dest="__units__",
+                        default=5,
+                        type=int)
+    parser.add_argument("--__activation__", dest="__activation__",
+                        default='tanh',
+                        type=str)
+
+    argv = parser.parse_args(sys.argv[1:])
     # Hyper Parameters
     # learning_rate = 0.003
     learning_rate = 0.05
+
+    batch_size = argv.batch_size
 
     loss_name = 'mse'
     loss_name = 'mle'
@@ -273,7 +297,7 @@ if __name__ == "__main__":
     do_trend = True
     do_confusion_matrix = True
     mc_mode = True
-    # do_trend = True
+    do_trend = False
 
     with_noise = True
 
@@ -294,13 +318,15 @@ if __name__ == "__main__":
     activation = 'tanh'
     activation = None
     ############################## predicitons #############################
-    __nb_plays__ = 100
-    __units__ = 100
-    __nb_plays__ = 2
-    __units__ = 5
+    __nb_plays__ = argv.__nb_plays__
+    __units__ = argv.__units__
+    # __nb_plays__ = 100
+    # __units__ = 100
+    # __nb_plays__ = 2
+    # __units__ = 5
 
     __state__ = 0
-    __activation__ = 'tanh'
+    __activation__ = argv.__activation__
     # __activation__ = 'relu'
     # __activation__ = None
     __mu__ = 0
@@ -330,7 +356,7 @@ if __name__ == "__main__":
         # predictions_file_key = 'models_predictions'
         raise
 
-    # weights_file_key = 'models_diff_weights_mc_stock_model_saved_weights'
+    weights_file_key = 'models_diff_weights_mc_stock_model_saved_weights'
 
     # XXXX: place weights_fname before run_test
     weights_fname = constants.DATASET_PATH[weights_file_key].format(method=method,
@@ -346,10 +372,11 @@ if __name__ == "__main__":
                                                                     __state__=__state__,
                                                                     __units__=__units__,
                                                                     __nb_plays__=__nb_plays__,
-                                                                    loss=loss_name)
+                                                                    loss=loss_name,
+                                                                    batch_size=batch_size)
     # method = 'noise'
     # sigma = 0.5
-
+    # import ipdb; ipdb.set_trace()
     if interp != 1:
         if do_prediction is False:
             raise
@@ -423,7 +450,7 @@ if __name__ == "__main__":
 
     # inputs, outputs = outputs, inputs
     inputs, outputs = inputs[:1100], outputs[:1100]
-    import ipdb; ipdb.set_trace()
+    # import ipdb; ipdb.set_trace()
 
     loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
                                                                      method=method,
@@ -439,7 +466,8 @@ if __name__ == "__main__":
                                                                      __state__=__state__,
                                                                      __units__=__units__,
                                                                      __nb_plays__=__nb_plays__,
-                                                                     loss=loss_name)
+                                                                     loss=loss_name,
+                                                                     batch_size=batch_size)
 
     predicted_fname = constants.DATASET_PATH[predictions_file_key].format(interp=interp,
                                                                           method=method,
@@ -455,7 +483,8 @@ if __name__ == "__main__":
                                                                           __state__=__state__,
                                                                           __units__=__units__,
                                                                           __nb_plays__=__nb_plays__,
-                                                                          loss=loss_name)
+                                                                          loss=loss_name,
+                                                                          batch_size=batch_size)
 
     if mc_mode is True and do_trend is True:
         trends_list_fname = constants.DATASET_PATH[trends_list_file_key].format(interp=interp,
@@ -472,7 +501,8 @@ if __name__ == "__main__":
                                                                                 __state__=__state__,
                                                                                 __units__=__units__,
                                                                                 __nb_plays__=__nb_plays__,
-                                                                                loss=loss_name)
+                                                                                loss=loss_name,
+                                                                                batch_size=batch_size)
 
 
     try:
@@ -520,7 +550,7 @@ if __name__ == "__main__":
                                     weights_name=weights_fname)
     else:
         LOG.debug("START to FIT via {}".format(colors.red(loss_name.upper())))
-        import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
         predictions, loss = fit(inputs=inputs,
                                 outputs=outputs,
                                 mu=__mu__,
@@ -531,7 +561,8 @@ if __name__ == "__main__":
                                 learning_rate=learning_rate,
                                 loss_file_name=loss_history_file,
                                 weights_name=weights_fname,
-                                loss_name=loss_name)
+                                loss_name=loss_name,
+                                batch_size=batch_size)
 
     LOG.debug("Write data into predicted_fname: {}".format(predicted_fname))
     tdata.DatasetSaver.save_data(inputs, predictions, predicted_fname)
