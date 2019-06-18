@@ -1,0 +1,84 @@
+cmp239
+2019-06-13 02:59:37 DEBUG __main__:262 [0;31;40mTest multiple plays[0m
+2019-06-13 02:59:37 DEBUG __main__:423 Load data from file: [0;36;40m./new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-10000/nb_plays-20/points-1000/input_dim-1/mu-0-sigma-110-points-1000.csv[0m
+2019-06-13 02:59:37 DEBUG __main__:552 START to FIT via [0;31;40mMLE[0m
+2019-06-13 02:59:37 DEBUG core:1260 [0;31;40mMake sure you are using the right random seed. currently seed is 123[0m
+2019-06-13 02:59:37 DEBUG core:1278 MyModel geneartes [0;31;40mPlay #1[0m with Weight: 10
+2019-06-13 02:59:37 DEBUG core:1278 MyModel geneartes [0;31;40mPlay #2[0m with Weight: 20
+2019-06-13 02:59:37 DEBUG __main__:49 Learning rate is 0.05
+2019-06-13 02:59:37 DEBUG core:1462 Compile with mu: 0, sigma: 110
+2019-06-13 02:59:37 DEBUG core:532 Initialize *weight* randomly...
+2019-06-13 02:59:37 DEBUG core:619 Operator.inputs.shape: (1, 1, 10)
+2019-06-13 02:59:37 DEBUG core:556 PhiCellinputs.shape: (1, 10)
+2019-06-13 02:59:37 DEBUG core:557 PhiCell._inputs.shape: (1, 10)
+2019-06-13 02:59:37 DEBUG core:558 PhiCell._state.shape: (1, 1)
+2019-06-13 02:59:37 DEBUG core:577 inputs: Tensor("operator/strided_slice_3:0", shape=(1, 1), dtype=float32), states: [<tf.Tensor 'operator/Reshape_1:0' shape=(1, 1) dtype=float32>]
+2019-06-13 02:59:37 DEBUG core:577 inputs: Tensor("operator/while/TensorArrayReadV3:0", shape=(1, 1), dtype=float32), states: (<tf.Tensor 'operator/while/Identity_2:0' shape=(1, 1) dtype=float32>,)
+2019-06-13 02:59:37 DEBUG core:593 outputs_.shape: Tensor("operator/transpose_2:0", shape=(1, 10, 1), dtype=float32)
+2019-06-13 02:59:37 DEBUG core:594 states_x.shape: (<tf.Tensor 'operator/while/Exit_2:0' shape=(1, 1) dtype=float32>,)
+2019-06-13 02:59:37 DEBUG core:556 PhiCellinputs.shape: (1, 10)
+2019-06-13 02:59:37 DEBUG core:557 PhiCell._inputs.shape: (1, 10)
+2019-06-13 02:59:37 DEBUG core:558 PhiCell._state.shape: (1, 1)
+2019-06-13 02:59:37 DEBUG core:577 inputs: Tensor("operator/while_1/strided_slice_1:0", shape=(1, 1), dtype=float32), states: [<tf.Tensor 'operator/while_1/Reshape_1:0' shape=(1, 1) dtype=float32>]
+2019-06-13 02:59:37 DEBUG core:577 inputs: Tensor("operator/while_1/while/TensorArrayReadV3:0", shape=(1, 1), dtype=float32), states: (<tf.Tensor 'operator/while_1/while/Identity_2:0' shape=(1, 1) dtype=float32>,)
+2019-06-13 02:59:37 DEBUG core:593 outputs_.shape: Tensor("operator/while_1/transpose_1:0", shape=(1, 10, 1), dtype=float32)
+2019-06-13 02:59:37 DEBUG core:594 states_x.shape: (<tf.Tensor 'operator/while_1/while/Exit_2:0' shape=(1, 1) dtype=float32>,)
+2019-06-13 02:59:37 DEBUG core:928 [0;33;40mSUMMARY of play-0[0m
+2019-06-13 02:59:37 DEBUG core:532 Initialize *weight* randomly...
+2019-06-13 02:59:37 DEBUG core:619 Operator.inputs.shape: (1, 1, 10)
+2019-06-13 02:59:37 DEBUG core:556 PhiCellinputs.shape: (1, 10)
+2019-06-13 02:59:37 DEBUG core:557 PhiCell._inputs.shape: (1, 10)
+2019-06-13 02:59:37 DEBUG core:558 PhiCell._state.shape: (1, 1)
+2019-06-13 02:59:37 DEBUG core:577 inputs: Tensor("operator_1/strided_slice_3:0", shape=(1, 1), dtype=float32), states: [<tf.Tensor 'operator_1/Reshape_1:0' shape=(1, 1) dtype=float32>]
+2019-06-13 02:59:37 DEBUG core:577 inputs: Tensor("operator_1/while/TensorArrayReadV3:0", shape=(1, 1), dtype=float32), states: (<tf.Tensor 'operator_1/while/Identity_2:0' shape=(1, 1) dtype=float32>,)
+2019-06-13 02:59:37 DEBUG core:593 outputs_.shape: Tensor("operator_1/transpose_2:0", shape=(1, 10, 1), dtype=float32)
+2019-06-13 02:59:37 DEBUG core:594 states_x.shape: (<tf.Tensor 'operator_1/while/Exit_2:0' shape=(1, 1) dtype=float32>,)
+2019-06-13 02:59:37 DEBUG core:556 PhiCellinputs.shape: (1, 10)
+2019-06-13 02:59:37 DEBUG core:557 PhiCell._inputs.shape: (1, 10)
+2019-06-13 02:59:37 DEBUG core:558 PhiCell._state.shape: (1, 1)
+2019-06-13 02:59:37 DEBUG core:577 inputs: Tensor("operator_1/while_1/strided_slice_1:0", shape=(1, 1), dtype=float32), states: [<tf.Tensor 'operator_1/while_1/Reshape_1:0' shape=(1, 1) dtype=float32>]
+2019-06-13 02:59:37 DEBUG core:577 inputs: Tensor("operator_1/while_1/while/TensorArrayReadV3:0", shape=(1, 1), dtype=float32), states: (<tf.Tensor 'operator_1/while_1/while/Identity_2:0' shape=(1, 1) dtype=float32>,)
+2019-06-13 02:59:37 DEBUG core:593 outputs_.shape: Tensor("operator_1/while_1/transpose_1:0", shape=(1, 10, 1), dtype=float32)
+2019-06-13 02:59:37 DEBUG core:594 states_x.shape: (<tf.Tensor 'operator_1/while_1/while/Exit_2:0' shape=(1, 1) dtype=float32>,)
+2019-06-13 02:59:37 DEBUG core:928 [0;33;40mSUMMARY of play-1[0m
+2019-06-13 02:59:37 DEBUG core:372 gradient nonlinear activation tanh
+2019-06-13 02:59:37 DEBUG core:372 gradient nonlinear activation tanh
+2019-06-13 02:59:40 DEBUG core:1692 Epoch: 0, Loss: -4.1043096, MSE Loss1: -1.0000000, MSE Loss2: -1.0000000, diff.mu: 1.7121220, diff.sigma: 2.5057135, mu: 0.1871872, sigma: 154.7261810, loss_by_hand: 0.0000000, loss_by_tf: 0.0000000
+2019-06-13 02:59:40 DEBUG core:1694 ================================================================================
+2019-06-13 02:59:40 DEBUG __main__:72 time cost: 3.2695531845092773s
+2019-06-13 02:59:40 DEBUG __main__:73 print weights info
+2019-06-13 02:59:40 DEBUG core:2153 [0;36;40mSaving play-0's Weights to ./new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-20/nb_plays-20/points-1000/input_dim-1/predictions-mu-0-sigma-110-points-1000/activation#-tanh/state#-0/units#-10/nb_plays#-2/loss-mle/weights-10/2plays/play-0.h5[0m
+2019-06-13 02:59:40 DEBUG core:2153 [0;36;40mSaving play-1's Weights to ./new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-20/nb_plays-20/points-1000/input_dim-1/predictions-mu-0-sigma-110-points-1000/activation#-tanh/state#-0/units#-10/nb_plays#-2/loss-mle/weights-10/2plays/play-1.h5[0m
+2019-06-13 02:59:40 DEBUG core:2156 [0;36;40mWriting input shape into disk...[0m
+2019-06-13 02:59:40 DEBUG core:2162 Time cost during writing shape: 0.0005011558532714844 s
+2019-06-13 02:59:40 DEBUG core:1734 mean: -0.0023824647068977356, std: 8.80173397064209
+2019-06-13 02:59:40 DEBUG __main__:80 Time cost in prediction: 0.31250572204589844s
+2019-06-13 02:59:40 DEBUG __main__:84 loss: 12351.4521484375
+2019-06-13 02:59:40 DEBUG core:2215 Start to close ProcessPool before deleting object
+2019-06-13 02:59:40 DEBUG __main__:567 Write data into predicted_fname: ./new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-20/nb_plays-20/points-1000/input_dim-1/predictions-mu-0-sigma-110-points-1000/activation#-tanh/state#-0/units#-10/nb_plays#-2/loss-mle/predictions-10.csv
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+operator (Operator)          (1, 10, 1)                1         
+_________________________________________________________________
+my_dense (MyDense)           (1, 10, 10)               20        
+_________________________________________________________________
+my_simple_dense (MySimpleDen (1, 10, 1)                11        
+=================================================================
+Total params: 32
+Trainable params: 32
+Non-trainable params: 0
+_________________________________________________________________
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #   
+=================================================================
+operator_1 (Operator)        (1, 10, 1)                1         
+_________________________________________________________________
+my_dense_1 (MyDense)         (1, 10, 10)               20        
+_________________________________________________________________
+my_simple_dense_1 (MySimpleD (1, 10, 1)                11        
+=================================================================
+Total params: 32
+Trainable params: 32
+Non-trainable params: 0
+_________________________________________________________________

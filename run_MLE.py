@@ -35,6 +35,8 @@ def fit(inputs,
 
     start = time.time()
     input_dim = batch_size
+    # input_dim = 1000
+
     # timestep = inputs.shape[0] // input_dim
     timestep = 1
     steps_per_epoch = inputs.shape[0] // input_dim
@@ -121,9 +123,10 @@ def predict(inputs,
     # predictions = mymodel.predict(inputs)
     # import ipdb; ipdb.set_trace()
     # predictions, _, _ = mymodel.predict2(inputs)
-    mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
-    predictions = mymodel.predict(inputs)
+    # mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
+    predictions, _, _ = mymodel.predict2(inputs)
 
+    import ipdb; ipdb.set_trace()
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
 
@@ -279,6 +282,11 @@ if __name__ == "__main__":
                         default='tanh',
                         type=str)
 
+    parser.add_argument('--trend', dest='trend',
+                        default=False, action='store_true')
+
+    parser.add_argument('--predict', dest='predict',
+                        default=False, action='store_true')
     argv = parser.parse_args(sys.argv[1:])
     # Hyper Parameters
     # learning_rate = 0.003
@@ -293,11 +301,11 @@ if __name__ == "__main__":
     # method = 'mixed'
     # method = 'noise'
     interp = 1
-    do_prediction = False
-    do_trend = True
+    # do_prediction = False
+    do_prediction = argv.predict
     do_confusion_matrix = True
     mc_mode = True
-    do_trend = False
+    do_trend = argv.trend
 
     with_noise = True
 
@@ -449,8 +457,7 @@ if __name__ == "__main__":
         pass
 
     # inputs, outputs = outputs, inputs
-    inputs, outputs = inputs[:1100], outputs[:1100]
-    # import ipdb; ipdb.set_trace()
+    inputs, outputs = inputs[:2000], outputs[:2000]
 
     loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
                                                                      method=method,
@@ -528,7 +535,7 @@ if __name__ == "__main__":
         #           activation=__activation__,
         #           nb_plays=__nb_plays__,
         #           weights_name=weights_fname)
-        import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
         predictions, loss = trend(prices=inputs,
                                   B=outputs,
                                   mu=__mu__,
