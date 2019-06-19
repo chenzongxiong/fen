@@ -1719,7 +1719,7 @@ class MyModel(object):
 
             LOG.debug("================================================================================")
             # save weights every 1000 epochs
-            if i % 1000 == 0 and i != 0
+            if i % 1000 == 0 and i != 0:
                 self.save_weights("{}-epochs-{}.h5".format(weights_fname[:-3], i))
 
             self.cost_history.append([i, cost])

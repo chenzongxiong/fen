@@ -29,8 +29,7 @@ def fit(inputs,
         loss_name='mse',
         batch_size=10):
 
-    # epochs = 10000
-    epochs = 10
+    epochs = 10000
 
     start = time.time()
     input_dim = batch_size
@@ -46,7 +45,7 @@ def fit(inputs,
                       learning_rate=learning_rate)
     LOG.debug("Learning rate is {}".format(learning_rate))
 
-    preload_weights = True
+    preload_weights = False
 
     if loss_name == 'mse':
         mymodel.fit(inputs,
@@ -542,7 +541,7 @@ if __name__ == "__main__":
                                     weights_name=weights_fname)
     else:
         LOG.debug("START to FIT via {}".format(colors.red(loss_name.upper())))
-        import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
         predictions, loss = fit(inputs=inputs,
                                 outputs=outputs,
                                 mu=__mu__,
