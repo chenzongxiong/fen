@@ -30,17 +30,13 @@ def fit(inputs,
         batch_size=10):
 
     # epochs = 10000
-    epochs = 2
-    # steps_per_epoch = batch_size
+    epochs = 10
 
     start = time.time()
     input_dim = batch_size
-    # input_dim = 1000
 
-    # timestep = inputs.shape[0] // input_dim
     timestep = 1
     steps_per_epoch = inputs.shape[0] // input_dim
-    # steps_per_epoch = 1
 
     mymodel = MyModel(input_dim=input_dim,
                       timestep=timestep,
@@ -49,7 +45,9 @@ def fit(inputs,
                       nb_plays=nb_plays,
                       learning_rate=learning_rate)
     LOG.debug("Learning rate is {}".format(learning_rate))
-    # mymodel.load_weights(weights_fname)
+
+    preload_weights = True
+
     if loss_name == 'mse':
         mymodel.fit(inputs,
                     outputs,
@@ -66,14 +64,15 @@ def fit(inputs,
                      epochs=epochs,
                      verbose=1,
                      steps_per_epoch=steps_per_epoch,
-                     loss_file_name=loss_file_name)
+                     loss_file_name=loss_file_name,
+                     preload_weights=preload_weights,
+                     weights_fname=weights_fname)
 
     else:
         raise Exception("loss {} not support".format(loss_name))
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
     LOG.debug("print weights info")
-    # mymodel.weights
     mymodel.save_weights(weights_fname)
     start = time.time()
     predictions, mu, sigma = mymodel.predict2(inputs)
@@ -105,7 +104,7 @@ def predict(inputs,
     num_samples = inputs.shape[0] // (input_dim * timestep)
 
     start = time.time()
-    parallel_prediction = True
+    parallel_prediction = False
     mymodel = MyModel(input_dim=input_dim,
                       timestep=timestep,
                       units=units,
@@ -321,10 +320,8 @@ if __name__ == "__main__":
     ############################## predicitons #############################
     __nb_plays__ = argv.__nb_plays__
     __units__ = argv.__units__
-    # __nb_plays__ = 100
-    # __units__ = 100
     # __nb_plays__ = 2
-    # __units__ = 5
+    # __units__ = 2
 
     __state__ = 0
     __activation__ = argv.__activation__
@@ -333,8 +330,7 @@ if __name__ == "__main__":
     # __activation__ = 'tanh'
     __mu__ = 0
     __sigma__ = 110
-    # __sigma__ = 5
-    # __sigma__ = 20
+
     if method == 'noise':
         with_noise = True
 
@@ -376,9 +372,7 @@ if __name__ == "__main__":
                                                                     __nb_plays__=__nb_plays__,
                                                                     loss=loss_name,
                                                                     batch_size=batch_size)
-    # method = 'noise'
-    # sigma = 0.5
-    # import ipdb; ipdb.set_trace()
+
     if interp != 1:
         if do_prediction is False:
             raise
@@ -551,7 +545,7 @@ if __name__ == "__main__":
                                     weights_name=weights_fname)
     else:
         LOG.debug("START to FIT via {}".format(colors.red(loss_name.upper())))
-        # import ipdb; ipdb.set_trace()
+        import ipdb; ipdb.set_trace()
         predictions, loss = fit(inputs=inputs,
                                 outputs=outputs,
                                 mu=__mu__,

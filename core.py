@@ -1615,12 +1615,12 @@ class MyModel(object):
             self.loss_by_hand = tf.keras.backend.mean(self.loss_a+self.loss_b)
             self.loss = self.loss_by_hand
 
-            # if outputs is not None:
-            #     mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))
-            #     mse_loss2 = tf.keras.backend.mean(tf.square(self.y_pred + tf.reshape(outputs, shape=self.y_pred.shape)))
-            # else:
-            mse_loss1 = tf.constant(-1.0, dtype=tf.float32)
-            mse_loss2 = tf.constant(-1.0, dtype=tf.float32)
+            if outputs is not None:
+                mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))
+                mse_loss2 = tf.keras.backend.mean(tf.square(self.y_pred + tf.reshape(outputs, shape=self.y_pred.shape)))
+            else:
+                mse_loss1 = tf.constant(-1.0, dtype=tf.float32)
+                mse_loss2 = tf.constant(-1.0, dtype=tf.float32)
 
             with tf.name_scope(self.optimizer.__class__.__name__):
                 updates = self.optimizer.get_updates(params=self.params_list,
@@ -1651,6 +1651,8 @@ class MyModel(object):
              loss_file_name="./tmp/mymodel_loss_history.csv",
              learning_rate=0.001,
              decay=0.,
+             preload_weights=False,
+             weights_fname=None,
              **kwargs):
 
         writer = utils.get_tf_summary_writer("./log/mle")
@@ -1673,6 +1675,10 @@ class MyModel(object):
         cost = np.inf
         patience_list = []
         prev_cost = np.inf
+
+        # load weights pre-trained
+        if preload_weights is True and weights_fname is not None:
+            self.load_weights(weights_fname)
 
         if kwargs.get('test_stateful', False):
             outputs_list = [[] for _ in range(self._nb_plays)]
