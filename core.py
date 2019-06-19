@@ -981,15 +981,22 @@ class Play(object):
         input_dim = self._batch_input_shape[-1].value
         samples = inputs.shape[-1] // input_dim
 
-        self.operator_layer.reset_states()
+        states = None
+
         for j in range(samples):
+            self.reset_states(states)
             x = inputs[j*input_dim:(j+1)*input_dim].reshape(1, 1, -1)
             output = self.model.predict(x, steps=steps_per_epoch, verbose=verbose).reshape(-1)
             outputs.append(output)
-            states = output[-1].reshape(1, 1)
-            self.operator_layer.reset_states(states)
+            if j != samples - 1:
+                op_output = self.operator_output(x, states)
+                states = op_output[-1].reshape(1, 1)
 
         return np.hstack(outputs)
+
+    @property
+    def states(self):
+        return self.operator_layer.states
 
     @property
     def weights(self):
@@ -1002,12 +1009,30 @@ class Play(object):
         weights_ = [w.reshape(-1) for w in weights_]
         return weights_
 
-    def operator_output(self, inputs):
-        _inputs = ops.convert_to_tensor(inputs, tf.float32)
-        x = self.reshape(_inputs)
-        outputs_ = self.operator_layer(x)
-        outputs = utils.get_session().run(outputs_)
+    def operator_output(self, inputs, states=None):
+        if len(inputs.shape) == 1:
+            input_dim = self._batch_input_shape[-1].value
+            samples = inputs.shape[-1] // input_dim
+        elif list(inputs.shape) == self._batch_input_shape.as_list():
+            input_dim = inputs.shape[-1]
+            samples = inputs.shape[0]
+        else:
+            raise Exception("Unknown input.shape: {}".format(inputs.shape))
+
+        outputs = []
+        for j in range(samples):
+            self.reset_states(states)
+            x = inputs[j*input_dim:(j+1)*input_dim].reshape(1, 1, -1)
+            op_output = self.operator_layer(ops.convert_to_tensor(x, dtype=tf.float32))
+            output = utils.get_session().run(op_output).reshape(-1)
+            outputs.append(output)
+            states = output[-1].reshape(1, 1)
+
+        outputs = np.hstack(outputs)
         return outputs.reshape(-1)
+
+    def reset_states(self, states=None):
+        self.operator_layer.reset_states(states)
 
     @property
     def number_of_layers(self):
@@ -1761,7 +1786,9 @@ class MyModel(object):
         ################################################################################
         counts = (((prices[1:] - prices[:-1]) >= 0) == ((original_prediction[1:]-original_prediction[:-1]) >= 0))
         sign = None
-        import ipdb; ipdb.set_trace()
+
+        # import ipdb; ipdb.set_trace()
+
         if (counts.sum() / prices.shape[0]) <= 0.15:
             sign = +1
         elif (counts.sum() / prices.shape[0]) >= 0.85:
@@ -1769,61 +1796,8 @@ class MyModel(object):
         else:
             raise Exception(colors.red("The neural network doesn't train well"))
 
-        original_prediction = original_prediction*sign
-
         # Enforce prediction to make sense
-        ################################################################################
-        #                Collect weights and Operator outputs                          #
-        # weights:                                                                     #
-        #   - weights[0]: the weights of operator layers                               #
-        #   - weights[1]: the weights of non-linear layers, with activation            #
-        #   - weights[2]: the bias of non-linear layers                                #
-        #   - weights[3]: the weights of linear layers                                 #
-        #   - weights[4]: the bias of linear layers                                    #
-        # opeartor_outputs:                                                            #
-        #   - output of operator layers, used in intermediate layer states tracking    #
-        # individual_p_list:                                                           #
-        #   - list of intermediate states of each play we are insterested in           #
-        #   - individual_p_list[0]: list of intermediate state of play-0               #
-        #   - individual_p_list[1]: list of intermediate state of play-1               #
-        #   - ...                                                                      #
-        #   - individual_p_list[N]: list of intermediate state of play-N               #
-        ################################################################################
-        # weights_ = [[], [], [], [], []]
-        # operator_outputs_ = []
-        # _ppp = ops.convert_to_tensor(prices, dtype=tf.float32)
-        # _ppp = tf.reshape(_ppp, shape=shape)
-
-        # TODO: parallelism HERE
-        # We don't have play models inside main process, need to fetch from sub-processes
-        ################################################################################
-        #  serial execution
-        ################################################################################
-        # for play in self.plays:
-        #     weights_[0].append(play.operator_layer.kernel)
-        #     weights_[1].append(play.nonlinear_layer.kernel)
-        #     weights_[2].append(play.nonlinear_layer.bias)
-        #     weights_[3].append(play.linear_layer.kernel)
-        #     weights_[4].append(play.linear_layer.bias)
-        #     operator_outputs_.append(play.operator_layer(_ppp))
-
-        # weights, operator_outputs = utils.get_session().run([weights_, operator_outputs_])
-
-        # for i in range(len(weights)):
-        #     for j in range(len(weights[i])):
-        #         weights[i][j] = weights[i][j].reshape(-1)
-        ################################################################################
-        #  multiprocess.Pool
-        ################################################################################
-        # start = time.time()
-        # pool = MP_CONTEXT .Pool(constants.CPU_COUNTS)
-        # args_list = [(play, prices) for play in self.plays]
-        # results = pool.map(parallel_extract_weights_and_operator_outputs, args_list)
-        # pool.close()
-        # pool.join()
-        # end = time.time()
-        # LOG.debug("Time cost during extract weights: {}".format(end-start))
-        # import ipdb; ipdb.set_trace()
+        original_prediction = original_prediction*sign
         ################################################################################
         #  My Pool
         ################################################################################
@@ -1852,169 +1826,8 @@ class MyModel(object):
 
         operator_outputs = self.pool.results
         end = time.time()
-        LOG.debug("Time cost during extract weights: {}".format(end-start))
-
-        # operator_outputs = [o.reshape(-1) for o in operator_outputs]
-        # individual_p_list = [[operator_output[start_pos-1]] for operator_output in operator_outputs]
-
-        ################################################################################
-        #                Helper Functions                                              #
-        # do_guess_helper: predict the price at given timestamp                        #
-        # do_guess_seq: predict the price sequence start from given timestamp          #
-        # repeat: repeat do_guess_seq N times                                          #
-        ################################################################################
-        # def do_guess_helper(k, step=1, direction=1, guess_flag=True, input_p=None, base_price=0, individual_p_list=None):
-        #     '''
-        #     Parameters:
-        #     --------------------
-        #     k: the index of price needs to predict, must be larger than `start_pos`
-        #     step: current step
-        #     direction: in which direction the price should change
-        #     Returns:
-        #     --------------------
-        #     guess_price: the price guess, scalar
-        #     predict_noise: the noise correpsonding to guess price, scalar
-        #     '''
-        #     predict_noise_list = []
-        #     guess = base_price + direction * step * delta
-
-        #     for i in range(self._nb_plays):
-        #         prev_state = individual_p_list[i][-1]
-        #         p = phi(weights[0][i] * guess - prev_state) + prev_state
-        #         pp = weights[1][i] * p + weights[2][i]
-        #         if self._activation is None:
-        #             pass
-        #         elif self._activation == 'tanh':
-        #             pp = np.tanh(pp)
-        #         elif self._activation == 'relu':
-        #             pp =  pp * (pp > 0)
-
-        #         ppp = (weights[3][i] * pp).sum() + weights[4][i]
-        #         predict_noise_list.append(ppp[0])
-
-        #     predict_noise = sign * sum(predict_noise_list) / self._nb_plays
-
-        #     return guess, predict_noise
-
-        # def do_guess_seq(start, seq=1, max_iteration=500, individual_p_list=None, hysteresis_info=None):
-        #     '''
-        #     Parameters:
-        #     --------------------
-        #     start: the start position of the prices going to do prediction
-        #     seq: the length of prices going to do prediction
-        #     max_iteration: the max iterations during trying to find a root for the price
-        #     Returns:
-        #     --------------------
-        #     guess_price_seq: a list of guess price, the length of it is equal to `seq`
-        #     '''
-        #     logger_string1 = "Step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, prev true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}"
-        #     logger_string2 = "Step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}"
-        #     ####################################################################################################
-        #     # guess_price_seq: the first value in it is the start point of price in prediction                 #
-        #     # predict_noise_seq: the first value in it is the start point of gt-noise in prediction            #
-        #     ####################################################################################################
-        #     individual_p_list = copy.deepcopy(individual_p_list)
-        #     LOG.debug("Before do_guess_helper, len(individual_p_list): {}, len(individual_p_list[0]): {}".format(len(individual_p_list), len(individual_p_list[0])))
-
-        #     guess_price_seq = [prices[start-1]]
-        #     predict_noise_seq = [original_prediction[start-1]]
-        #     interval = 0
-
-        #     while interval < seq:
-        #         k = start + interval
-        #         bk = np.random.normal(loc=mu, scale=sigma) + predict_noise_seq[-1]
-        #         if bk > predict_noise_seq[-1]:
-        #             direction = -1
-        #         elif bk < predict_noise_seq[-1]:
-        #             direction = +1
-        #         else:
-        #             direction = 0
-
-        #         step = 0
-        #         guess_hysteresis_list = [(guess_price_seq[-1], predict_noise_seq[-1])]
-        #         guess, guess_noise = do_guess_helper(k, step, direction, base_price=guess_price_seq[-1], individual_p_list=individual_p_list)
-        #         # _, gt_noise = do_guess_helper(k, 0, direction, base_price=guess_price_seq[-1], individual_p_list=individual_p_list)
-        #         if np.allclose(predict_noise_seq[-1], guess_noise) is False:
-        #             # sanity checking
-        #             import ipdb; ipdb.set_trace()
-
-        #         prev_diff, curr_diff = None, guess_noise - bk
-        #         good_guess = False
-        #         # guess_hysteresis_list.append((guess, guess_noise))
-        #         while step <= max_iteration:
-        #             step += 1
-        #             prev_diff = curr_diff
-        #             guess, guess_noise = do_guess_helper(k, step, direction, base_price=guess_price_seq[-1], individual_p_list=individual_p_list)
-        #             guess_hysteresis_list.append((guess, guess_noise))
-        #             curr_diff = guess_noise - bk
-        #             if curr_diff * prev_diff < 0:
-        #                 LOG.debug(colors.yellow(logger_string1.format(step, float(prices[k]), float(guess), float(guess_noise), float(bk), float(original_prediction[k]), float(original_prediction[k-1]), float(curr_diff), float(prev_diff), direction, delta)))
-        #                 good_guess = True
-        #                 break
-
-        #             LOG.debug(logger_string2.format(step, float(prices[k]), float(guess), float(guess_noise), float(bk), float(original_prediction[k]), float(curr_diff), float(prev_diff), direction, delta))
-
-        #         #########################################################################################################################
-        #         # hysteresis_info:                                                                                                      #
-        #         #   guess_hysteresis_list    -> hysteresis_info[0]: a list of (price, noise) tuples                                     #
-        #         #   original_prediction[k-1] -> hysteresis_info[1]: the ground truth of noise in previous step                          #
-        #         #   original_prediction[k]   -> hysteresis_info[2]: the ground truth of noise in current step                           #
-        #         #   bk                       -> hysteresis_info[3]: the noise generated from random walk                                #
-        #         #   price[k-1]               -> hysteresis_info[4]: the ground truth of price in previous step                          #
-        #         #   price[k]                 -> hysteresis_info[5]: the ground truth of price in current step                           #
-        #         #########################################################################################################################
-        #         hysteresis_info.append([guess_hysteresis_list, original_prediction[k-1], original_prediction[k], bk, prices[k-1], prices[k]])
-
-        #         if good_guess is False:
-        #             LOG.warn(colors.red("Not a good guess"))
-        #             continue
-
-        #         guess_price_seq.append(guess)
-        #         predict_noise_seq.append(guess_noise)
-
-        #         for j in range(self._nb_plays):
-        #             p = phi(weights[0][j] * guess - individual_p_list[j][-1]) + individual_p_list[j][-1]
-        #             individual_p_list[j].append(p)
-
-        #         interval += 1
-
-        #         LOG.debug("After do_guess_helper, len(individual_p_list): {}, len(individual_p_list[0]): {}".format(len(individual_p_list), len(individual_p_list[0])))
-        #     return guess_price_seq[1:]
-
-
-        # def repeat(k, seq=1, repeating=1):
-        #     '''
-        #     Parameters:
-        #     --------------------
-        #     k: the index of the price starting to prediction
-        #     seq: the sequence of prices trying to predict
-        #     repeating: how many times this sequence should repeat
-        #     Returns:
-        #     --------------------
-        #     guess_price_seq: the avearge of this guess price sequence.
-        #     '''
-        #     hysteresis_info = []
-        #     guess_price_seq_stack = []
-        #     for _ in range(repeating):
-        #         LOG.debug("Before do_guess_seq, len(individual_p_list): {}, len(individual_p_list[0]): {}".format(len(individual_p_list), len(individual_p_list[0])))
-        #         guess_price_seq = do_guess_seq(k, seq=seq, individual_p_list=individual_p_list, max_iteration=max_iteration, hysteresis_info=hysteresis_info)
-        #         guess_price_seq_stack.append(guess_price_seq)
-        #         guess_prices_list[k-start_pos+seq-1].append(guess_price_seq[-1])
-        #         LOG.debug("After do_guess_seq, len(individual_p_list): {}, len(individual_p_list[0]): {}".format(len(individual_p_list), len(individual_p_list[0])))
-        #         LOG.debug("================================================================================")
-
-        #     ########################################
-        #     #     update individual_p_list         #
-        #     ########################################
-        #     for i, o in enumerate(operator_outputs):
-        #         individual_p_list[i].append(o[k-seq+1])
-
-        #     guess_price_seq_stack_ = np.array(guess_price_seq_stack)
-        #     avg_guess = guess_price_seq_stack_.mean(axis=0)[-1]
-        #     LOG.debug("********************************************************************************")
-        #     utils.plot_hysteresis_info(hysteresis_info, k, predicted_price=float(avg_guess))
-        #     return avg_guess
-        # guess_prices_list = [[] for _ in range(end_pos-start_pos)]
+        LOG.debug("Time cost during extract operator_outputs: {}".format(end-start))
+        # import ipdb;ipdb.set_trace()
         guess_prices = []
         k = start_pos
         seq = 1
@@ -2022,14 +1835,6 @@ class MyModel(object):
         # TODO: using multi-processing HERE
         # import multiprocess as mp
         # pool = mp.Pool(os.cpu_count())
-        # 1. prepare for all the tasks
-        # 2. run tasks in parallel
-        # pool = ProcessingPool(os.cpu_count())
-        # args_list = [(k+seq-1, seq, repeating) for k in range(start_pos, end_pos+1)]
-        # guess_prices = pool.map(repeat, args_list)
-        # pool.close()
-        # pool.join()
-        # LOG.debug("Finish task processing")
         nb_plays = self._nb_plays
         activation = self._activation
         start = time.time()
@@ -2061,13 +1866,8 @@ class MyModel(object):
         pool.close()
         pool.join()
         end = time.time()
-        LOG.debug("Time cost for prediction price: {} s".format(end-start))
-        # while k + seq - 1 < end_pos:
-        #     avg_guess = repeat(k, seq=seq, repeating=repeating)
-        #     guess_prices.append(avg_guess)
 
-        #     LOG.debug(colors.red(logger_string3.format(k+seq-1, float(avg_guess), float(prices[k]), float(prices[k-1]))))
-        #     k += 1
+        LOG.debug("Time cost for prediction price: {} s".format(end-start))
 
         LOG.debug("Verifing...")
         guess_prices = np.array(guess_prices).reshape(-1)
