@@ -29,8 +29,8 @@ def fit(inputs,
         loss_name='mse',
         batch_size=10):
 
-    epochs = 10000
-    # epochs = 1
+    # epochs = 10000
+    epochs = 2
     # steps_per_epoch = batch_size
 
     start = time.time()
@@ -80,7 +80,6 @@ def fit(inputs,
     # predictions = mymodel.predict(inputs)
     end = time.time()
     LOG.debug("Time cost in prediction: {}s".format(end-start))
-
     loss = ((predictions - outputs) ** 2).mean()
     loss = float(loss)
     LOG.debug("loss: {}".format(loss))
@@ -106,27 +105,21 @@ def predict(inputs,
     num_samples = inputs.shape[0] // (input_dim * timestep)
 
     start = time.time()
+    parallel_prediction = True
     mymodel = MyModel(input_dim=input_dim,
                       timestep=timestep,
                       units=units,
                       activation=activation,
                       nb_plays=nb_plays,
-                      parallel_prediction=True)
+                      parallel_prediction=parallel_prediction)
 
-    mymodel.load_weights(weights_fname)
-    # for i in range(num_samples):
-    #     LOG.debug("Predict on #{} sample".format(i+1))
-    #     pred, mu, sigma = mymodel.predict2(inputs[i*(input_dim*timestep): (i+1)*(input_dim*timestep)])
-    #     predictions_list.append(pred)
-    # predictions, mu, sigma = mymodel.predict2(inputs)
+    if parallel_prediction is True:
+        mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
+        predictions = mymodel.predict(inputs)
+    else:
+        mymodel.load_weights(weights_fname)
+        predictions, mu, sigma = mymodel.predict2(inputs)
 
-    # predictions = mymodel.predict(inputs)
-    # import ipdb; ipdb.set_trace()
-    # predictions, _, _ = mymodel.predict2(inputs)
-    # mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
-    predictions, _, _ = mymodel.predict2(inputs)
-
-    import ipdb; ipdb.set_trace()
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
 
@@ -337,6 +330,7 @@ if __name__ == "__main__":
     __activation__ = argv.__activation__
     # __activation__ = 'relu'
     # __activation__ = None
+    # __activation__ = 'tanh'
     __mu__ = 0
     __sigma__ = 110
     # __sigma__ = 5

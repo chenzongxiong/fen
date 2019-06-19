@@ -653,6 +653,7 @@ class Operator(RNN):
                            for dim in self.cell.state_size
                            ]
         elif states is None:
+            # import ipdb; ipdb.set_trace()
             for state, dim in zip(self.states, self.cell.state_size):
                 tf.keras.backend.set_value(state,
                                            np.zeros([batch_size] +
@@ -973,25 +974,20 @@ class Play(object):
         return self.model.evaluate(x, y, steps=steps_per_epoch)
 
     def predict(self, inputs, steps_per_epoch=1, verbose=0):
-        # inputs = ops.convert_to_tensor(inputs, tf.float32)
-
         if not self.built:
             self.build(inputs)
-
-        # if inputs.shape.as_list() == self._batch_input_shape.as_list():
-        #     x = inputs
-        # else:
-        #     x = self.reshape(inputs)
-
-        # return self.model.predict(x, steps=steps_per_epoch, verbose=verbose)
 
         outputs = []
         input_dim = self._batch_input_shape[-1].value
         samples = inputs.shape[-1] // input_dim
+
+        self.operator_layer.reset_states()
         for j in range(samples):
             x = inputs[j*input_dim:(j+1)*input_dim].reshape(1, 1, -1)
-            output = self.model.predict(x, steps=steps_per_epoch, verbose=verbose)
-            outputs.append(output.reshape(-1))
+            output = self.model.predict(x, steps=steps_per_epoch, verbose=verbose).reshape(-1)
+            outputs.append(output)
+            states = output[-1].reshape(1, 1)
+            self.operator_layer.reset_states(states)
 
         return np.hstack(outputs)
 
@@ -1025,6 +1021,7 @@ class Play(object):
 
     def load_weights(self, path, by_name=False):
         self.model.load_weights(path, by_name=by_name)
+        # self.model.load_weights(path, by_name=True)
 
     @property
     def layers(self):
@@ -1452,7 +1449,7 @@ class MyModel(object):
     def weights(self):
         for play in self.plays:
             LOG.debug("{}, number of layer is: {}".format(play._name, play.number_of_layers))
-            LOG.debug("{}, weight: {}".format(play._name, play.weight))
+            LOG.debug("{}, weight: {}".format(play._name, play.weights))
 
     def compile(self, inputs, **kwargs):
         unittest = kwargs.pop('unittest', False)
@@ -1681,6 +1678,7 @@ class MyModel(object):
                 cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, *operator_outputs = self.train_function([ins.reshape(1, 1, -1)])
                 states_list = [o.reshape(-1)[-1] for o in operator_outputs]
                 self.reset_states(states_list=states_list)
+                # LOG.debug("states: {}, prev_outputs: {}".format(self.states, states_list))
 
                 if prev_cost <= cost:
                     patience_list.append(cost)
@@ -1706,21 +1704,14 @@ class MyModel(object):
             if not play.built:
                 play.build(_inputs)
 
-        outputs = [[] for _ in range(self._nb_plays)]
+        outputs = []
         input_dim = self.batch_input_shape[-1]
         steps_per_epoch = inputs.shape[-1] // input_dim
 
         for i, play in enumerate(self.plays):
-            # for j in range(steps_per_epoch):
-            #     x = inputs[j*input_dim:(j+1)*input_dim].reshape(1, 1, -1)
-            outputs[i].append(play.predict(inputs))
+            outputs.append(play.predict(inputs))
 
-        # import ipdb; ipdb.set_trace()
-        results = []
-        for o in outputs:
-            results.append(np.hstack(o))
-
-        outputs_ = np.array(results)
+        outputs_ = np.array(outputs)
         prediction = outputs_.mean(axis=0)
         prediction = prediction.reshape(-1)
 
@@ -2196,8 +2187,6 @@ class MyModel(object):
                 LOG.debug(colors.red("Set Weights for {}".format(play._name)))
             end = time.time()
             LOG.debug("Load weights cost: {} s".format(end-start))
-            # import ipdb; ipdb.set_trace()
-
     @property
     def trainable_weights(self):
         weights = []
@@ -2219,10 +2208,10 @@ class MyModel(object):
         tf.keras.backend.clear_session()
         utils.get_cache().clear()
 
-    # @property
-    # def states(self):
-    #     'NOTE: doesn't work properly
-    #     return utils.get_session().run([play.operator_layer.states for play in self.plays])
+    @property
+    def states(self):
+        # NOTE: doesn't work properly
+        return utils.get_session().run([play.operator_layer.states for play in self.plays])
 
     # @property
     # def op_states(self):
