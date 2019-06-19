@@ -76,7 +76,6 @@ def fit(inputs,
     mymodel.save_weights(weights_fname)
     start = time.time()
     predictions, mu, sigma = mymodel.predict2(inputs)
-    # predictions = mymodel.predict(inputs)
     end = time.time()
     LOG.debug("Time cost in prediction: {}s".format(end-start))
     loss = ((predictions - outputs) ** 2).mean()
@@ -121,8 +120,6 @@ def predict(inputs,
 
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
-
-    # predictions = np.hstack(predictions_list)
     outputs = outputs[:predictions.shape[-1]]
     loss = ((predictions - outputs) ** 2).mean()
     loss = float(loss)
@@ -147,7 +144,7 @@ def trend(prices,
 
     assert len(shape) == 3, "shape must be 3 dimensions"
     input_dim = shape[2]
-    # timestep = prices.shape[0] // input_dim
+
     timestep = 1
     shape[1] = timestep
 

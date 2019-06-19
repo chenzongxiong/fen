@@ -756,7 +756,6 @@ class MyDense(Layer):
         self.built = True
 
     def call(self, inputs):
-        # import ipdb; ipdb.set_trace()
         assert inputs.shape.ndims == 3
 
         # XXX: double checked. it's correct in current model. no worried
@@ -809,7 +808,6 @@ class MySimpleDense(Dense):
         self.built = True
 
     def call(self, inputs):
-        # import ipdb; ipdb.set_trace()
         return super(MySimpleDense, self).call(inputs)
 
 
@@ -1678,6 +1676,7 @@ class MyModel(object):
 
         # load weights pre-trained
         if preload_weights is True and weights_fname is not None:
+            # find the best match weights from weights directory
             self.load_weights(weights_fname)
 
         if kwargs.get('test_stateful', False):
@@ -1709,7 +1708,6 @@ class MyModel(object):
                 cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, *operator_outputs = self.train_function([ins.reshape(1, 1, -1)])
                 states_list = [o.reshape(-1)[-1] for o in operator_outputs]
                 self.reset_states(states_list=states_list)
-                # LOG.debug("states: {}, prev_outputs: {}".format(self.states, states_list))
 
                 if prev_cost <= cost:
                     patience_list.append(cost)
@@ -1717,10 +1715,12 @@ class MyModel(object):
                     prev_cost = cost
                     patience_list = []
                 loss_by_hand, loss_by_tf = 0, 0
-                # LOG.debug(logger_string_step.format(j, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf)))
             LOG.debug(logger_string_epoch.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf)))
 
             LOG.debug("================================================================================")
+            # save weights every 1000 epochs
+            if i % 1000 == 0 and i != 0
+                self.save_weights("{}-epochs-{}.h5".format(weights_fname[:-3], i))
 
             self.cost_history.append([i, cost])
 
@@ -1943,6 +1943,8 @@ class MyModel(object):
 
     def save_weights(self, fname):
         suffix = fname.split(".")[-1]
+        assert suffix == 'h5', "must store in h5 format"
+
         for play in self.plays:
             path = "{}/{}plays/{}.{}".format(fname[:-3], len(self.plays), play._name, suffix)
             os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -1953,7 +1955,6 @@ class MyModel(object):
         LOG.debug(colors.cyan("Writing input shape into disk..."))
         start = time.time()
         with open("{}/{}plays/input_shape.txt".format(fname[:-3], len(self.plays)), "w") as f:
-            # f.write(":".join(map(str, self.plays[0]._batch_input_shape.as_list())))
             f.write(":".join(map(str, self.batch_input_shape)))
         end = time.time()
         LOG.debug("Time cost during writing shape: {} s".format(end-start))
@@ -1961,10 +1962,24 @@ class MyModel(object):
     def load_weights(self, fname, extra={}):
         LOG.debug(colors.cyan("Trying to Load Weights first..."))
         suffix = fname.split(".")[-1]
-        dirname = "{}/{}plays".format(fname[:-3], len(self.plays))
+        dirname = "{}/{}plays".format(fname[:-3], self._nb_plays)
+
         if not os.path.isdir(dirname):
             LOG.debug(colors.red("Fail to Load Weights."))
-            return
+            epochs = []
+            base = '/'.join(fname.split('/')[:-1])
+            for _dir in os.listdir(base):
+                if os.path.isdir('{}/{}'.format(base, _dir)):
+                    epochs.append(int(_dir.split('-')[-1]))
+
+            if not epochs:
+                return False
+            best_epoch = max(epochs)
+            dirname = '{}-epochs-{}/{}plays'.format(fname[:-3], best_epoch, self._nb_plays)
+            if not os.path.isdir(dirname):
+                # sanity checking
+                raise Exception("Bugs inside *load_wegihts*")
+
         LOG.debug(colors.red("Found trained Weights. Loading..."))
         with open("{}/input_shape.txt".format(dirname), "r") as f:
             line = f.read()
@@ -1993,6 +2008,8 @@ class MyModel(object):
                 LOG.debug(colors.red("Set Weights for {}".format(play._name)))
             end = time.time()
             LOG.debug("Load weights cost: {} s".format(end-start))
+        return True
+
     @property
     def trainable_weights(self):
         weights = []
