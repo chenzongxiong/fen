@@ -1,3 +1,4 @@
+import os
 import sys
 import argparse
 
@@ -30,6 +31,7 @@ def fit(inputs,
         batch_size=10):
 
     epochs = 10000
+    # epochs = 10
 
     start = time.time()
     input_dim = batch_size
@@ -89,8 +91,28 @@ def predict(inputs,
             activation='tanh',
             nb_plays=1,
             weights_name='model.h5'):
-    with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
-        line = f.read()
+    best_epoch = None
+    try:
+        with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
+            line = f.read()
+    except FileNotFoundError:
+        epochs = []
+        base = '/'.join(weights_fname.split('/')[:-1])
+        for _dir in os.listdir(base):
+            if os.path.isdir('{}/{}'.format(base, _dir)):
+                epochs.append(int(_dir.split('-')[-1]))
+
+        if not epochs:
+            raise Exception("no trained parameters found")
+
+        best_epoch = max(epochs)
+        dirname = '{}-epochs-{}/{}plays'.format(weights_fname[:-3], best_epoch, nb_plays)
+        if not os.path.isdir(dirname):
+            # sanity checking
+            raise Exception("Bugs inside *save_wegihts* or *fit2*")
+        with open("{}/input_shape.txt".format(dirname), 'r') as f:
+            line = f.read()
+
     shape = list(map(int, line.split(":")))
 
     assert len(shape) == 3, "shape must be 3 dimensions"
@@ -124,8 +146,8 @@ def predict(inputs,
     loss = float(loss)
     LOG.debug("loss: {}".format(loss))
 
-    return predictions, loss
-
+    # return predictions, loss
+    return predictions, best_epoch
 
 def trend(prices,
           B,
@@ -532,13 +554,16 @@ if __name__ == "__main__":
         inputs = inputs[1000:1000+predictions.shape[-1]]
     elif do_prediction is True:
         LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
-        import ipdb; ipdb.set_trace()
-        predictions, loss = predict(inputs=inputs,
-                                    outputs=outputs,
-                                    units=__units__,
-                                    activation=__activation__,
-                                    nb_plays=__nb_plays__,
-                                    weights_name=weights_fname)
+        # import ipdb; ipdb.set_trace()
+        predictions, best_epoch = predict(inputs=inputs,
+                                           outputs=outputs,
+                                           units=__units__,
+                                           activation=__activation__,
+                                           nb_plays=__nb_plays__,
+                                           weights_name=weights_fname)
+        if best_epoch is not None:
+            predicted_fname = "{}-epochs-{}.csv".format(predicted_fname[:-4], best_epoch)
+
     else:
         LOG.debug("START to FIT via {}".format(colors.red(loss_name.upper())))
         # import ipdb; ipdb.set_trace()
