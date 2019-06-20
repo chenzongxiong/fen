@@ -124,7 +124,7 @@ def predict(inputs,
     num_samples = inputs.shape[0] // (input_dim * timestep)
 
     start = time.time()
-    parallel_prediction = False
+    parallel_prediction = True
     mymodel = MyModel(input_dim=input_dim,
                       timestep=timestep,
                       units=units,
@@ -518,10 +518,35 @@ if __name__ == "__main__":
                                                                                 batch_size=batch_size)
 
 
-    try:
-        pass
-    except FileNotFoundError:
-        sys.exit(0)
+
+    LOG.debug('############################  SETTINGS #########################################')
+    LOG.debug('# Learning Rate: {}'.format(learning_rate))
+    LOG.debug('# points: {}'.format(points))
+    LOG.debug('# nb_plays: {}'.format(nb_plays))
+    LOG.debug('# units: {}'.format(units))
+    LOG.debug('# activation: {}'.format(activation))
+    LOG.debug("# mu: {}".format(mu))
+    LOG.debug("# sigma: {}".format(sigma))
+    LOG.debug("# state: {}".format(state))
+    LOG.debug('# __nb_plays__: {}'.format(__nb_plays__))
+    LOG.debug('# __units__: {}'.format(__units__))
+    LOG.debug('# __activation__: {}'.format(__activation__))
+    LOG.debug("# __mu__: {}".format(__mu__))
+    LOG.debug("# __sigma__: {}".format(__sigma__))
+    LOG.debug("# __state__: {}".format(__state__))
+
+    LOG.debug("# do_prediction: {}".format(do_prediction))
+    LOG.debug("# do_trend: {}".format(do_trend))
+    LOG.debug("# do_fit: {}".format(not (do_prediction and do_trend)))
+    LOG.debug("# mc_mode: {}".format(mc_mode))
+
+    LOG.debug('# train_fname: {}'.format(fname))
+    LOG.debug('# predicted_fname: {}'.format(predicted_fname))
+    LOG.debug('# weights_fname: {}'.format(weights_fname))
+    LOG.debug('# weights_fname: {}'.format(weights_fname))
+    LOG.debug('################################################################################')
+
+
     # try:
     #     import ipdb; ipdb.set_trace()
     #     a, b = tdata.DatasetLoader.load_data(predicted_fname)
