@@ -47,7 +47,7 @@ def fit(inputs,
                       learning_rate=learning_rate)
     LOG.debug("Learning rate is {}".format(learning_rate))
 
-    preload_weights = False
+    preload_weights = True
 
     if loss_name == 'mse':
         mymodel.fit(inputs,
