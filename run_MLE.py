@@ -47,7 +47,7 @@ def fit(inputs,
                       learning_rate=learning_rate)
     LOG.debug("Learning rate is {}".format(learning_rate))
 
-    preload_weights = True
+    preload_weights = False
 
     if loss_name == 'mse':
         mymodel.fit(inputs,
@@ -297,10 +297,17 @@ if __name__ == "__main__":
 
     parser.add_argument('--predict', dest='predict',
                         default=False, action='store_true')
+    parser.add_argument('--__mu__', dest='__mu__',
+                        default=0,
+                        type=float)
+    parser.add_argument('--__sigma__', dest='__sigma__',
+                        default=110,
+                        type=float)
+
     argv = parser.parse_args(sys.argv[1:])
     # Hyper Parameters
     # learning_rate = 0.003
-    learning_rate = 0.05
+    learning_rate = 0.07
 
     batch_size = argv.batch_size
 
@@ -346,8 +353,10 @@ if __name__ == "__main__":
     # __activation__ = 'relu'
     # __activation__ = None
     # __activation__ = 'tanh'
-    __mu__ = 0
-    __sigma__ = 110
+    __mu__ = 2.60
+    __sigma__ = 110.69
+    # __mu__ = argv.__mu__
+    # __sigma__ = argv.__sigma__
 
     if method == 'noise':
         with_noise = True
