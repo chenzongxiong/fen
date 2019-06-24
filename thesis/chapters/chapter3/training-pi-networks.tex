@@ -1,0 +1,33 @@
+\subsection{Training a PI network\label{sec:chapter3:training-pi-network}}
+Assume we are given an input sequence $x_1, x_2, \ldots, x_N$ and an output sequence $q_1, q_2, \ldots, q_N$. We perform the following steps in cycle until convergence.
+
+\begin{enumerate}
+\item Preparing initial states for the $m$-unfolded network: Fix a vector of initial states $P_0$ and all the weights (denoted by $W$). For each $k=1, \ldots, K$, we calculate recursively $p_{1}^{k}, p_{2}^{k}, \ldots, p_{N}^{k}$ by formula \ref{eqn:chapter3:play-operator}. We denote the corresponding (intermediate) states of the \textbf{PI} operator by
+  \begin{equation*}
+    P_n = (p_{n}^{1}, \ldots, p_{n}^{K}), n = 1, \ldots, N.
+  \end{equation*}
+\item Preparing inputs for the $m$-unfolded network: We fix $m$ and group the input sequence into $m$-tuples:
+  \begin{equation*}
+    \mathbf{x_1} := (x_1, \ldots, x_m), \quad \mathbf{x_2} := (x_2, \ldots, x_{m+1}), \quad \ldots,
+  \end{equation*}
+  which gives $M := N-m$ tuples $\mathbf{x_1}, \ldots, \mathbf{x_M}$. Next we form a new set of inputs for the $m$-unfolded network, attaching the vectors of intermediate states:
+  \begin{equation*}
+    \mathbf{y_1} := (P_0, \mathbf{x_1}), \quad \mathbf{y_2} := (P_1, \mathbf{x_2}), \quad \ldots,
+  \end{equation*}
+
+\item Training the $m$-unfoled network: We train by stochstic gradient descent the feed-forward $m$-unfolded \textbf{PI} network
+  \begin{equation*}
+    \mathbb{R}^{K} \times \mathbb{R}^{m} \ni \mathbf{y} \mapsto F_{m}(\mathbf{y}) \in \mathbb{R}^m
+  \end{equation*}
+  with the inputs $\mathbf{y_1}, \ldots, \mathbf{y_M}$ and the true targets $\mathbf{q_1}, \ldots, \mathbf{q_M}$, where
+  \begin{equation*}
+    \begin{aligned*}
+      \mathbf{q_1} = (q_1, \ldots, \q_m), \quad \mathbf{q_2} = (q_2, \ldots, q_{m+1}), \quad \ldots
+    \end{aligned*}
+  \end{equation*}
+
+\item We update the initial state $P_0$:
+  \begin{equation*}
+    P_{0}^{new} := P_{0} - \nabla_{P_0} (F_m(P_0, \mathbf{x_1}) - \mathbf{q_1})^2
+  \end{equation*}
+\end{enumerate}
