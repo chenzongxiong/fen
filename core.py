@@ -267,7 +267,7 @@ def repeat(k,
     avg_guess = guess_price_seq_stack_.mean(axis=0)[-1]
     LOG.debug(colors.red(logger_string3.format(k, float(avg_guess), float(prev_gt_price), float(curr_gt_price))))
     LOG.debug("********************************************************************************")
-    utils.plot_hysteresis_info(hysteresis_info, k, predicted_price=float(avg_guess))
+    utils.plot_hysteresis_info(hysteresis_info, k, predicted_price=float(avg_guess), mu=mu, sigma=sigma)
     return avg_guess
 
 
@@ -329,27 +329,6 @@ def Phi(x, width=1.0):
 
 
 def gradient_operator(P, weights=None):
-    # _P = tf.reshape(P, shape=(P.shape[0].value, -1))
-    # _diff = _P[:, 1:] - _P[:, :-1]
-
-    # x0 = tf.slice(_P, [0, 0], [1, 1])
-    # diff = tf.concat([x0, _diff], axis=1)
-
-    # p1 = tf.cast(tf.abs(diff) > 0., dtype=tf.float32)
-    # p2 = 1.0 - p1
-    # p3_list = []
-    # # TODO: multiple process here
-
-    # for j in range(1, _P.shape[1].value):
-    #     p3_list.append(tf.reduce_sum(tf.cumprod(p2[:, j:], axis=1), axis=1))
-
-    # _p3 = tf.stack(p3_list, axis=1) + 1
-    # p3 = tf.concat([_p3, tf.constant(1.0, shape=(_p3.shape[0].value, 1), dtype=tf.float32)], axis=1)
-
-    # result = tf.multiply(p1, p3)
-    # return tf.reshape(result, shape=P.shape.as_list())
-
-    # P = tf.clip_by_value(P, clip_value_min=-1e9, clip_value_max=1e9)
     reshaped_P = tf.reshape(P, shape=(P.shape[0].value, -1))
 
     diff_ = reshaped_P[:, 1:] - reshaped_P[:, :-1]
@@ -1248,8 +1227,7 @@ class MyModel(object):
                  diff_weights=False,
                  network_type=constants.NetworkType.PLAY,
                  learning_rate=0.001,
-                 **kwargs
-                 ):
+                 **kwargs):
         self._unittest = kwargs.pop('unittest', False)
         if self._unittest is False:
             assert timestep == 1, colors.red('timestep must be 1')
@@ -1986,12 +1964,7 @@ class MyModel(object):
     @property
     def states(self):
         # NOTE: doesn't work properly
-        # return utils.get_session().run([play.operator_layer.states for play in self.plays])
         return [play.operator_layer.states for play in self.plays]
-    # @property
-    # def op_states(self):
-    #     return self.states
-
 
     def reset_states(self, states_list=None):
         if states_list is None:

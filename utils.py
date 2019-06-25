@@ -3,6 +3,8 @@ import threading
 import h5py
 
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 
@@ -10,11 +12,7 @@ import log as logging
 import colors
 
 LOG = logging.getLogger(__name__)
-# base seed
-# np.random.seed(123)
-# test seed
-# np.random.seed(345)
-# LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is 345"))
+
 os.environ['OMP_NUM_THREADS'] = str(os.cpu_count())
 
 
@@ -235,10 +233,9 @@ def plot_graph(G):
     plt.show()
 
 
-def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None):
+def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None, **kwargs):
     fig = plt.figure()
     colors = ['magenta']
-
     for index, info in enumerate(hysteresis_info):
         guess_hysteresis_list = info[0]
         prices = np.array([g[0] for g in guess_hysteresis_list])
@@ -253,7 +250,7 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None):
         vertical_line = np.linspace(noise.min(), noise.max(), l)
         if index == 0:
             plt.plot(prices, prev_original_prediction, color='red', label='start position', linewidth=1)
-            plt.plot(prices, bk, color='black', label='random walk', linewidth=1)
+            # plt.plot(prices, bk, color='black', label='random walk', linewidth=1)
             plt.plot(prices, curr_original_prediction, color='blue', label='target position', linewidth=1)
             plt.plot(prev_price, vertical_line, color='red', label='previous price', linewidth=1, linestyle='dashed')
             plt.plot(curr_price, vertical_line, color='blue', label='current price', linewidth=1, linestyle='dashed')
@@ -261,7 +258,7 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None):
             plt.plot(prices, noise, color=colors[index % len(colors)], marker='o', markersize=4, label='steps finding root', linewidth=1)
         else:
             plt.plot(prices, prev_original_prediction, color='red', label=None, linewidth=1)
-            plt.plot(prices, bk, color='black', label=None, linewidth=1)
+            # plt.plot(prices, bk, color='black', label=None, linewidth=1)
             plt.plot(prices, curr_original_prediction, color='blue', label=None, linewidth=1)
             plt.plot(prev_price, vertical_line, color='red', label=None, linewidth=1, linestyle='dashed')
             plt.plot(curr_price, vertical_line, color='blue', label=None, linewidth=1, linestyle='dashed')
@@ -271,8 +268,14 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None):
     plt.xlabel("prices")
     plt.ylabel("noise")
     plt.legend()
-    # plt.show()
-    fname = './frames/{}.png'.format(i)
+    plt.show()
+    mu = kwargs.pop('mu', None)
+    sigma = kwargs.pop('sigma', None)
+    if mu is None and sigma is None:
+        fname = './frames/{}.png'.format(i)
+    else:
+        fname = './frames-mu-{}-sigma-{}/{}.png'.format(mu, sigma, i)
+
     os.makedirs(os.path.dirname(fname), exist_ok=True)
     fig.savefig(fname, dpi=400)
     LOG.debug("Save picture into disk {}".format(fname))
