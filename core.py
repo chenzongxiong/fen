@@ -76,7 +76,11 @@ def do_guess_helper(step, direction, start_price, nb_plays, activation, sign, pr
         elif activation == 'relu':
             pp =  pp * (pp > 0)
         elif activation == 'elu':
-            raise Exception("not implement elu yet")
+            pp1 = (pp >= 0) * pp
+            pp2 = (pp < 0) * (np.exp(pp) - 1)
+            pp = pp1 + pp2
+        elif activation == 'softmax':
+            raise Exception("not implement softmax yet")
         else:
             raise Exception("not support for activation {}".format(colors.red(activation)))
 
@@ -267,7 +271,9 @@ def repeat(k,
     avg_guess = guess_price_seq_stack_.mean(axis=0)[-1]
     LOG.debug(colors.red(logger_string3.format(k, float(avg_guess), float(prev_gt_price), float(curr_gt_price))))
     LOG.debug("********************************************************************************")
-    utils.plot_hysteresis_info(hysteresis_info, k, predicted_price=float(avg_guess), mu=mu, sigma=sigma)
+    # utils.plot_hysteresis_info(hysteresis_info, k, predicted_price=float(avg_guess), mu=mu, sigma=sigma)
+    utils.plot_internal_transaction(hysteresis_info, k, predicted_price=float(avg_guess), mu=mu, sigma=sigma)
+
     return avg_guess
 
 
@@ -1724,7 +1730,7 @@ class MyModel(object):
         sign = None
 
         # import ipdb; ipdb.set_trace()
-
+        LOG.debug("(counts.sum() / prices.shape[0]) is: {}".format(counts.sum() / prices.shape[0]))
         if (counts.sum() / prices.shape[0]) <= 0.15:
             sign = +1
         elif (counts.sum() / prices.shape[0]) >= 0.85:
@@ -1767,7 +1773,7 @@ class MyModel(object):
         guess_prices = []
         k = start_pos
         seq = 1
-        repeating = 500
+        repeating = 10
         # TODO: using multi-processing HERE
         # import multiprocess as mp
         # pool = mp.Pool(os.cpu_count())

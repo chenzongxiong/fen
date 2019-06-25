@@ -250,9 +250,9 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
 
 
 def plot_simulation_info(i, ax):
-    fname1 = '../simulation/training-dataset/mu-0-sigma-110.0-points-10/{}-brief.csv'.format(i)
-    fname2 = '../simulation/training-dataset/mu-0-sigma-110.0-points-10/{}-true-detail.csv'.format(i)
-    fname3 = '../simulation/training-dataset/mu-0-sigma-110.0-points-10/{}-fake-detail.csv'.format(i)
+    fname1 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'.format(i)
+    fname2 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'.format(i)
+    fname3 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'.format(i)
 
     _data = np.loadtxt(fname1, delimiter=',')
     true_data = np.loadtxt(fname2, delimiter=',')

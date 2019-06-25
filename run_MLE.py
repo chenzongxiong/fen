@@ -31,7 +31,7 @@ def fit(inputs,
         batch_size=10):
 
     epochs = 10000
-    # epochs = 10
+    # epochs = 1
 
     start = time.time()
     input_dim = batch_size
@@ -106,6 +106,8 @@ def predict(inputs,
             raise Exception("no trained parameters found")
 
         best_epoch = max(epochs)
+
+        LOG.debug("Best epoch is {}".format(best_epoch))
         dirname = '{}-epochs-{}/{}plays'.format(weights_fname[:-3], best_epoch, nb_plays)
         if not os.path.isdir(dirname):
             # sanity checking
@@ -159,8 +161,32 @@ def trend(prices,
           weights_name='model.h5',
           trends_list_fname=None):
 
-    with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
-        line = f.read()
+    # with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
+    #     line = f.read()
+    best_epoch = None
+    try:
+        with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
+            line = f.read()
+    except FileNotFoundError:
+        epochs = []
+        base = '/'.join(weights_fname.split('/')[:-1])
+        for _dir in os.listdir(base):
+            if os.path.isdir('{}/{}'.format(base, _dir)):
+                epochs.append(int(_dir.split('-')[-1]))
+
+        if not epochs:
+            raise Exception("no trained parameters found")
+
+        best_epoch = max(epochs)
+
+        LOG.debug("Best epoch is {}".format(best_epoch))
+        dirname = '{}-epochs-{}/{}plays'.format(weights_fname[:-3], best_epoch, nb_plays)
+        if not os.path.isdir(dirname):
+            # sanity checking
+            raise Exception("Bugs inside *save_wegihts* or *fit2*")
+        with open("{}/input_shape.txt".format(dirname), 'r') as f:
+            line = f.read()
+
     shape = list(map(int, line.split(":")))
 
     assert len(shape) == 3, "shape must be 3 dimensions"
@@ -285,7 +311,7 @@ if __name__ == "__main__":
                         default=5,
                         type=int)
     parser.add_argument("--__activation__", dest="__activation__",
-                        default='tanh',
+                        default=None,
                         type=str)
 
     parser.add_argument('--trend', dest='trend',
@@ -349,7 +375,8 @@ if __name__ == "__main__":
     # __activation__ = 'relu'
     # __activation__ = None
     # __activation__ = 'tanh'
-    __mu__ = 2.60
+    # __mu__ = 2.60
+    __mu__ = 0
     __sigma__ = 110.69
     # __mu__ = argv.__mu__
     # __sigma__ = argv.__sigma__
@@ -572,8 +599,10 @@ if __name__ == "__main__":
         #           nb_plays=__nb_plays__,
         #           weights_name=weights_fname)
         # import ipdb; ipdb.set_trace()
-        predictions, loss = trend(prices=inputs,
-                                  B=outputs,
+        # inputs = inputs[:600]
+        # outputs = outputs[:600]
+        predictions, loss = trend(prices=inputs[:600],
+                                  B=outputs[:600],
                                   mu=__mu__,
                                   sigma=__sigma__,
                                   units=__units__,
@@ -581,10 +610,12 @@ if __name__ == "__main__":
                                   nb_plays=__nb_plays__,
                                   weights_name=weights_fname,
                                   trends_list_fname=trends_list_fname)
-        inputs = inputs[1000:1000+predictions.shape[-1]]
+        # inputs = inputs[1000:1000+predictions.shape[-1]]
+        inputs = inputs[300:300+predictions.shape[-1]]
     elif do_prediction is True:
         LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
         # import ipdb; ipdb.set_trace()
+        inputs, outputs = inputs[:300], outputs[:300]
         predictions, best_epoch = predict(inputs=inputs,
                                            outputs=outputs,
                                            units=__units__,
@@ -597,6 +628,8 @@ if __name__ == "__main__":
     else:
         LOG.debug("START to FIT via {}".format(colors.red(loss_name.upper())))
         # import ipdb; ipdb.set_trace()
+        inputs, outputs = inputs[:300], outputs[:300]
+
         predictions, loss = fit(inputs=inputs,
                                 outputs=outputs,
                                 mu=__mu__,
