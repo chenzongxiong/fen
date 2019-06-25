@@ -75,6 +75,10 @@ def do_guess_helper(step, direction, start_price, nb_plays, activation, sign, pr
             pp = np.tanh(pp)
         elif activation == 'relu':
             pp =  pp * (pp > 0)
+        elif activation == 'elu':
+            raise Exception("not implement elu yet")
+        else:
+            raise Exception("not support for activation {}".format(colors.red(activation)))
 
         ppp = (weights[3][i] * pp).sum() + weights[4][i]
         predict_noise_list.append(ppp[0])
@@ -369,7 +373,7 @@ def jacobian(outputs, inputs):
 
 
 def gradient_nonlinear_layer(fZ, weights=None, activation=None, reduce_sum=True):
-    LOG.debug("gradient nonlinear activation {}".format(activation))
+    LOG.debug("gradient nonlinear activation {}".format(colors.red(activation)))
     # ignore sample
     # fZ = tf.clip_by_value(fZ, clip_value_min=-1e9, clip_value_max=1e9)
     # weights = tf.clip_by_value(weights, clip_value_min=-1e9, clip_value_max=1e9)
@@ -383,8 +387,11 @@ def gradient_nonlinear_layer(fZ, weights=None, activation=None, reduce_sum=True)
         ### we need to ensure the right epoch of fZ
         partial_gradient = (1.0 + _fZ) * (1.0 - _fZ)
     elif activation == 'relu':
-        _fZ = tf.reshape(fZ, shape=fZ.shape.as_list()[1:])
         partial_gradient = tf.cast(_fZ >= 1e-9, dtype=tf.float32)
+    elif activation == 'elu':
+        a = tf.cast(_fZ >= 0, dtype=tf.float32)
+        b = tf.cast(_fZ < 0, dtype=tf.float32)
+        partial_gradient = a + b * (_fZ + 1)
     else:
         raise Exception("activation: {} not support".format(activation))
 
@@ -400,8 +407,6 @@ def gradient_nonlinear_layer(fZ, weights=None, activation=None, reduce_sum=True)
 
 
 def gradient_linear_layer(weights, multiples=1, expand_dims=True):
-    # weights = tf.clip_by_value(weights, clip_value_min=-1e9, clip_value_max=1e9)
-
     if expand_dims is True:
         return tf.expand_dims(tf.tile(tf.transpose(weights, perm=[1, 0]), multiples=[multiples, 1]), axis=0)
     else:
@@ -435,7 +440,6 @@ def gradient_operator_nonlinear_layers(P,
     g1 = tf.reshape(g1, shape=P.shape)
     g2 = gradient_nonlinear_layer(fZ, nonlinear_weights, activation, reduce_sum=reduce_sum)
     g3 = g1*g2
-    # normalized_g = tf.clip_by_value(g3, clip_value_min=-1e-9, clip_value_max=1e9)
     return g3
 
 
@@ -458,7 +462,6 @@ def gradient_all_layers(P,
                                             reduce_sum=False,
                                             feed_dict=feed_dict)
     g2 = tf.expand_dims(tf.matmul(g1[0], linear_weights), axis=0)
-    # normalized_g = tf.clip_by_value(g2, clip_value_min=-1e9, clip_value_max=1e9)
     return g2
 
 
@@ -499,6 +502,7 @@ class PhiCell(Layer):
                  kernel_constraint="non_neg",
                  **kwargs):
         self.debug = kwargs.pop("debug", False)
+        self.unroll = kwargs.pop('unittest', False)
 
         super(PhiCell, self).__init__(
             activity_regularizer=regularizers.get(activity_regularizer), **kwargs)
@@ -509,22 +513,14 @@ class PhiCell(Layer):
         self.units = 1
         self.state_size = [1]
 
-        # self.kernel_initializer = initializers.get(kernel_initializer)
         self.kernel_initializer = tf.keras.initializers.Constant(value=weight, dtype=tf.float32)
-
         self.kernel_regularizer = regularizers.get(kernel_regularizer)
-        # self.kernel_regularizer = regularizers.l1_l2
         self.kernel_constraint = constraints.get(kernel_constraint)
 
         self.hysteretic_func = hysteretic_func
         self.input_dim = input_dim
-        self.unroll = False
 
     def build(self, input_shape):
-
-        if input_shape[-1] <= 20:
-            self.unroll = False
-
         if self.debug:
             LOG.debug("Initialize *weight* as pre-defined: {} ....".format(self._weight))
             self.kernel = tf.Variable([[self._weight]], name="weight", dtype=tf.float32)
@@ -599,21 +595,22 @@ class Operator(RNN):
     def __init__(self,
                  weight=1.0,
                  width=1.0,
-                 debug=False):
+                 debug=False,
+                 unittest=False):
 
         cell = PhiCell(
             weight=weight,
             width=1.0,
-            debug=debug
-            )
+            debug=debug,
+            unittest=unittest)
+
+        unroll = True if unittest is True else False
         super(Operator, self).__init__(
             cell=cell,
             return_sequences=True,
             return_state=False,
             stateful=True,
-            unroll=False
-            # unroll=True
-            )
+            unroll=False)
 
     def call(self, inputs, initial_state=None):
         LOG.debug("Operator.inputs.shape: {}".format(inputs.shape))
@@ -626,10 +623,6 @@ class Operator(RNN):
     @property
     def kernel(self):
         return self.cell.kernel
-
-    # TODO: handle state between states
-    # def states(self):
-    #     pass
 
     def reset_states(self, states=None):
         if not self.stateful:
@@ -675,12 +668,7 @@ class Operator(RNN):
                         self.name + ': expected shape=' + str(
                             (batch_size, dim)) + ', found shape=' + str(value.shape))
                 # TODO(fchollet): consider batch calls to `set_value`.
-                # utils.init_tf_variables()
-                # import ipdb; ipdb.set_trace()
                 tf.keras.backend.set_value(state, value)
-                # s, ss = sess.run([state, self.states])
-                # print("state: {}, states: {}".format(s, ss))
-
 
 
 class MyDense(Layer):
@@ -708,7 +696,6 @@ class MyDense(Layer):
         self.activation = activations.get(activation)
         self.kernel_initializer = initializers.get(kernel_initializer)
         self.kernel_regularizer = regularizers.get(kernel_regularizer)
-        # self.kernel_regularizer = regularizers.l1_l2
         self.kernel_constraint = constraints.get(kernel_constraint)
         if use_bias is True:
             self.bias_initializer = initializers.get(bias_initializer)
@@ -779,11 +766,7 @@ class MySimpleDense(Dense):
 
         kwargs['activation'] = None
         kwargs['kernel_constraint'] = None
-        # kwargs['kernel_constraint'] = 'non_neg'
-
-        # kwargs['kernel_regularize'] = 'l2'
         super(MySimpleDense, self).__init__(**kwargs)
-        # self.kernel_regularizer = regularizers.l1_l2
 
     def build(self, input_shape):
         assert self.units == 1
@@ -826,7 +809,8 @@ class Play(object):
                  use_bias=True,
                  name="play",
                  timestep=1,
-                 input_dim=1):
+                 input_dim=1,
+                 **kwargs):
 
         self._weight = weight
         self._width = width
@@ -848,6 +832,7 @@ class Play(object):
         self._need_compile = False
         self.use_bias = use_bias
         self._name = name
+        self._unittest = kwargs.pop('unittest', False)
 
     def build(self, inputs=None):
         if inputs is None and self._batch_input_shape is None:
@@ -874,7 +859,8 @@ class Play(object):
         length = self._batch_input_shape[1].value * self._batch_input_shape[2].value
         self.batch_size = self._batch_input_shape[0].value
         assert self.batch_size == 1, colors.red("only support batch_size is 1")
-        assert self._play_timestep == 1, colors.red("only support outter-timestep 1")
+        if not getattr(self, "_unittest", False):
+            assert self._play_timestep == 1, colors.red("only support outter-timestep 1")
 
         self.model = tf.keras.models.Sequential()
 
@@ -890,13 +876,13 @@ class Play(object):
 
         self.model.add(Operator(weight=getattr(self, "_weight", 1.0),
                                 width=getattr(self, "_width", 1.0),
-                                debug=getattr(self, "_debug", False)))
+                                debug=getattr(self, "_debug", False),
+                                unittest=getattr(self, "_unittest", False)))
 
         if self._network_type == constants.NetworkType.PLAY:
             self.model.add(MyDense(self.units,
                                    activation=self.activation,
                                    use_bias=self.use_bias,
-                                   # use_bias=False,
                                    debug=getattr(self, "_debug", False)))
 
             self.model.add(MySimpleDense(units=1,
@@ -1274,6 +1260,12 @@ class MyModel(object):
                  learning_rate=0.001,
                  **kwargs
                  ):
+        self._unittest = kwargs.pop('unittest', False)
+        if self._unittest is False:
+            assert timestep == 1, colors.red('timestep must be 1')
+
+        assert activation in [None, 'tanh', 'relu', 'elu'], colors.red("activation {} not support".format(activation))
+
         # fix random seed to 123
         seed = 123
         np.random.seed(seed)
@@ -1283,6 +1275,7 @@ class MyModel(object):
         self._nb_plays = nb_plays
         self._activation = activation
         self._input_dim = input_dim
+
         _weight = 1.0
         _width = 0.1
         width = 1
@@ -1311,14 +1304,15 @@ class MyModel(object):
                         network_type=network_type,
                         name="play-{}".format(nb_play),
                         timestep=timestep,
-                        input_dim=input_dim)
+                        input_dim=input_dim,
+                        unittest=self._unittest)
             assert play._need_compile == False, colors.red("Play inside MyModel mustn't be compiled")
             self.plays.append(play)
 
         # self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, decay=0.1)
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
         # self.optimizer = tf.keras.optimizers.SGD(lr=learning_rate)
-        if kwargs.get("parallel_prediction", False):
+        if kwargs.pop("parallel_prediction", False):
             self.pool = WorkerPool(constants.CPU_COUNTS)
             self.pool.start()
 
@@ -1476,17 +1470,13 @@ class MyModel(object):
             LOG.debug("{}, weight: {}".format(play._name, play.weights))
 
     def compile(self, inputs, **kwargs):
-        unittest = kwargs.pop('unittest', False)
-        mu = kwargs.pop('mu', None)
-        sigma = kwargs.pop('sigma', None)
+        mu, sigma = kwargs.pop('mu', None), kwargs.pop('sigma', None)
         outputs = kwargs.pop('outputs', None)
-        LOG.debug("Compile with mu: {}, sigma: {}".format(mu, sigma))
+        LOG.debug("Compile with mu: {}, sigma: {}".format(colors.red(mu), colors.red(sigma)))
 
         _inputs = inputs
         inputs = ops.convert_to_tensor(inputs, tf.float32)
-        for play in self.plays:
-            if not play.built:
-                play.build(inputs)
+        _ = [play.build(inputs) for play in self.plays if not play.built]
 
         self.params_list = []
         self.feed_inputs = []
@@ -1502,31 +1492,23 @@ class MyModel(object):
                                                               name='target-sigma',
                                                               dtype=tf.float32)
 
-        # TODO: not feed with self._x, can't be a bug HERE
-
         self._batch_input_shape = utils.get_cache()['play_input_layer'].input.shape
         self.feed_inputs = [utils.get_cache()['play_input_layer'].input]
         self.feed_targets = []
         self.update_inputs = []
 
         for play in self.plays:
-            # self.feed_inputs.append(play.input)
             self.model_outputs.append(play.output)
             # TODO: figure out the function of get_updates_for
             self.update_inputs += play.model.get_updates_for(play.input)
             self.params_list += play.trainable_weights
 
-
-        # TODO: Need to fix self._x, self._x_feed_dict later
-        # self._x = [tf.reshape(inputs, shape=self._batch_input_shape.as_list())]
-        if unittest is True:
-            self._x_feed_dict = { self.feed_inputs[0].name : _inputs.reshape(self._batch_input_shape.as_list()) }
+        if self._unittest is True:
+            self._x_feed_dict = { self.feed_inputs[0].name : _inputs.reshape(self.batch_input_shape) }
 
         self._y = [self.feed_mu, self.feed_sigma]
 
-        # LOG.debug("self._x.shape: {}, x_feed_dict.names: {}, x_feed_dict.shape: {}".format([(x.name, x.shape) for x in self.feed_inputs], self._x_feed_dict.keys(), [self._x_feed_dict[name].shape for name in self._x_feed_dict.keys()]))
-
-        assert len(self.feed_inputs) == 1, colors.red("ERROR: only one input layers")
+        assert len(self.feed_inputs) == 1, colors.red("ERROR: only need one input layer")
         ##################### Average outputs #############################
         if self._nb_plays > 1:
             self.y_pred = tf.keras.layers.Average()(self.model_outputs)
@@ -1541,77 +1523,56 @@ class MyModel(object):
         self.curr_sigma = tf.keras.backend.std(self.diff)
 
         with tf.name_scope('training'):
-            if unittest is False:
+            if self._unittest is False:
                 ###################### Calculate J by hand ###############################
-                J_list = [gradient_all_layers(play.operator_layer.output,
-                                              play.nonlinear_layer.output,
-                                              play.operator_layer.kernel,
-                                              play.nonlinear_layer.kernel,
-                                              play.linear_layer.kernel,
-                                              activation=self._activation) for play in self.plays]
-                self.J_list_by_hand = J_list
+                # 1. gradient for each play, assign to self.J_list_by_hand
+                self.J_list_by_hand = [
+                    gradient_all_layers(play.operator_layer.output,
+                                        play.nonlinear_layer.output,
+                                        play.operator_layer.kernel,
+                                        play.nonlinear_layer.kernel,
+                                        play.linear_layer.kernel,
+                                        activation=self._activation) for play in self.plays]
             else:
                 ###################### Calculate J by hand ###############################
-                J_list = [gradient_all_layers(play.operator_layer.output,
-                                              play.nonlinear_layer.output,
-                                              play.operator_layer.kernel,
-                                              play.nonlinear_layer.kernel,
-                                              play.linear_layer.kernel,
-                                              activation=self._activation,
-                                              debug=True,
-                                              inputs=self.feed_inputs[0],
-                                              feed_dict=copy.deepcopy(self._x_feed_dict))]
-                self.J_list_by_hand = J_list
+                # 1. gradient for each play, assign to self.J_list_by_hand
+                self.J_list_by_hand = [
+                    gradient_all_layers(play.operator_layer.output,
+                                        play.nonlinear_layer.output,
+                                        play.operator_layer.kernel,
+                                        play.nonlinear_layer.kernel,
+                                        play.linear_layer.kernel,
+                                        activation=self._activation,
+                                        debug=True,
+                                        inputs=self.feed_inputs[0],
+                                        feed_dict=copy.deepcopy(self._x_feed_dict)) for play in self.plays]
                 ####################### Calculate J by Tensorflow ###############################
-                y_pred = tf.reshape(self.y_pred, shape=self.feed_inputs[0].shape)
-                J_by_tf = tf.keras.backend.gradients(y_pred, self.feed_inputs)
-                J_by_tf = [tf.reshape(J_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
-                self.J_by_tf = tf.reduce_mean(tf.concat(J_by_tf, axis=-1), axis=-1, keepdims=True)
-
-                model_outputs = [tf.reshape(self.model_outputs[i], shape=self.feed_inputs[0].shape) for i in range(self._nb_plays)]
-                J_list_by_tf = tf.keras.backend.gradients(model_outputs, self.feed_inputs)
+                # 1. gradient for each play, assign to self.J_list_by_tf
+                # 2. gradient for summuation of all plays, assign to self.J_by_tf
+                model_outputs = [tf.reshape(self.model_outputs[i], shape=self.batch_input_shape) for i in range(self._nb_plays)]
+                J_list_by_tf = [tf.keras.backend.gradients(model_output, self.feed_inputs) for model_output in model_outputs]
                 self.J_list_by_tf = [tf.reshape(J_list_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
 
-            # by tf
-            # model_outputs = [tf.reshape(self.model_outputs[i], shape=self.feed_inputs[i].shape) for i in range(self._nb_plays)]
-            # J_list_by_tf = tf.keras.backend.gradients(model_outputs, self.feed_inputs)
-            # self.J_list_by_tf = [tf.reshape(J_list_by_tf[i], shape=(1, -1, 1)) for i in range(self._nb_plays)]
-            # if unittest is True:
-            #     self.J_by_tf = tf.reduce_mean(tf.concat(self.J_list_by_tf, axis=-1), axis=-1, keepdims=True) / self._nb_plays
-            #     normalized_J_by_tf = tf.clip_by_value(tf.abs(self.J_by_tf), clip_value_min=1e-9, clip_value_max=1e9)
-
-            # import ipdb; ipdb.set_trace()
-            # by hand
+                y_pred = tf.reshape(self.y_pred, shape=self.batch_input_shape)
+                J_by_tf = tf.keras.backend.gradients(y_pred, self.feed_inputs)[0]
+                self.J_by_tf = tf.reshape(J_by_tf, shape=(1, -1, 1))
             # (T * 1)
-            self.J_by_hand = tf.reduce_mean(tf.concat(self.J_list_by_hand, axis=-1), axis=-1, keepdims=True) / self._nb_plays
+            # by hand
+            self.J_by_hand = tf.reduce_mean(tf.concat(self.J_list_by_hand, axis=-1), axis=-1, keepdims=True)
+            if self._unittest is True:
+                # we don't care about the graidents of loss function, it's calculated by tensorflow.
+                return
+
             normalized_J_by_hand = tf.clip_by_value(tf.abs(self.J_by_hand), clip_value_min=1e-18, clip_value_max=1e18)
 
             # TODO: support derivation for p0
             # TODO: make loss customize from outside
-            # learn mu/sigma/weights
-            # _loss = tf.keras.backend.square((self.diff - self.curr_mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
-            # # fix mu and learn sigma/weights
-            # _loss = tf.keras.backend.square((self.diff - mu)/self.curr_sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
-            # fix mu/sigma and learn weights
-            # self.loss_a = tf.keras.backend.square(self.diff - mu)
+            # TODO: learn mu/sigma/weights
+            # NOTE: current version is fixing mu/sigma and learn weights
             self.loss_a = tf.keras.backend.square((self.diff - mu)/sigma) / 2
-            # import ipdb; ipdb.set_trace()
-
-            # self.loss_a = tf.keras.backend.square(self.y_pred- mu)
-
-            # self.loss_a = tf.keras.backend.square(self.y_pred - outputs)
             self.loss_b = - tf.keras.backend.log(normalized_J_by_hand[:, 0:, :])
-            # if unittest is True:
-            #     self.loss_c = - tf.keras.backend.log(normalized_J_by_tf[:, 0:, :])
-            #     self.loss_by_tf = tf.keras.backend.mean(self.loss_a + self.loss_c)
-            # else:
-            #     # self.loss_by_tf = tf.constants(0, dtype=tf.float32)
-            #     pass
 
-            # _loss = tf.keras.backend.square((diff - mu)/sigma) / 2 - tf.keras.backend.log(normalized_J[:, 1:, :])
-            # self.loss_by_hand = tf.keras.backend.mean(self.loss_a + self.loss_b)
-            # self.loss_by_hand = tf.keras.backend.mean(self.loss_b)
-            self.loss_by_hand = tf.keras.backend.mean(self.loss_a+self.loss_b)
+            self.loss_by_hand = tf.keras.backend.mean(self.loss_a + self.loss_b)
             self.loss = self.loss_by_hand
 
             if outputs is not None:
@@ -1624,7 +1585,7 @@ class MyModel(object):
             with tf.name_scope(self.optimizer.__class__.__name__):
                 updates = self.optimizer.get_updates(params=self.params_list,
                                                      loss=self.loss)
-
+                # TODO: may be useful to uncomment the following code
                 # updates += self.update_inputs
             training_inputs = self.feed_inputs + self.feed_targets
 
@@ -1662,7 +1623,7 @@ class MyModel(object):
             __sigma__ = (outputs[1:] - outputs[:-1]).std()
             outputs = ops.convert_to_tensor(outputs, tf.float32)
 
-        self.compile(inputs, mu=mu, sigma=sigma, unittest=False, outputs=outputs, **kwargs)
+        self.compile(inputs, mu=mu, sigma=sigma, outputs=outputs, **kwargs)
         # ins = self._x + self._y
         # ins = self._x
         input_dim =  self.batch_input_shape[-1]
@@ -2035,8 +1996,8 @@ class MyModel(object):
     @property
     def states(self):
         # NOTE: doesn't work properly
-        return utils.get_session().run([play.operator_layer.states for play in self.plays])
-
+        # return utils.get_session().run([play.operator_layer.states for play in self.plays])
+        return [play.operator_layer.states for play in self.plays]
     # @property
     # def op_states(self):
     #     return self.states
