@@ -47,7 +47,7 @@ def fit(inputs,
                       learning_rate=learning_rate)
     LOG.debug("Learning rate is {}".format(learning_rate))
 
-    preload_weights = False
+    preload_weights = True
 
     if loss_name == 'mse':
         mymodel.fit(inputs,
@@ -275,12 +275,9 @@ if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 
     parser = argparse.ArgumentParser()
-    # parser.add_argument("--neural-type", dest="neural_type",
-    #                     required=False, default="simple_rnn",
-    #                     type=str,
     #                     help="select which rnn neural network to evaluate")
     parser.add_argument("--batch_size", dest="batch_size",
-                        default=1,
+                        default=1000,
                         type=int)
     parser.add_argument("--__nb_plays__", dest="__nb_plays__",
                         default=2,
