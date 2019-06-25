@@ -24,7 +24,7 @@ y_{j}  &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \tanh(\theta_{i} p_{j} + \theta_{i0
 
 Calculate derivation for $y_{j}$,
 \begin{equation}\label{eqn:chapter3:TODO}
-\frac{\partial y_{j}}{\partial p_{j}} &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} \frac{\partial f(z_j)}{\partial z_{j}}
+\frac{\partial y_{j}}{\partial p_{j}} &=& \sum_{i=1}^{S} \tilde{\theta_{i}} \theta_{i} \frac{\partial f(z_j)}{\partial z_{j}} \frac{\partial z_{j}}{\partial p_{j}}
 \end{equation}
 
 Now let's consider the mapping between $p_{j}$ and $x_{j}$. let $\sigma_{j} = w^{1} x_{j} - p_{j-1}$
