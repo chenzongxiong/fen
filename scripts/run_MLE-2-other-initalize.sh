@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH -J run_MLE-nb_plays-100-units-200-activation-tanh-batch-size-1000-mu-2.69
+#SBATCH -J run_MLE-nb_plays-100-units-200-activation-tanh-batch-size-1000-mu-2.69-x
 #SBATCH -D /home/zxchen/feng
-#SBATCH -o ./tmp/run_MLE-nb_plays-100-units-200-activation-tanh-batch-size-1000-mu-2.69.out
+#SBATCH -o ./tmp/run_MLE-nb_plays-100-units-200-activation-tanh-batch-size-1000-mu-2.69-x.out
 #SBATCH --nodes=1
 #SBATCH --mem=80G
 #SBATCH --time=30-00:00:00
