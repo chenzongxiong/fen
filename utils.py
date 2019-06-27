@@ -221,7 +221,7 @@ def print_tf_graph(graph):
       print("%s -> %s" % (node.name, child.name))
     print("--------------------------------------------------------------------------------")
 
-import matplotlib.pyplot as plt
+
 import networkx as nx
 def plot_graph(G):
     '''Plot a DAG using NetworkX'''

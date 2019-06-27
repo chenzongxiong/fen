@@ -265,6 +265,8 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
 
 
 def visualize(inputs,
+              mu=0,
+              sigma=1,
               units=1,
               activation='tanh',
               nb_plays=1,
@@ -276,9 +278,9 @@ def visualize(inputs,
 
     assert len(shape) == 3, "shape must be 3 dimensions"
     input_dim = shape[2]
-    timestep = inputs.shape[0] // input_dim
+    # timestep = inputs.shape[0] // input_dim
+    timestep = 1
     shape[1] = timestep
-
     start = time.time()
 
     mymodel = MyModel(input_dim=input_dim,
@@ -361,12 +363,12 @@ if __name__ == "__main__":
 
     parser.add_argument('--trend', dest='trend',
                         default=False, action='store_true')
-
     parser.add_argument('--predict', dest='predict',
                         default=False, action='store_true')
     parser.add_argument('--plot', dest='plot',
                         default=False, action='store_true')
-
+    parser.add_argument('--visualize_activated_plays', dest='visualize_activated_plays',
+                        default=False, action='store_true')
     parser.add_argument('--__mu__', dest='__mu__',
                         default=0,
                         type=float)
@@ -394,6 +396,7 @@ if __name__ == "__main__":
     mc_mode = True
     do_trend = argv.trend
     do_plot = argv.plot
+    do_visualize_activated_plays = argv.visualize_activated_plays
 
     with_noise = True
 
@@ -642,16 +645,8 @@ if __name__ == "__main__":
     #     LOG.warning("Not found prediction file, no way to create confusion matrix")
 
     if mc_mode is True and do_trend is True:
-        # visualize(inputs=inputs,
-        #           units=__units__,
-        #           activation=__activation__,
-        #           nb_plays=__nb_plays__,
-        #           weights_name=weights_fname)
-        # import ipdb; ipdb.set_trace()
-        # inputs = inputs[:600]
-        # outputs = outputs[:600]
-        predictions, loss = trend(prices=inputs[:600],
-                                  B=outputs[:600],
+        predictions, loss = trend(prices=inputs[:batch_size*2],
+                                  B=outputs[:batch_size*2],
                                   mu=__mu__,
                                   sigma=__sigma__,
                                   units=__units__,
@@ -659,8 +654,17 @@ if __name__ == "__main__":
                                   nb_plays=__nb_plays__,
                                   weights_name=weights_fname,
                                   trends_list_fname=trends_list_fname)
-        # inputs = inputs[1000:1000+predictions.shape[-1]]
-        inputs = inputs[300:300+predictions.shape[-1]]
+        inputs = inputs[batch_size:batch_size+predictions.shape[-1]]
+    elif do_visualize_activated_plays is True:
+        LOG.debug(colors.red("Load weights from {}, DO VISUALIZE ACTIVATED PLAYS".format(weights_fname)))
+        visualize(inputs=inputs[:batch_size],
+                  mu=__mu__,
+                  sigma=__sigma__,
+                  units=__units__,
+                  activation=__activation__,
+                  nb_plays=__nb_plays__,
+                  weights_name=weights_fname)
+        sys.exit(0)
     elif do_prediction is True:
         LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
         # import ipdb; ipdb.set_trace()

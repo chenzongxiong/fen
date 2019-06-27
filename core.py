@@ -2,7 +2,10 @@ import os
 import time
 import copy
 import inspect
+import matplotlib
+# matplotlib.use('Agg')
 from matplotlib import pyplot as plt
+from matplotlib.animation import FuncAnimation
 import multiprocessing as mp
 MP_CONTEXT = mp.get_context('spawn')
 
@@ -1830,10 +1833,10 @@ class MyModel(object):
         # return guess_prices, guess_prices_list
         return guess_prices
 
-    def visualize_activated_plays(self, inputs):
+    def visualize_activated_plays(self, inputs, mu=0, sigma=1):
         input_dim = self._batch_input_shape[-1]
         points = inputs.shape[-1]
-        timestamp = points // input_dim
+        timestamp = 1
         shape = (1, timestamp, input_dim)
         _inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
         _inputs = tf.reshape(_inputs, shape=shape)
@@ -1842,16 +1845,14 @@ class MyModel(object):
         outputs = [output.reshape(-1) for output in outputs]  # self._nb_plays * intputs.shape(-1)
         outputs = np.array(outputs)
         assert outputs.shape == (self._nb_plays, points)
-        step = 2
-        x_size = 10
-        y_size = 10
-        vmin, vmax = outputs.min(), outputs.max()
 
-        from matplotlib import pyplot as plt
-        from matplotlib.animation import FuncAnimation
         import seaborn as sns
 
         fig, ax = plt.subplots(figsize=(20, 20))
+        x_size, y_size = 2, 1
+        vmin, vmax = outputs.min(), outputs.max()
+        assert x_size * y_size == self._nb_plays
+
         fig.set_tight_layout(True)
         x = np.linspace(0, x_size+1, x_size+2)
         y = np.linspace(0, y_size+1, y_size+2)
@@ -1859,6 +1860,7 @@ class MyModel(object):
         fargs = (outputs, x_size, y_size, vmin, vmax, ax)
         global once
         once = True
+
         def update(i, *fargs):
             global once
             outputs = fargs[0]
@@ -1873,11 +1875,48 @@ class MyModel(object):
             sns.heatmap(output, linewidth=0.5, vmin=vmin, vmax=vmax, ax=ax, cbar=once)
             once = False
 
-        anim = FuncAnimation(fig, update, frames=np.arange(1, points, step),
-                             fargs=fargs, interval=400)
-        fname = './visualize/heatmap.gif'
+        anim = FuncAnimation(fig, update, frames=np.arange(0, points, 2),
+                             fargs=fargs, interval=500)
+
+        fname = './visualize-mu-{}-sigma-{}/heatmap1.gif'.format(mu, sigma)
         os.makedirs(os.path.dirname(fname), exist_ok=True)
         anim.save(fname, dpi=40, writer='imagemagick')
+
+
+        fig, ax = plt.subplots(figsize=(20, 20))
+        x_size, y_size = points // 20, 20
+        vmin, vmax = outputs.min(), outputs.max()
+        assert x_size * y_size == input_dim
+
+        fig.set_tight_layout(True)
+        x = np.linspace(0, x_size+1, x_size+2)
+        y = np.linspace(0, y_size+1, y_size+2)
+        xv, yv = np.meshgrid(x, y)
+        fargs = (outputs, x_size, y_size, vmin, vmax, ax)
+
+        once = True
+        def update2(i, *fargs):
+            global once
+            outputs = fargs[0]
+            x_size = fargs[1]
+            y_size = fargs[2]
+            vmin = fargs[3]
+            vmax = fargs[4]
+            ax = fargs[5]
+
+            LOG.info("Update animation frame: {}".format(i))
+            output = outputs[i, :]
+            output = output.reshape(x_size, y_size)
+            sns.heatmap(output, linewidth=0.5, vmin=vmin, vmax=vmax, ax=ax, cbar=once)
+            once = False
+
+        anim = FuncAnimation(fig, update2, frames=np.arange(0, self._nb_plays, 1),
+                             fargs=fargs, interval=500)
+
+        fname = './visualize-mu-{}-sigma-{}/heatmap2.gif'.format(mu, sigma)
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
+        anim.save(fname, dpi=40, writer='imagemagick')
+
 
     def save_weights(self, fname):
         suffix = fname.split(".")[-1]
