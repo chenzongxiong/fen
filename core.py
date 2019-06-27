@@ -2,6 +2,7 @@ import os
 import time
 import copy
 import inspect
+from matplotlib import pyplot as plt
 import multiprocessing as mp
 MP_CONTEXT = mp.get_context('spawn')
 
@@ -1492,7 +1493,7 @@ class MyModel(object):
         y_pred = tf.reshape(self.y_pred, shape=(-1,))
         self.diff = tf.math.subtract(y_pred[1:], y_pred[:-1])
 
-        self.diff= tf.concat([tf.reshape(y_pred[0], shape=(1,)), self.diff], axis=0)
+        self.diff = tf.concat([tf.reshape(y_pred[0], shape=(1,)), self.diff], axis=0)
         self.curr_mu = tf.keras.backend.mean(self.diff)
         self.curr_sigma = tf.keras.backend.std(self.diff)
 
@@ -1532,7 +1533,9 @@ class MyModel(object):
                 self.J_by_tf = tf.reshape(J_by_tf, shape=(1, -1, 1))
             # (T * 1)
             # by hand
-            self.J_by_hand = tf.reduce_mean(tf.concat(self.J_list_by_hand, axis=-1), axis=-1, keepdims=True)
+            J_by_hand = tf.reduce_mean(tf.concat(self.J_list_by_hand, axis=-1), axis=-1, keepdims=True)
+            self.J_by_hand = tf.reshape(J_by_hand, shape=(-1,))
+
             if self._unittest is True:
                 # we don't care about the graidents of loss function, it's calculated by tensorflow.
                 return
@@ -1544,8 +1547,7 @@ class MyModel(object):
             # TODO: learn mu/sigma/weights
             # NOTE: current version is fixing mu/sigma and learn weights
             self.loss_a = tf.keras.backend.square((self.diff - mu)/sigma) / 2
-            self.loss_b = - tf.keras.backend.log(normalized_J_by_hand[:, 0:, :])
-
+            self.loss_b = - tf.keras.backend.log(normalized_J_by_hand)
             self.loss_by_hand = tf.keras.backend.mean(self.loss_a + self.loss_b)
             self.loss = self.loss_by_hand
 
@@ -1568,7 +1570,7 @@ class MyModel(object):
             if kwargs.get('test_stateful', False):
                 outputs = [play.operator_layer.output for play in self.plays]
             else:
-                outputs = [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred] + [play.operator_layer.output for play in self.plays]
+                outputs = [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred, tf.keras.backend.mean(self.loss_a), tf.keras.backend.mean(self.loss_b)] + [play.operator_layer.output for play in self.plays]
 
             self.train_function = tf.keras.backend.function(training_inputs,
                                                             outputs,
@@ -1634,14 +1636,14 @@ class MyModel(object):
             assert len(results) == self._nb_plays
             return results
 
-        logger_string_epoch = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}"
-        logger_string_step = "Steps: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}"
+        logger_string_epoch = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}, loss_a: {:.7f}, loss_b: {:.7f}"
+        logger_string_step = "Steps: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}, loss_a: {:.7f}, loss_b: {:.7f}"
 
         for i in range(epochs):
             self.reset_states()
             for j in range(steps_per_epoch):
                 ins = inputs[j*input_dim:(j+1)*input_dim]
-                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, *operator_outputs = self.train_function([ins.reshape(1, 1, -1)])
+                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, loss_a, loss_b, *operator_outputs = self.train_function([ins.reshape(1, 1, -1)])
                 states_list = [o.reshape(-1)[-1] for o in operator_outputs]
                 self.reset_states(states_list=states_list)
 
@@ -1651,17 +1653,17 @@ class MyModel(object):
                     prev_cost = cost
                     patience_list = []
                 loss_by_hand, loss_by_tf = 0, 0
-            LOG.debug(logger_string_epoch.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf)))
+            LOG.debug(logger_string_epoch.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf), loss_a, loss_b))
 
             LOG.debug("================================================================================")
             # save weights every 1000 epochs
             if i % 1000 == 0 and i != 0:
                 self.save_weights("{}-epochs-{}.h5".format(weights_fname[:-3], i))
 
-            self.cost_history.append([i, cost])
+            self.cost_history.append([i, cost, mse_cost1, mse_cost2, loss_a, loss_b])
 
         cost_history = np.array(self.cost_history)
-        tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
+        tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1:], loss_file_name)
 
     def predict2(self, inputs):
         _inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
@@ -1991,3 +1993,97 @@ class MyModel(object):
         return a list
         '''
         return self._batch_input_shape.as_list()
+
+
+    def _load_sim_dataset(self, i):
+        brief_data = np.loadtxt(self._fmt_brief.format(i), delimiter=',')
+        truth_data = np.loadtxt(self._fmt_truth.format(i), delimiter=',')
+        fake_data = np.loadtxt(self._fmt_fake.format(i), delimiter=',')
+
+        fake_B1, fake_B2, fake_B3, _B1, _B2, _B3 = brief_data[0], brief_data[1], brief_data[2], brief_data[3], brief_data[4], brief_data[5]
+        fake_price_list, fake_stock_list = fake_data[:, 0], fake_data[:, 1]
+        price_list, stock_list = truth_data[:, 0], truth_data[:, 1]
+        return fake_price_list, fake_stock_list, price_list, stock_list, fake_B1, fake_B2, fake_B3, _B1, _B2, _B3
+
+    def plot_graphs_together(self, prices, noises, mu, sigma):
+        self._fmt_brief = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'
+        self._fmt_truth = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'
+        self._fmt_fake = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'
+        length = 10
+        assert length < prices.shape[-1] - 1, "Length must be less than prices.shape-1"
+        batch_size = self.batch_input_shape[-1]
+        for i in range(length):
+            fig, (ax1, ax2) = plt.subplots(2, sharex='all')
+
+            fake_price_list, fake_noise_list, price_list, noise_list, fake_B1, fake_B2, fake_B3, _B1, _B2, _B3 = self._load_sim_dataset(i)
+            start_price, end_price = price_list[0], price_list[-1]
+            if abs(prices[i] - start_price) > 1e-7 or \
+              abs(prices[i+1] - end_price) > 1e-7:
+                LOG.error("Bugs: prices is out of expectation")
+
+            interpolated_prices = np.linspace(start_price, end_price, batch_size)
+            interpolated_noises, _, _ = self.predict2(interpolated_prices)
+
+            fake_start_price, fake_end_price = fake_price_list[0], fake_price_list[-1]
+            fake_interpolated_prices = np.linspace(fake_start_price, fake_end_price, batch_size)
+            fake_interpolated_noises, _, _ = self.predict2(fake_interpolated_prices)
+
+            self._plot_sim(ax1, fake_price_list, fake_noise_list,
+                           price_list, noise_list, fake_B1,
+                           fake_B2, fake_B3, _B1, _B2, _B3)
+            self._plot_interpolated(ax2, fake_interpolated_prices, fake_interpolated_noises,
+                                    interpolated_prices, interpolated_noises, fake_B1,
+                                    fake_B2, fake_B3, _B1, _B2, _B3)
+            if mu is None and sigma is None:
+                fname = './frames/{}.png'.format(i)
+            else:
+                fname = './frames-mu-{}-sigma-{}/{}.png'.format(mu, sigma, i)
+
+            os.makedirs(os.path.dirname(fname), exist_ok=True)
+            fig.savefig(fname, dpi=400)
+
+    def _plot_sim(self, ax,
+                  fake_price_list, fake_noise_list,
+                  price_list, noise_list,
+                  fake_B1, fake_B2, fake_B3,
+                  _B1, _B2, _B3):
+        fake_l = 10 if len(fake_price_list) == 1 else len(fake_price_list)
+        l = 10 if len(price_list) == 1 else len(price_list)
+        fake_B1, fake_B2, fake_B3 = np.array([fake_B1]*fake_l), np.array([fake_B2]*fake_l), np.array([fake_B3]*fake_l)
+        _B1, _B2, _B3 = np.array([_B1]*l), np.array([_B2]*l), np.array([_B3]*l)
+
+        if np.all(fake_price_list[1:] - fake_price_list[:-1] >= 0):
+            fake_color = 'black'
+            fake_txt = "INCREASE"
+        else:
+            fake_color = 'blue'
+            fake_txt = 'DECREASE'
+
+        if np.all(price_list[1:] - price_list[:-1] >= 0):
+            color = 'black'
+            txt = "INCREASE"
+        else:
+            color = 'blue'
+            txt = 'DECREASE'
+
+        ax.plot(fake_price_list, fake_B1, 'r', fake_price_list, fake_B2, 'c--', fake_price_list, fake_B3, 'k--')
+        ax.plot(price_list, _B1, 'r', price_list, _B2, 'c', price_list, _B3, 'k-')
+        ax.plot(fake_price_list, fake_noise_list, color=fake_color, marker='^', markersize=2, linestyle='--')
+        ax.plot(price_list, noise_list, color=color, marker='o', markersize=2)
+        ax.text(fake_price_list.mean(), fake_noise_list.mean(), fake_txt)
+        ax.text(price_list.mean(), noise_list.mean(), txt)
+        ax.set_xlabel("Prices")
+        ax.set_ylabel("#Noise")
+
+    def _plot_interpolated(self, ax,
+                           fake_interpolated_prices,
+                           fake_interpolated_noises,
+                           interpolated_prices,
+                           interpolated_noises,
+                           fake_B1, fake_B2, fake_B3,
+                           _B1, _B2, _B3):
+        self._plot_sim(ax,
+                       fake_interpolated_prices, fake_interpolated_noises,
+                       interpolated_prices, interpolated_noises,
+                       fake_B1, fake_B2, fake_B3,
+                       _B1, _B2, _B3)

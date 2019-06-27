@@ -7,7 +7,6 @@ import numpy as np
 
 import log as logging
 from core import MyModel, confusion_matrix
-# import utils
 import trading_data as tdata
 import constants
 import colors
@@ -161,8 +160,6 @@ def trend(prices,
           weights_name='model.h5',
           trends_list_fname=None):
 
-    # with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
-    #     line = f.read()
     best_epoch = None
     try:
         with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
@@ -217,6 +214,54 @@ def trend(prices,
 
     loss = float(-1.0)
     return guess_trend, loss
+
+def plot_graphs_together(price_list, noise_list, mu, sigma,
+                         units=1,
+                         activation='tanh',
+                         nb_plays=1,
+                         weights_name='model.h5',
+                         trends_list_fname=None):
+    best_epoch = None
+    try:
+        with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
+            line = f.read()
+    except FileNotFoundError:
+        epochs = []
+        base = '/'.join(weights_fname.split('/')[:-1])
+        for _dir in os.listdir(base):
+            if os.path.isdir('{}/{}'.format(base, _dir)):
+                epochs.append(int(_dir.split('-')[-1]))
+
+        if not epochs:
+            raise Exception("no trained parameters found")
+
+        best_epoch = max(epochs)
+
+        LOG.debug("Best epoch is {}".format(best_epoch))
+        dirname = '{}-epochs-{}/{}plays'.format(weights_fname[:-3], best_epoch, nb_plays)
+        if not os.path.isdir(dirname):
+            # sanity checking
+            raise Exception("Bugs inside *save_wegihts* or *fit2*")
+        with open("{}/input_shape.txt".format(dirname), 'r') as f:
+            line = f.read()
+
+    shape = list(map(int, line.split(":")))
+
+    assert len(shape) == 3, "shape must be 3 dimensions"
+    input_dim = shape[2]
+
+    timestep = 1
+    shape[1] = timestep
+
+    mymodel = MyModel(input_dim=input_dim,
+                      timestep=timestep,
+                      units=units,
+                      activation=activation,
+                      nb_plays=nb_plays,
+                      parallel_prediction=False)
+
+    mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': False})
+    mymodel.plot_graphs_together(prices=price_list, noises=noise_list, mu=mu, sigma=sigma)
 
 
 def visualize(inputs,
@@ -319,6 +364,9 @@ if __name__ == "__main__":
 
     parser.add_argument('--predict', dest='predict',
                         default=False, action='store_true')
+    parser.add_argument('--plot', dest='plot',
+                        default=False, action='store_true')
+
     parser.add_argument('--__mu__', dest='__mu__',
                         default=0,
                         type=float)
@@ -345,6 +393,7 @@ if __name__ == "__main__":
     do_confusion_matrix = True
     mc_mode = True
     do_trend = argv.trend
+    do_plot = argv.plot
 
     with_noise = True
 
@@ -377,7 +426,7 @@ if __name__ == "__main__":
     # __activation__ = 'tanh'
     # __mu__ = 2.60
     __mu__ = 0
-    __sigma__ = 110.69
+    __sigma__ = 110
     # __mu__ = argv.__mu__
     # __sigma__ = argv.__sigma__
 
@@ -615,7 +664,7 @@ if __name__ == "__main__":
     elif do_prediction is True:
         LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
         # import ipdb; ipdb.set_trace()
-        inputs, outputs = inputs[:300], outputs[:300]
+        inputs, outputs = inputs[:batch_size], outputs[:batch_size]
         predictions, best_epoch = predict(inputs=inputs,
                                            outputs=outputs,
                                            units=__units__,
@@ -625,10 +674,18 @@ if __name__ == "__main__":
         if best_epoch is not None:
             predicted_fname = "{}-epochs-{}.csv".format(predicted_fname[:-4], best_epoch)
 
+    elif do_plot is True:
+        inputs, outputs = inputs[:batch_size], outputs[:batch_size]
+        plot_graphs_together(price_list=inputs, noise_list=outputs, mu=__mu__, sigma=__sigma__,
+                             weights_name=weights_fname,
+                             units=__units__,
+                             activation=__activation__,
+                             nb_plays=__nb_plays__)
+
     else:
         LOG.debug("START to FIT via {}".format(colors.red(loss_name.upper())))
         # import ipdb; ipdb.set_trace()
-        inputs, outputs = inputs[:300], outputs[:300]
+        inputs, outputs = inputs[:batch_size], outputs[:batch_size]
 
         predictions, loss = fit(inputs=inputs,
                                 outputs=outputs,
