@@ -1251,6 +1251,7 @@ class MyModel(object):
 
         self.plays = []
         self._nb_plays = nb_plays
+        self._units = units
         self._activation = activation
         self._input_dim = input_dim
 
@@ -1267,7 +1268,7 @@ class MyModel(object):
 
             # weight = 10 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
             weight = 2 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
-            LOG.debug("MyModel geneartes {} with Weight: {}".format(colors.red("Play #{}".format(nb_play+1)), weight))
+            LOG.debug("MyModel generates {} with Weight: {}".format(colors.red("Play #{}".format(nb_play+1)), weight))
             if debug is True:
                 weight = 1.0
 
@@ -1952,7 +1953,10 @@ class MyModel(object):
             if not epochs:
                 return False
             best_epoch = max(epochs)
+            LOG.debug("Loading weights from Epoch: {}".format(epochs))
+            best_epoch = 4000
             dirname = '{}-epochs-{}/{}plays'.format(fname[:-3], best_epoch, self._nb_plays)
+            LOG.debug("Loading weights from epochs file: {}".format(dirname))
             if not os.path.isdir(dirname):
                 # sanity checking
                 raise Exception("Bugs inside *load_wegihts*")
@@ -2048,7 +2052,7 @@ class MyModel(object):
         self._fmt_brief = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'
         self._fmt_truth = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'
         self._fmt_fake = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'
-        length = 10
+        length = 100
         assert length < prices.shape[-1] - 1, "Length must be less than prices.shape-1"
         batch_size = self.batch_input_shape[-1]
         for i in range(length):
@@ -2077,8 +2081,11 @@ class MyModel(object):
             if mu is None and sigma is None:
                 fname = './frames/{}.png'.format(i)
             else:
-                fname = './frames-mu-{}-sigma-{}/{}.png'.format(mu, sigma, i)
+                fname = './frames-nb_plays-{}-units-{}-batch_size-{}-mu-{}-sigma-{}/{}.png'.format(
+                    self._nb_plays, self._units, self._input_dim,
+                    mu, sigma, i)
 
+            LOG.debug("plot {}".format(fname))
             os.makedirs(os.path.dirname(fname), exist_ok=True)
             fig.savefig(fname, dpi=400)
 
