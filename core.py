@@ -1292,6 +1292,7 @@ class MyModel(object):
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
         # self.optimizer = tf.keras.optimizers.SGD(lr=learning_rate)
         if kwargs.pop("parallel_prediction", False):
+            self.parallel_prediction = True
             self.pool = WorkerPool(constants.CPU_COUNTS)
             self.pool.start()
 
@@ -2030,13 +2031,31 @@ class MyModel(object):
         for i, play in enumerate(self.plays):
             play.operator_layer.reset_states(states_list[i])
 
+    def reset_states_parallel(self, states_list=None):
+        if states_list is None:
+            states_list = [np.array([0]).reshape(1, 1) for _ in range(self._nb_plays)]
+        elif not isinstance(states_list[0], np.ndarray):
+            states_list = [np.array([s]).reshape(1, 1) for s in states_list]
+        else:
+            states_list = [s.reshape(1, 1) for s in states_list]
+        for i, play in enumerate(self.plays):
+            task = Task(play, 'reset_states', (states_list[i],))
+            self.pool.put(task)
+        self.pool.join()
+
+    def get_op_outputs_parallel(self, inputs):
+        for play in self.plays:
+             task = Task(play, 'operator_output', (inputs,))
+             self.pool.put(task)
+        self.pool.join()
+        return self.pool.results
+
     @property
     def batch_input_shape(self):
         '''
         return a list
         '''
         return self._batch_input_shape.as_list()
-
 
     def _load_sim_dataset(self, i):
         brief_data = np.loadtxt(self._fmt_brief.format(i), delimiter=',')
@@ -2058,16 +2077,7 @@ class MyModel(object):
         states_list = None
         prices_tensor = tf.reshape(ops.convert_to_tensor(prices, dtype=tf.float32), shape=(1, 1, -1))
 
-        operator_outputs_ = [play.operator_layer(prices_tensor) for play in self.plays]
-        operator_outputs = utils.get_session().run(operator_outputs_)
-        operator_outputs = [o.reshape(-1) for o in operator_outputs]
-
-        # for play in self.plays:
-        #      task = Task(play, 'operator_output', (prices,))
-        #      self.pool.put(task)
-        # self.pool.join()
-
-        # operator_outputs = self.pool.results
+        operator_outputs = self.get_op_outputs_parallel(prices)
 
         states_list = None
         for i in range(length):
@@ -2079,15 +2089,15 @@ class MyModel(object):
               abs(prices[i+1] - end_price) > 1e-7:
                 LOG.error("Bugs: prices is out of expectation")
 
-            self.reset_states(states_list=states_list)
+            self.reset_states_parallel(states_list=states_list)
 
             interpolated_prices = np.linspace(start_price, end_price, batch_size)
-            interpolated_noises, _, _ = self.predict2(interpolated_prices)
-            # interpolated_noises = self.predict(interpolated_prices)
+            # interpolated_noises, _, _ = self.predict2(interpolated_prices)
+            interpolated_noises = self.predict(interpolated_prices)
             fake_start_price, fake_end_price = fake_price_list[0], fake_price_list[-1]
             fake_interpolated_prices = np.linspace(fake_start_price, fake_end_price, batch_size)
-            fake_interpolated_noises, _, _ = self.predict2(fake_interpolated_prices)
-            # fake_interpolated_noises = self.predict(fake_interpolated_prices)
+            # fake_interpolated_noises, _, _ = self.predict2(fake_interpolated_prices)
+            fake_interpolated_noises = self.predict(fake_interpolated_prices)
             states_list = [o[i-1] for o in operator_outputs]
 
             self._plot_sim(ax1, fake_price_list, fake_noise_list,

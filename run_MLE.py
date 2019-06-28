@@ -255,7 +255,7 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
     timestep = 1
     shape[1] = timestep
     # import ipdb; ipdb.set_trace()
-    parallelism = False
+    parallelism = True
     mymodel = MyModel(input_dim=input_dim,
                       timestep=timestep,
                       units=units,
