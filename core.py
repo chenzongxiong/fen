@@ -1954,7 +1954,7 @@ class MyModel(object):
                 return False
             best_epoch = max(epochs)
             LOG.debug("Loading weights from Epoch: {}".format(epochs))
-            best_epoch = 4000
+            # best_epoch = 4000
             dirname = '{}-epochs-{}/{}plays'.format(fname[:-3], best_epoch, self._nb_plays)
             LOG.debug("Loading weights from epochs file: {}".format(dirname))
             if not os.path.isdir(dirname):
@@ -2052,9 +2052,24 @@ class MyModel(object):
         self._fmt_brief = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'
         self._fmt_truth = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'
         self._fmt_fake = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'
-        length = 100
+        length = 10
         assert length < prices.shape[-1] - 1, "Length must be less than prices.shape-1"
         batch_size = self.batch_input_shape[-1]
+        states_list = None
+        prices_tensor = tf.reshape(ops.convert_to_tensor(prices, dtype=tf.float32), shape=(1, 1, -1))
+
+        operator_outputs_ = [play.operator_layer(prices_tensor) for play in self.plays]
+        operator_outputs = utils.get_session().run(operator_outputs_)
+        operator_outputs = [o.reshape(-1) for o in operator_outputs]
+
+        # for play in self.plays:
+        #      task = Task(play, 'operator_output', (prices,))
+        #      self.pool.put(task)
+        # self.pool.join()
+
+        # operator_outputs = self.pool.results
+
+        states_list = None
         for i in range(length):
             fig, (ax1, ax2) = plt.subplots(2, sharex='all')
 
@@ -2064,13 +2079,16 @@ class MyModel(object):
               abs(prices[i+1] - end_price) > 1e-7:
                 LOG.error("Bugs: prices is out of expectation")
 
+            self.reset_states(states_list=states_list)
+
             interpolated_prices = np.linspace(start_price, end_price, batch_size)
-            # interpolated_noises, _, _ = self.predict2(interpolated_prices)
-            interpolated_noises = self.predict(interpolated_prices)
+            interpolated_noises, _, _ = self.predict2(interpolated_prices)
+            # interpolated_noises = self.predict(interpolated_prices)
             fake_start_price, fake_end_price = fake_price_list[0], fake_price_list[-1]
             fake_interpolated_prices = np.linspace(fake_start_price, fake_end_price, batch_size)
-            # fake_interpolated_noises, _, _ = self.predict2(fake_interpolated_prices)
-            fake_interpolated_noises = self.predict(fake_interpolated_prices)
+            fake_interpolated_noises, _, _ = self.predict2(fake_interpolated_prices)
+            # fake_interpolated_noises = self.predict(fake_interpolated_prices)
+            states_list = [o[i-1] for o in operator_outputs]
 
             self._plot_sim(ax1, fake_price_list, fake_noise_list,
                            price_list, noise_list, fake_B1,

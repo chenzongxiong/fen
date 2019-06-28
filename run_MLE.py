@@ -30,7 +30,7 @@ def fit(inputs,
         batch_size=10):
 
     epochs = 10000
-    # epochs = 1
+    epochs = 1
 
     start = time.time()
     input_dim = batch_size
@@ -222,12 +222,12 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
                          weights_name='model.h5',
                          trends_list_fname=None):
     best_epoch = None
-    # try:
-    #     with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
-    #         line = f.read()
+    try:
+        with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
+            line = f.read()
 
-    # except FileNotFoundError:
-    if True:
+    except FileNotFoundError:
+    # if True:
         epochs = []
         base = '/'.join(weights_fname.split('/')[:-1])
         for _dir in os.listdir(base):
@@ -238,7 +238,7 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
             raise Exception("no trained parameters found")
 
         best_epoch = max(epochs)
-        best_epoch = 9000
+        # best_epoch = 9000
         LOG.debug("Best epoch is {}".format(best_epoch))
         dirname = '{}-epochs-{}/{}plays'.format(weights_fname[:-3], best_epoch, nb_plays)
         if not os.path.isdir(dirname):
@@ -254,8 +254,8 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
 
     timestep = 1
     shape[1] = timestep
-
-    parallelism = True
+    # import ipdb; ipdb.set_trace()
+    parallelism = False
     mymodel = MyModel(input_dim=input_dim,
                       timestep=timestep,
                       units=units,
@@ -422,8 +422,8 @@ if __name__ == "__main__":
     ############################## predicitons #############################
     __nb_plays__ = argv.__nb_plays__
     __units__ = argv.__units__
-    # __nb_plays__ = 2
-    # __units__ = 2
+    __nb_plays__ = 2
+    __units__ = 2
 
     __state__ = 0
     __activation__ = argv.__activation__
