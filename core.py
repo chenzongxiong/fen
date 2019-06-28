@@ -3,7 +3,7 @@ import time
 import copy
 import inspect
 import matplotlib
-# matplotlib.use('Agg')
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from matplotlib.animation import FuncAnimation
 import multiprocessing as mp
@@ -2061,11 +2061,12 @@ class MyModel(object):
                 LOG.error("Bugs: prices is out of expectation")
 
             interpolated_prices = np.linspace(start_price, end_price, batch_size)
-            interpolated_noises, _, _ = self.predict2(interpolated_prices)
-
+            # interpolated_noises, _, _ = self.predict2(interpolated_prices)
+            interpolated_noises = self.predict(interpolated_prices)
             fake_start_price, fake_end_price = fake_price_list[0], fake_price_list[-1]
             fake_interpolated_prices = np.linspace(fake_start_price, fake_end_price, batch_size)
-            fake_interpolated_noises, _, _ = self.predict2(fake_interpolated_prices)
+            # fake_interpolated_noises, _, _ = self.predict2(fake_interpolated_prices)
+            fake_interpolated_noises = self.predict(fake_interpolated_prices)
 
             self._plot_sim(ax1, fake_price_list, fake_noise_list,
                            price_list, noise_list, fake_B1,

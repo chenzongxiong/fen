@@ -222,10 +222,12 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
                          weights_name='model.h5',
                          trends_list_fname=None):
     best_epoch = None
-    try:
-        with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
-            line = f.read()
-    except FileNotFoundError:
+    # try:
+    #     with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
+    #         line = f.read()
+
+    # except FileNotFoundError:
+    if True:
         epochs = []
         base = '/'.join(weights_fname.split('/')[:-1])
         for _dir in os.listdir(base):
@@ -236,7 +238,7 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
             raise Exception("no trained parameters found")
 
         best_epoch = max(epochs)
-
+        best_epoch = 9000
         LOG.debug("Best epoch is {}".format(best_epoch))
         dirname = '{}-epochs-{}/{}plays'.format(weights_fname[:-3], best_epoch, nb_plays)
         if not os.path.isdir(dirname):
@@ -253,14 +255,15 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
     timestep = 1
     shape[1] = timestep
 
+    parallelism = True
     mymodel = MyModel(input_dim=input_dim,
                       timestep=timestep,
                       units=units,
                       activation=activation,
                       nb_plays=nb_plays,
-                      parallel_prediction=False)
+                      parallel_prediction=parallelism)
 
-    mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': False})
+    mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': parallelism})
     mymodel.plot_graphs_together(prices=price_list, noises=noise_list, mu=mu, sigma=sigma)
 
 
@@ -685,7 +688,7 @@ if __name__ == "__main__":
                              units=__units__,
                              activation=__activation__,
                              nb_plays=__nb_plays__)
-
+        sys.exit(0)
     else:
         LOG.debug("START to FIT via {}".format(colors.red(loss_name.upper())))
         # import ipdb; ipdb.set_trace()
