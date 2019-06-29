@@ -1389,7 +1389,7 @@ class MyModel(object):
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
 
-    def predict(self, inputs, individual=False):
+    def predict_parallel(self, inputs, individual=False):
         _inputs = inputs
 
         ##########################################################################
@@ -1726,7 +1726,7 @@ class MyModel(object):
         # mu: use empirical mean                                                       #
         # sigma: use empirical standard derviation                                     #
         ################################################################################
-        original_prediction = self.predict(prices)
+        original_prediction = self.predict_parallel(prices)
         mu = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).mean()
         sigma = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).std()
         LOG.debug(colors.cyan("emprical mean: {}, emprical standard dervation: {}".format(mu, sigma)))
@@ -2093,11 +2093,11 @@ class MyModel(object):
 
             interpolated_prices = np.linspace(start_price, end_price, batch_size)
             # interpolated_noises, _, _ = self.predict2(interpolated_prices)
-            interpolated_noises = self.predict(interpolated_prices)
+            interpolated_noises = self.predict_parallel(interpolated_prices)
             fake_start_price, fake_end_price = fake_price_list[0], fake_price_list[-1]
             fake_interpolated_prices = np.linspace(fake_start_price, fake_end_price, batch_size)
             # fake_interpolated_noises, _, _ = self.predict2(fake_interpolated_prices)
-            fake_interpolated_noises = self.predict(fake_interpolated_prices)
+            fake_interpolated_noises = self.predict_parallel(fake_interpolated_prices)
             states_list = [o[i-1] for o in operator_outputs]
 
             self._plot_sim(ax1, fake_price_list, fake_noise_list,
@@ -2152,7 +2152,6 @@ class MyModel(object):
         ax.plot(price_list, noise_list, color=color, marker='.', markersize=6, linestyle='-')
         ax.set_xlabel("Prices")
         ax.set_ylabel("#Noise")
-
 
     def _plot_interpolated(self, ax,
                            fake_interpolated_prices,
