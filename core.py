@@ -2081,8 +2081,8 @@ class MyModel(object):
 
         states_list = None
         for i in range(length):
-            fig, (ax1, ax2) = plt.subplots(2, sharex='all')
-
+             # fig, (ax1, ax2) = plt.subplots(2, sharex='all')
+            fig, ax1 = plt.subplots(1)
             fake_price_list, fake_noise_list, price_list, noise_list, fake_B1, fake_B2, fake_B3, _B1, _B2, _B3 = self._load_sim_dataset(i)
             start_price, end_price = price_list[0], price_list[-1]
             if abs(prices[i] - start_price) > 1e-7 or \
@@ -2103,7 +2103,16 @@ class MyModel(object):
             self._plot_sim(ax1, fake_price_list, fake_noise_list,
                            price_list, noise_list, fake_B1,
                            fake_B2, fake_B3, _B1, _B2, _B3)
-            self._plot_interpolated(ax2, fake_interpolated_prices, fake_interpolated_noises,
+
+            # import ipdb; ipdb.set_trace()
+            fake_size = fake_price_list.shape[-1]
+            fake_interpolated_prices = fake_interpolated_prices[::batch_size//fake_size]
+            fake_interpolated_noises = fake_interpolated_noises[::batch_size//fake_size]
+            size = price_list.shape[-1]
+            interpolated_prices = interpolated_prices[::batch_size//size]
+            interpolated_noises = interpolated_noises[::batch_size//size]
+
+            self._plot_interpolated(ax1, fake_interpolated_prices, fake_interpolated_noises,
                                     interpolated_prices, interpolated_noises, fake_B1,
                                     fake_B2, fake_B3, _B1, _B2, _B3)
             if mu is None and sigma is None:
@@ -2121,34 +2130,29 @@ class MyModel(object):
                   fake_price_list, fake_noise_list,
                   price_list, noise_list,
                   fake_B1, fake_B2, fake_B3,
-                  _B1, _B2, _B3):
+                  _B1, _B2, _B3, color='blue'):
         fake_l = 10 if len(fake_price_list) == 1 else len(fake_price_list)
         l = 10 if len(price_list) == 1 else len(price_list)
         fake_B1, fake_B2, fake_B3 = np.array([fake_B1]*fake_l), np.array([fake_B2]*fake_l), np.array([fake_B3]*fake_l)
         _B1, _B2, _B3 = np.array([_B1]*l), np.array([_B2]*l), np.array([_B3]*l)
 
-        if np.all(fake_price_list[1:] - fake_price_list[:-1] >= 0):
-            fake_color = 'black'
-            fake_txt = "INCREASE"
-        else:
-            fake_color = 'blue'
-            fake_txt = 'DECREASE'
+        fake_B2 = fake_B2 - fake_B1
+        fake_B3 = fake_B3 - fake_B1
+        fake_noise_list = fake_noise_list - fake_B1
+        fake_B1 = fake_B1 - fake_B1
 
-        if np.all(price_list[1:] - price_list[:-1] >= 0):
-            color = 'black'
-            txt = "INCREASE"
-        else:
-            color = 'blue'
-            txt = 'DECREASE'
+        _B2 = _B2 - _B1
+        _B3 = _B3 - _B1
+        noise_list = noise_list - _B1
+        _B1 = _B1 - _B1
 
         ax.plot(fake_price_list, fake_B1, 'r', fake_price_list, fake_B2, 'c--', fake_price_list, fake_B3, 'k--')
         ax.plot(price_list, _B1, 'r', price_list, _B2, 'c', price_list, _B3, 'k-')
-        ax.plot(fake_price_list, fake_noise_list, color=fake_color, marker='^', markersize=2, linestyle='--')
-        ax.plot(price_list, noise_list, color=color, marker='o', markersize=2)
-        ax.text(fake_price_list.mean(), fake_noise_list.mean(), fake_txt)
-        ax.text(price_list.mean(), noise_list.mean(), txt)
+        ax.plot(fake_price_list, fake_noise_list, color=color, marker='s', markersize=3, linestyle='--')
+        ax.plot(price_list, noise_list, color=color, marker='.', markersize=6, linestyle='-')
         ax.set_xlabel("Prices")
         ax.set_ylabel("#Noise")
+
 
     def _plot_interpolated(self, ax,
                            fake_interpolated_prices,
@@ -2157,8 +2161,10 @@ class MyModel(object):
                            interpolated_noises,
                            fake_B1, fake_B2, fake_B3,
                            _B1, _B2, _B3):
+        from matplotlib import colors as mcolors
+
         self._plot_sim(ax,
                        fake_interpolated_prices, fake_interpolated_noises,
                        interpolated_prices, interpolated_noises,
                        fake_B1, fake_B2, fake_B3,
-                       _B1, _B2, _B3)
+                       _B1, _B2, _B3, mcolors.CSS4_COLORS['orange'])
