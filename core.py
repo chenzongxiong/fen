@@ -81,7 +81,9 @@ def do_guess_helper(step, direction, start_price, nb_plays, activation, sign, pr
             pp =  pp * (pp > 0)
         elif activation == 'elu':
             pp1 = (pp >= 0) * pp
-            pp2 = (pp < 0) * (np.exp(pp) - 1)
+            # pp2 = (pp < 0) * (np.exp(pp) - 1)
+            pp2 = (pp < 0) * pp
+            pp2 = np.exp(pp2) - 1
             pp = pp1 + pp2
         elif activation == 'softmax':
             raise Exception("not implement softmax yet")
@@ -1695,7 +1697,9 @@ class MyModel(object):
     def trend(self, prices, B, mu, sigma,
               start_pos=1000, end_pos=1100,
               delta=0.001, max_iteration=10000):
-        end_pos = 1012
+        start_pos = 500
+        end_pos = 510
+        # end_pos = 1012
         assert start_pos > 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
         assert len(prices.shape) == 1, colors.red("Prices should be a vector")
@@ -1731,9 +1735,9 @@ class MyModel(object):
 
         # import ipdb; ipdb.set_trace()
         LOG.debug("(counts.sum() / prices.shape[0]) is: {}".format(counts.sum() / prices.shape[0]))
-        if (counts.sum() / prices.shape[0]) <= 0.15:
+        if (counts.sum() / prices.shape[0]) <= 0.3:
             sign = +1
-        elif (counts.sum() / prices.shape[0]) >= 0.85:
+        elif (counts.sum() / prices.shape[0]) >= 0.7:
             sign = -1
         else:
             raise Exception(colors.red("The neural network doesn't train well"))
@@ -1774,9 +1778,7 @@ class MyModel(object):
         k = start_pos
         seq = 1
         repeating = 10
-        # TODO: using multi-processing HERE
-        # import multiprocess as mp
-        # pool = mp.Pool(os.cpu_count())
+
         nb_plays = self._nb_plays
         activation = self._activation
         start = time.time()
@@ -1948,7 +1950,6 @@ class MyModel(object):
                 return False
             best_epoch = max(epochs)
             LOG.debug("Loading weights from Epoch: {}".format(epochs))
-            # best_epoch = 4000
             dirname = '{}-epochs-{}/{}plays'.format(fname[:-3], best_epoch, self._nb_plays)
             LOG.debug("Loading weights from epochs file: {}".format(dirname))
             if not os.path.isdir(dirname):
