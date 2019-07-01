@@ -75,7 +75,7 @@ def fit(inputs,
     LOG.debug("print weights info")
     mymodel.save_weights(weights_fname)
     start = time.time()
-    predictions, mu, sigma = mymodel.predict2(inputs)
+    predictions = mymodel.predict(inputs)
     end = time.time()
     LOG.debug("Time cost in prediction: {}s".format(end-start))
     loss = ((predictions - outputs) ** 2).mean()
@@ -135,10 +135,10 @@ def predict(inputs,
 
     if parallel_prediction is True:
         mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
-        predictions = mymodel.predict(inputs)
+        predictions = mymodel.predict_parallel(inputs)
     else:
         mymodel.load_weights(weights_fname)
-        predictions, mu, sigma = mymodel.predict2(inputs)
+        predictions, mu, sigma = mymodel.predict(inputs)
 
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
@@ -215,6 +215,7 @@ def trend(prices,
     loss = float(-1.0)
     return guess_trend, loss
 
+
 def plot_graphs_together(price_list, noise_list, mu, sigma,
                          units=1,
                          activation='tanh',
@@ -222,12 +223,10 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
                          weights_name='model.h5',
                          trends_list_fname=None):
     best_epoch = None
-    # try:
-    #     with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
-    #         line = f.read()
-
-    # except FileNotFoundError:
-    if True:
+    try:
+        with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
+            line = f.read()
+    except FileNotFoundError:
         epochs = []
         base = '/'.join(weights_fname.split('/')[:-1])
         for _dir in os.listdir(base):
@@ -238,8 +237,6 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
             raise Exception("no trained parameters found")
 
         best_epoch = max(epochs)
-        # best_epoch = 9000
-        best_epoch = 5000
         LOG.debug("Best epoch is {}".format(best_epoch))
         dirname = '{}-epochs-{}/{}plays'.format(weights_fname[:-3], best_epoch, nb_plays)
         if not os.path.isdir(dirname):
@@ -255,7 +252,6 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
 
     timestep = 1
     shape[1] = timestep
-    # import ipdb; ipdb.set_trace()
     parallelism = True
     mymodel = MyModel(input_dim=input_dim,
                       timestep=timestep,
@@ -320,7 +316,6 @@ def plot(a, b, trend_list):
     min_trend_list = trend_list.min(axis=1)
     max_trend_list = trend_list.max(axis=1)
     ax2.fill_between(x, min_trend_list, max_trend_list, facecolor='gray', alpha=0.5, interpolate=True)
-    # import ipdb; ipdb.set_trace()
     ax3.plot(x, a, color='blue')
     trend_list_ = [trend for trend in  trend_list]
     ax3.boxplot(trend_list_)

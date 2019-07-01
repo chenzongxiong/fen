@@ -937,15 +937,13 @@ class Play(object):
         x, y = self.reshape(inputs, outputs)
         return self.model.evaluate(x, y, steps=steps_per_epoch)
 
-    def predict(self, inputs, steps_per_epoch=1, verbose=0):
+    def predict(self, inputs, steps_per_epoch=1, verbose=0, states=None):
         if not self.built:
             self.build(inputs)
 
         outputs = []
         input_dim = self._batch_input_shape[-1].value
         samples = inputs.shape[-1] // input_dim
-
-        states = None
 
         for j in range(samples):
             self.reset_states(states)
@@ -1407,7 +1405,7 @@ class MyModel(object):
         start = time.time()
         for play in self.plays:
             LOG.debug("{}".format(play._name))
-            task = Task(play, 'predict', (_inputs,))
+            task = Task(play, 'predict', (_inputs, ))
             self.pool.put(task)
 
         self.pool.join()
@@ -1604,7 +1602,17 @@ class MyModel(object):
             __sigma__ = (outputs[1:] - outputs[:-1]).std()
             outputs = ops.convert_to_tensor(outputs, tf.float32)
 
-        self.compile(inputs, mu=mu, sigma=sigma, outputs=outputs, **kwargs)
+        # self.compile(inputs, mu=mu, sigma=sigma, outputs=outputs, **kwargs)
+        training_inputs, validate_inputs = inputs[:self._input_dim], inputs[self._input_dim:]
+        if outputs is not None:
+            training_outputs, validate_outputs = outputs[:self._input_dim], outputs[self._input_dim:]
+        else:
+            training_outputs, validate_outputs = None, None
+
+        # kwargs['validate_inputs'] = validate_inputs
+        # kwargs['validate_outputs'] = validate_outputs
+
+        self.compile(training_inputs, mu=mu, sigma=sigma, outputs=training_outputs, **kwargs)
         # ins = self._x + self._y
         # ins = self._x
         input_dim =  self.batch_input_shape[-1]
@@ -1670,34 +1678,19 @@ class MyModel(object):
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1:], loss_file_name)
 
-    def predict2(self, inputs):
-        _inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
+    def predict(self, inputs):
+        if isinstance(inputs, tf.Tensor):
+            _inputs = inputs
+        else:
+            _inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
 
-        for play in self.plays:
-            self._need_compile = False
-            if not play.built:
-                play.build(_inputs)
-
-        outputs = []
-        input_dim = self.batch_input_shape[-1]
-        steps_per_epoch = inputs.shape[-1] // input_dim
-
-        for i, play in enumerate(self.plays):
-            outputs.append(play.predict(inputs))
+        _ = [play.build(_inputs) for play in self.plays if play.built is False]
+        outputs = [play.predict(inputs) for play in self.plays]
 
         outputs_ = np.array(outputs)
         prediction = outputs_.mean(axis=0)
         prediction = prediction.reshape(-1)
-
-        # keep prices and random walk in the same direction in our assumption
-        diff_pred = prediction[1:] - prediction[:-1]
-        diff_input = inputs[1:] - inputs[:-1]
-        prediction = utils.slide_window_average(prediction, window_size=1)
-
-        mean = diff_pred.mean()
-        std = diff_pred.std()
-        LOG.debug("mean: {}, std: {}".format(mean, std))
-        return prediction, float(mean), float(std)
+        return prediction
 
     def trend(self, prices, B, mu, sigma,
               start_pos=1000, end_pos=1100,
@@ -2092,11 +2085,9 @@ class MyModel(object):
             self.reset_states_parallel(states_list=states_list)
 
             interpolated_prices = np.linspace(start_price, end_price, batch_size)
-            # interpolated_noises, _, _ = self.predict2(interpolated_prices)
             interpolated_noises = self.predict_parallel(interpolated_prices)
             fake_start_price, fake_end_price = fake_price_list[0], fake_price_list[-1]
             fake_interpolated_prices = np.linspace(fake_start_price, fake_end_price, batch_size)
-            # fake_interpolated_noises, _, _ = self.predict2(fake_interpolated_prices)
             fake_interpolated_noises = self.predict_parallel(fake_interpolated_prices)
             states_list = [o[i-1] for o in operator_outputs]
 

@@ -509,5 +509,11 @@ class TestCases(unittest.TestCase):
         a_result, b_result = self.session.run([a, truth])
         self.assertTrue(np.allclose(a_result, b_result))
 
+    def test_is_tensor(self):
+        a = np.array([1, 2, 3, 4])
+        a1 = ops.convert_to_tensor(a)
+        self.assertTrue(isinstance(a1, tf.Tensor))
+
+
 if __name__ == '__main__':
     unittest.main()
