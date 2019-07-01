@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib
 # matplotlib.use('Agg')
 from matplotlib import pyplot as plt
+from matplotlib import colors as mcolors
 from matplotlib.animation import FuncAnimation
 
 import log as logging
@@ -237,8 +238,8 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
     mu = kwargs.pop('mu', 0)
     sigma = kwargs.pop('sigma', 1)
 
-    fig, (ax1, ax2) = plt.subplots(2)
-    plot_simulation_info(i, ax1)
+    fig, (ax1, ax2) = plt.subplots(2, sharex='all')
+    plot_simulation_info(i-1, ax1)
     plot_hysteresis_info(hysteresis_info, i, predicted_price=predicted_price, ax=ax2)
     # plt.show()
     if mu is None and sigma is None:
@@ -246,6 +247,7 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
     else:
         fname = './frames-mu-{}-sigma-{}/{}.png'.format(mu, sigma, i)
 
+    os.makedirs(os.path.dirname(fname), exist_ok=True)
     fig.savefig(fname, dpi=400)
 
 
@@ -266,21 +268,6 @@ def plot_simulation_info(i, ax):
     fake_B1, fake_B2, fake_B3 = np.array([fake_B1]*fake_l), np.array([fake_B2]*fake_l), np.array([fake_B3]*fake_l)
     _B1, _B2, _B3 = np.array([_B1]*l), np.array([_B2]*l), np.array([_B3]*l)
 
-
-    if np.all(fake_price_list[1:] - fake_price_list[:-1] >= 0):
-        fake_color = 'black'
-        fake_txt = "INCREASE"
-    else:
-        fake_color = 'blue'
-        fake_txt = 'DECREASE'
-
-    if np.all(price_list[1:] - price_list[:-1] >= 0):
-        color = 'black'
-        txt = "INCREASE"
-    else:
-        color = 'blue'
-        txt = 'DECREASE'
-
     fake_l = 10 if len(fake_price_list) == 1 else len(fake_price_list)
     l = 10 if len(price_list) == 1 else len(price_list)
 
@@ -289,12 +276,10 @@ def plot_simulation_info(i, ax):
 
     ax.plot(fake_price_list, fake_B1, 'r', fake_price_list, fake_B2, 'c--', fake_price_list, fake_B3, 'k--')
     ax.plot(price_list, _B1, 'r', price_list, _B2, 'c', price_list, _B3, 'k-')
-    ax.plot(fake_price_list, fake_stock_list, color=fake_color, marker='^', markersize=2, linestyle='--')
-    ax.plot(price_list, stock_list, color=color, marker='o', markersize=2)
-    ax.text(fake_price_list.mean(), fake_stock_list.mean(), fake_txt)
-    ax.text(price_list.mean(), stock_list.mean(), txt)
+    ax.plot(fake_price_list, fake_stock_list, color='blue', marker='*', markersize=4, linestyle='--')
+    ax.plot(price_list, stock_list, color='blue', marker='o', markersize=6)
     ax.set_xlabel("prices")
-    ax.set_ylabel("#noise")
+    ax.set_ylabel("#Noise")
 
 
 def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None, **kwargs):
@@ -302,7 +287,8 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None, **kwargs
     if ax is None:
         fig, ax = plt.figure()
 
-    colors = ['magenta']
+    colors = [mcolors.CSS4_COLORS['orange']]
+
     for index, info in enumerate(hysteresis_info):
         guess_hysteresis_list = info[0]
         prices = np.array([g[0] for g in guess_hysteresis_list])
@@ -317,19 +303,13 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None, **kwargs
         vertical_line = np.linspace(noise.min(), noise.max(), l)
         if index == 0:
             ax.plot(prices, prev_original_prediction, color='red', label='start position', linewidth=1)
-            # plt.plot(prices, bk, color='black', label='random walk', linewidth=1)
             ax.plot(prices, curr_original_prediction, color='blue', label='target position', linewidth=1)
-            ax.plot(prev_price, vertical_line, color='red', label='previous price', linewidth=1, linestyle='dashed')
-            ax.plot(curr_price, vertical_line, color='blue', label='current price', linewidth=1, linestyle='dashed')
-            ax.plot(_predicted_price, vertical_line, color='black', label='predicted price', linewidth=1, linestyle='dashed')
+            ax.plot(_predicted_price, vertical_line, color='black', label='predicted price', linewidth=1, linestyle='solid')
             ax.plot(prices, noise, color=colors[index % len(colors)], marker='o', markersize=4, label='steps finding root', linewidth=1)
         else:
             ax.plot(prices, prev_original_prediction, color='red', label=None, linewidth=1)
-            # plt.plot(prices, bk, color='black', label=None, linewidth=1)
             ax.plot(prices, curr_original_prediction, color='blue', label=None, linewidth=1)
-            ax.plot(prev_price, vertical_line, color='red', label=None, linewidth=1, linestyle='dashed')
-            ax.plot(curr_price, vertical_line, color='blue', label=None, linewidth=1, linestyle='dashed')
-            ax.plot(_predicted_price, vertical_line, color='black', label=None, linewidth=1, linestyle='dashed')
+            ax.plot(_predicted_price, vertical_line, color='black', label=None, linewidth=1, linestyle='solid')
             ax.plot(prices, noise, color=colors[index % len(colors)], marker='o', markersize=4, label=None, linewidth=1)
 
     ax.set_xlabel("prices")

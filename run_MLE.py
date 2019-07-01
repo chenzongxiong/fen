@@ -200,17 +200,7 @@ def trend(prices,
                       parallel_prediction=True)
 
     mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
-
-    # guess_trend, guess_trend_list = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
     guess_trend = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
-    # loss = ((prediction - prices) ** 2).mean()
-    # loss = float(loss)
-    # LOG.debug("loss: {}".format(loss))
-    # import ipdb; ipdb.set_trace()
-    # if trends_list_fname is not None:
-    #     inputs = prices[1000:1000+guess_trend.shape[-1]]
-    #     outputs = guess_trend_list
-    #     tdata.DatasetSaver.save_data(inputs, outputs, trends_list_fname)
 
     loss = float(-1.0)
     return guess_trend, loss

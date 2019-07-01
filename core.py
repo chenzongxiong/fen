@@ -81,7 +81,6 @@ def do_guess_helper(step, direction, start_price, nb_plays, activation, sign, pr
             pp =  pp * (pp > 0)
         elif activation == 'elu':
             pp1 = (pp >= 0) * pp
-            # pp2 = (pp < 0) * (np.exp(pp) - 1)
             pp2 = (pp < 0) * pp
             pp2 = np.exp(pp2) - 1
             pp = pp1 + pp2
@@ -272,12 +271,10 @@ def repeat(k,
 
         guess_price_seq_stack.append(guess_price_seq)
 
-
     guess_price_seq_stack_ = np.array(guess_price_seq_stack)
     avg_guess = guess_price_seq_stack_.mean(axis=0)[-1]
-    LOG.debug(colors.red(logger_string3.format(k, float(avg_guess), float(prev_gt_price), float(curr_gt_price))))
+    LOG.debug(colors.red(logger_string3.format(k, float(avg_guess), float(curr_gt_price), float(prev_gt_price))))
     LOG.debug("********************************************************************************")
-    # utils.plot_hysteresis_info(hysteresis_info, k, predicted_price=float(avg_guess), mu=mu, sigma=sigma)
     utils.plot_internal_transaction(hysteresis_info, k, predicted_price=float(avg_guess), mu=mu, sigma=sigma)
 
     return avg_guess
@@ -1698,7 +1695,7 @@ class MyModel(object):
               start_pos=1000, end_pos=1100,
               delta=0.001, max_iteration=10000):
         start_pos = 500
-        end_pos = 510
+        end_pos = 600
         # end_pos = 1012
         assert start_pos > 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
@@ -1777,12 +1774,13 @@ class MyModel(object):
         guess_prices = []
         k = start_pos
         seq = 1
-        repeating = 10
+        repeating = 1
 
         nb_plays = self._nb_plays
         activation = self._activation
         start = time.time()
-        pool = MP_CONTEXT.Pool(constants.CPU_COUNTS)
+        # pool = MP_CONTEXT.Pool(constants.CPU_COUNTS)
+        pool = MP_CONTEXT.Pool(1)
         args_list = []
         while k + seq - 1 < end_pos:
             prev_gt_price = prices[k-1]
@@ -1814,6 +1812,7 @@ class MyModel(object):
         LOG.debug("Time cost for prediction price: {} s".format(end-start))
 
         LOG.debug("Verifing...")
+        import ipdb; ipdb.set_trace()
         guess_prices = np.array(guess_prices).reshape(-1)
 
         loss1 =  ((guess_prices - prices[start_pos:end_pos]) ** 2)
@@ -1821,13 +1820,11 @@ class MyModel(object):
         loss3 = (prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1]) ** 2
         loss4 = np.abs(prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1])
 
-        LOG.debug("root square loss1: {}".format((loss1.sum()/(end_pos-start_pos))**(0.5)))
-        LOG.debug("root square loss2: {}".format((loss3.sum()/(end_pos-start_pos))**(0.5)))
-        LOG.debug("abs loss1: {}".format((loss2.sum()/(end_pos-start_pos))))
-        LOG.debug("abs loss2: {}".format((loss4.sum()/(end_pos-start_pos))))
+        LOG.debug("hnn-RMSE: {}".format((loss1.sum()/(end_pos-start_pos))**(0.5)))
+        LOG.debug("baseline-RMSE: {}".format((loss3.sum()/(end_pos-start_pos))**(0.5)))
+        LOG.debug("hnn-ABS: {}".format((loss2.sum()/(end_pos-start_pos))))
+        LOG.debug("baseline-ABS: {}".format((loss4.sum()/(end_pos-start_pos))))
 
-        # guess_prices_list = np.array(guess_prices_list)
-        # return guess_prices, guess_prices_list
         return guess_prices
 
     def visualize_activated_plays(self, inputs, mu=0, sigma=1):
