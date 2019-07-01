@@ -150,8 +150,8 @@ def do_guess_seq(start,
 
     while interval < seq:
         k = start + interval
-        # bk = np.random.normal(loc=mu, scale=sigma) + predict_noise_seq[-1]
-        bk = curr_gt_prediction
+        bk = np.random.normal(loc=mu, scale=sigma) + predict_noise_seq[-1]
+        # bk = curr_gt_prediction
         if bk > predict_noise_seq[-1]:
             direction = -1
         elif bk < predict_noise_seq[-1]:
@@ -1777,7 +1777,7 @@ class MyModel(object):
         guess_prices = []
         k = start_pos
         seq = 1
-        repeating = 1
+        repeating = 100
 
         nb_plays = self._nb_plays
         activation = self._activation
@@ -1825,8 +1825,8 @@ class MyModel(object):
 
         LOG.debug("hnn-RMSE: {}".format((loss1.sum()/(end_pos-start_pos))**(0.5)))
         LOG.debug("baseline-RMSE: {}".format((loss3.sum()/(end_pos-start_pos))**(0.5)))
-        LOG.debug("hnn-ABS: {}".format((loss2.sum()/(end_pos-start_pos))))
-        LOG.debug("baseline-ABS: {}".format((loss4.sum()/(end_pos-start_pos))))
+        LOG.debug("hnn-L1-ERROR: {}".format((loss2.sum()/(end_pos-start_pos))))
+        LOG.debug("baseline-L1-ERROR: {}".format((loss4.sum()/(end_pos-start_pos))))
 
         return guess_prices
 
