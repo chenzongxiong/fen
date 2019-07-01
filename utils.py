@@ -248,7 +248,7 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
         fname = './frames-mu-{}-sigma-{}/{}.png'.format(mu, sigma, i)
 
     os.makedirs(os.path.dirname(fname), exist_ok=True)
-    fig.savefig(fname, dpi=400)
+    fig.savefig(fname, dpi=40)
 
 
 def plot_simulation_info(i, ax):
@@ -276,8 +276,8 @@ def plot_simulation_info(i, ax):
 
     ax.plot(fake_price_list, fake_B1, 'r', fake_price_list, fake_B2, 'c--', fake_price_list, fake_B3, 'k--')
     ax.plot(price_list, _B1, 'r', price_list, _B2, 'c', price_list, _B3, 'k-')
-    ax.plot(fake_price_list, fake_stock_list, color='blue', marker='*', markersize=4, linestyle='--')
-    ax.plot(price_list, stock_list, color='blue', marker='o', markersize=6)
+    ax.plot(fake_price_list, fake_stock_list, color='blue', marker='*', markersize=2, linestyle='--')
+    ax.plot(price_list, stock_list, color='blue', marker='o', markersize=4)
     ax.set_xlabel("prices")
     ax.set_ylabel("#Noise")
 

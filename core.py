@@ -68,7 +68,8 @@ def do_guess_helper(step, direction, start_price, nb_plays, activation, sign, pr
     '''
     predict_noise_list = []
     guess = start_price + direction * step * delta
-
+    # LOG.debug("--------------------------------------------------------------------------------");
+    # LOG.debug("prev_states: {}".format(prev_states))
     for i in range(nb_plays):
         prev_state = prev_states[i]
         p = phi(weights[0][i] * guess - prev_state) + prev_state
@@ -110,7 +111,7 @@ def do_guess_seq(start,
                  individual_p_list,
                  weights,
                  hysteresis_info,
-                 max_iteration=200):
+                 max_iteration=2000):
     '''
     Parameters:
     --------------------
@@ -149,7 +150,8 @@ def do_guess_seq(start,
 
     while interval < seq:
         k = start + interval
-        bk = np.random.normal(loc=mu, scale=sigma) + predict_noise_seq[-1]
+        # bk = np.random.normal(loc=mu, scale=sigma) + predict_noise_seq[-1]
+        bk = curr_gt_prediction
         if bk > predict_noise_seq[-1]:
             direction = -1
         elif bk < predict_noise_seq[-1]:
@@ -176,7 +178,7 @@ def do_guess_seq(start,
 
             guess_hysteresis_list.append((guess, guess_noise))
             curr_diff = guess_noise - bk
-            if curr_diff * prev_diff < 0:
+            if np.abs(curr_diff) < 0.01 or curr_diff * prev_diff < 0:
                 LOG.debug(colors.yellow(logger_string1.format(step, float(curr_gt_price), float(guess), float(guess_noise), float(bk), float(curr_gt_prediction), float(prev_gt_prediction), float(curr_diff), float(prev_diff), direction, delta)))
                 good_guess = True
                 break
@@ -1696,6 +1698,7 @@ class MyModel(object):
               delta=0.001, max_iteration=10000):
         start_pos = 500
         end_pos = 600
+        # end_pos = 510
         # end_pos = 1012
         assert start_pos > 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
@@ -1779,8 +1782,8 @@ class MyModel(object):
         nb_plays = self._nb_plays
         activation = self._activation
         start = time.time()
-        # pool = MP_CONTEXT.Pool(constants.CPU_COUNTS)
-        pool = MP_CONTEXT.Pool(1)
+        pool = MP_CONTEXT.Pool(constants.CPU_COUNTS)
+        # pool = MP_CONTEXT.Pool(1)
         args_list = []
         while k + seq - 1 < end_pos:
             prev_gt_price = prices[k-1]
@@ -1812,7 +1815,7 @@ class MyModel(object):
         LOG.debug("Time cost for prediction price: {} s".format(end-start))
 
         LOG.debug("Verifing...")
-        import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
         guess_prices = np.array(guess_prices).reshape(-1)
 
         loss1 =  ((guess_prices - prices[start_pos:end_pos]) ** 2)
