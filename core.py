@@ -2129,24 +2129,31 @@ class MyModel(object):
                   fake_price_list, fake_noise_list,
                   price_list, noise_list,
                   fake_B1, fake_B2, fake_B3,
-                  _B1, _B2, _B3, color='blue'):
+                  _B1, _B2, _B3, color='blue', plot_target_line=True):
         fake_l = 10 if len(fake_price_list) == 1 else len(fake_price_list)
         l = 10 if len(price_list) == 1 else len(price_list)
         fake_B1, fake_B2, fake_B3 = np.array([fake_B1]*fake_l), np.array([fake_B2]*fake_l), np.array([fake_B3]*fake_l)
         _B1, _B2, _B3 = np.array([_B1]*l), np.array([_B2]*l), np.array([_B3]*l)
 
-        fake_B2 = fake_B2 - fake_B1
-        fake_B3 = fake_B3 - fake_B1
-        fake_noise_list = fake_noise_list - fake_B1
-        fake_B1 = fake_B1 - fake_B1
+        if plot_target_line is True:
+            fake_B2 = fake_B2 - fake_B1
+            fake_B3 = fake_B3 - fake_B1
+            fake_noise_list = fake_noise_list - fake_B1
+            fake_B1 = fake_B1 - fake_B1
 
-        _B2 = _B2 - _B1
-        _B3 = _B3 - _B1
-        noise_list = noise_list - _B1
-        _B1 = _B1 - _B1
+            _B2 = _B2 - _B1
+            _B3 = _B3 - _B1
+            noise_list = noise_list - _B1
+            _B1 = _B1 - _B1
+            ax.plot(fake_price_list, fake_B1, 'r', fake_price_list, fake_B2, 'c--', fake_price_list, fake_B3, 'k--')
+            ax.plot(price_list, _B1, 'r', price_list, _B2, 'c', price_list, _B3, 'k-')
 
-        ax.plot(fake_price_list, fake_B1, 'r', fake_price_list, fake_B2, 'c--', fake_price_list, fake_B3, 'k--')
-        ax.plot(price_list, _B1, 'r', price_list, _B2, 'c', price_list, _B3, 'k-')
+        else:
+            fake_noise_list = fake_noise_list - fake_B1
+            fake_B1 = fake_B1 - fake_B1
+            noise_list = noise_list - _B1
+            _B1 = _B1 - _B1
+
         ax.plot(fake_price_list, fake_noise_list, color=color, marker='s', markersize=3, linestyle='--')
         ax.plot(price_list, noise_list, color=color, marker='.', markersize=6, linestyle='-')
         ax.set_xlabel("Prices")
@@ -2159,10 +2166,12 @@ class MyModel(object):
                            interpolated_noises,
                            fake_B1, fake_B2, fake_B3,
                            _B1, _B2, _B3):
+
         from matplotlib import colors as mcolors
+        # import ipdb; ipdb.set_trace()
 
         self._plot_sim(ax,
                        fake_interpolated_prices, fake_interpolated_noises,
                        interpolated_prices, interpolated_noises,
-                       fake_B1, fake_B2, fake_B3,
-                       _B1, _B2, _B3, mcolors.CSS4_COLORS['orange'])
+                       fake_interpolated_noises[0], fake_B2, fake_B3,
+                       interpolated_noises[0], _B2, _B3, mcolors.CSS4_COLORS['orange'], plot_target_line=False)
