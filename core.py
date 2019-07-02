@@ -951,9 +951,9 @@ class Play(object):
         outputs = []
         input_dim = self._batch_input_shape[-1].value
         samples = inputs.shape[-1] // input_dim
-
+        LOG.debug("#Samples: {}".format(samples))
         for j in range(samples):
-            self.reset_states(states)
+            # self.reset_states(states)
             x = inputs[j*input_dim:(j+1)*input_dim].reshape(1, 1, -1)
             output = self.model.predict(x, steps=steps_per_epoch, verbose=verbose).reshape(-1)
             outputs.append(output)
@@ -2097,15 +2097,14 @@ class MyModel(object):
               abs(prices[i+1] - end_price) > 1e-7:
                 LOG.error("Bugs: prices is out of expectation")
 
-            fake_start_price, fake_end_price = fake_price_list[0], fake_price_list[-1]
-            fake_interpolated_prices = np.linspace(fake_start_price, fake_end_price, batch_size)
-            # self.reset_states_parallel(states_list=states_list)
-            fake_interpolated_noises = self.predict_parallel(fake_interpolated_prices, states_list=states_list)
-
             interpolated_prices = np.linspace(start_price, end_price, batch_size)
             # self.reset_states_parallel(states_list=states_list)
             interpolated_noises = self.predict_parallel(interpolated_prices, states_list=states_list)
 
+            fake_start_price, fake_end_price = fake_price_list[0], fake_price_list[-1]
+            fake_interpolated_prices = np.linspace(fake_start_price, fake_end_price, batch_size)
+            # self.reset_states_parallel(states_list=states_list)
+            fake_interpolated_noises = self.predict_parallel(fake_interpolated_prices, states_list=states_list)
 
             states_list = [o[i-1] for o in operator_outputs]
 
