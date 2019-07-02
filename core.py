@@ -2083,7 +2083,7 @@ class MyModel(object):
         self._fmt_brief = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'
         self._fmt_truth = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'
         self._fmt_fake = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'
-        length = 10
+        length = 100
         assert length <= prices.shape[-1] - 1, "Length must be less than prices.shape-1"
         batch_size = self.batch_input_shape[-1]
         # states_list = None
@@ -2173,23 +2173,23 @@ class MyModel(object):
         _B1, _B2, _B3 = np.array([_B1]*l), np.array([_B2]*l), np.array([_B3]*l)
 
         if plot_target_line is True:
-            # fake_B2 = fake_B2 - fake_B1
-            # fake_B3 = fake_B3 - fake_B1
-            # fake_noise_list = fake_noise_list - fake_B1
-            # fake_B1 = fake_B1 - fake_B1
+            fake_B2 = fake_B2 - fake_B1
+            fake_B3 = fake_B3 - fake_B1
+            fake_noise_list = fake_noise_list - fake_B1
+            fake_B1 = fake_B1 - fake_B1
 
-            # _B2 = _B2 - _B1
-            # _B3 = _B3 - _B1
-            # noise_list = noise_list - _B1
-            # _B1 = _B1 - _B1
+            _B2 = _B2 - _B1
+            _B3 = _B3 - _B1
+            noise_list = noise_list - _B1
+            _B1 = _B1 - _B1
             ax.plot(fake_price_list, fake_B1, 'r', fake_price_list, fake_B2, 'c--', fake_price_list, fake_B3, 'k--')
             ax.plot(price_list, _B1, 'r', price_list, _B2, 'c', price_list, _B3, 'k-')
 
         else:
-            # fake_noise_list = fake_noise_list - fake_B1
-            # fake_B1 = fake_B1 - fake_B1
-            # noise_list = noise_list - _B1
-            # _B1 = _B1 - _B1
+            fake_noise_list = fake_noise_list - fake_B1
+            fake_B1 = fake_B1 - fake_B1
+            noise_list = noise_list - _B1
+            _B1 = _B1 - _B1
             pass
 
         ax.plot(fake_price_list, fake_noise_list, color=color, marker='s', markersize=3, linestyle='--')
