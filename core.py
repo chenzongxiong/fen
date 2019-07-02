@@ -953,9 +953,12 @@ class Play(object):
         samples = inputs.shape[-1] // input_dim
         LOG.debug("#Samples: {}".format(samples))
         for j in range(samples):
-            # self.reset_states(states)
+            LOG.debug("PID: {}, self.states: {}, states: {} before".format(os.getpid(), sess.run(self.states), states))
+            self.reset_states(states)
+            LOG.debug("PID: {}, self.states: {}, states: {} after".format(os.getpid(), sess.run(self.states), states))
             x = inputs[j*input_dim:(j+1)*input_dim].reshape(1, 1, -1)
             output = self.model.predict(x, steps=steps_per_epoch, verbose=verbose).reshape(-1)
+            LOG.debug("PID: {}, self.states: {}, states: {} done".format(os.getpid(), sess.run(self.states), states))
             outputs.append(output)
             if j != samples - 1:
                 op_output = self.operator_output(x, states)
@@ -1419,7 +1422,8 @@ class MyModel(object):
         start = time.time()
         for i, play in enumerate(self.plays):
             LOG.debug("{}".format(play._name))
-            task = Task(play, 'predict', (_inputs, 1, 0, states_list[i]))
+            # task = Task(play, 'predict', (_inputs, 1, 0, states_list[i]))
+            task = Task(play, 'predict', (_inputs, 1, 0, None))
             self.pool.put(task)
 
         self.pool.join()
@@ -2079,7 +2083,7 @@ class MyModel(object):
         self._fmt_brief = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'
         self._fmt_truth = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'
         self._fmt_fake = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'
-        length = 2
+        length = 1
         assert length < prices.shape[-1] - 1, "Length must be less than prices.shape-1"
         batch_size = self.batch_input_shape[-1]
         states_list = None
@@ -2098,12 +2102,10 @@ class MyModel(object):
                 LOG.error("Bugs: prices is out of expectation")
 
             interpolated_prices = np.linspace(start_price, end_price, batch_size)
-            # self.reset_states_parallel(states_list=states_list)
             interpolated_noises = self.predict_parallel(interpolated_prices, states_list=states_list)
 
             fake_start_price, fake_end_price = fake_price_list[0], fake_price_list[-1]
             fake_interpolated_prices = np.linspace(fake_start_price, fake_end_price, batch_size)
-            # self.reset_states_parallel(states_list=states_list)
             fake_interpolated_noises = self.predict_parallel(fake_interpolated_prices, states_list=states_list)
 
             states_list = [o[i-1] for o in operator_outputs]
