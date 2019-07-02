@@ -952,6 +952,7 @@ class Play(object):
         input_dim = self._batch_input_shape[-1].value
         samples = inputs.shape[-1] // input_dim
         LOG.debug("#Samples: {}".format(samples))
+        states = None
         for j in range(samples):
             # LOG.debug("PID: {}, self.states: {}, states: {} before".format(os.getpid(), sess.run(self.states), states))
             self.reset_states(states)
@@ -2083,7 +2084,7 @@ class MyModel(object):
         self._fmt_brief = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'
         self._fmt_truth = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'
         self._fmt_fake = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'
-        length = 100
+        length = 10
         assert length <= prices.shape[-1] - 1, "Length must be less than prices.shape-1"
         batch_size = self.batch_input_shape[-1]
         # states_list = None
