@@ -952,7 +952,6 @@ class Play(object):
         input_dim = self._batch_input_shape[-1].value
         samples = inputs.shape[-1] // input_dim
         LOG.debug("#Samples: {}".format(samples))
-        # states = None
         for j in range(samples):
             # LOG.debug("PID: {}, self.states: {}, states: {} before".format(os.getpid(), sess.run(self.states), states))
             self.reset_states(states)
@@ -2174,23 +2173,24 @@ class MyModel(object):
         _B1, _B2, _B3 = np.array([_B1]*l), np.array([_B2]*l), np.array([_B3]*l)
 
         if plot_target_line is True:
-            fake_B2 = fake_B2 - fake_B1
-            fake_B3 = fake_B3 - fake_B1
-            fake_noise_list = fake_noise_list - fake_B1
-            fake_B1 = fake_B1 - fake_B1
+            # fake_B2 = fake_B2 - fake_B1
+            # fake_B3 = fake_B3 - fake_B1
+            # fake_noise_list = fake_noise_list - fake_B1
+            # fake_B1 = fake_B1 - fake_B1
 
-            _B2 = _B2 - _B1
-            _B3 = _B3 - _B1
-            noise_list = noise_list - _B1
-            _B1 = _B1 - _B1
+            # _B2 = _B2 - _B1
+            # _B3 = _B3 - _B1
+            # noise_list = noise_list - _B1
+            # _B1 = _B1 - _B1
             ax.plot(fake_price_list, fake_B1, 'r', fake_price_list, fake_B2, 'c--', fake_price_list, fake_B3, 'k--')
             ax.plot(price_list, _B1, 'r', price_list, _B2, 'c', price_list, _B3, 'k-')
 
         else:
-            fake_noise_list = fake_noise_list - fake_B1
-            fake_B1 = fake_B1 - fake_B1
-            noise_list = noise_list - _B1
-            _B1 = _B1 - _B1
+            # fake_noise_list = fake_noise_list - fake_B1
+            # fake_B1 = fake_B1 - fake_B1
+            # noise_list = noise_list - _B1
+            # _B1 = _B1 - _B1
+            pass
 
         ax.plot(fake_price_list, fake_noise_list, color=color, marker='s', markersize=3, linestyle='--')
         ax.plot(price_list, noise_list, color=color, marker='.', markersize=6, linestyle='-')
