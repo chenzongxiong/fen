@@ -2111,13 +2111,13 @@ class MyModel(object):
 
             # result_list.append(interpolated_noises[0])
 
-            # fake_start_price, fake_end_price = fake_price_list[0], fake_price_list[-1]
-            # fake_interpolated_prices = np.linspace(fake_start_price, fake_end_price, batch_size)
-            # # self.reset_states_parallel(states_list=states_list)
-            # fake_interpolated_noises = self.predict_parallel(fake_interpolated_prices, states_list=states_list)
+            fake_start_price, fake_end_price = fake_price_list[0], fake_price_list[-1]
+            fake_interpolated_prices = np.linspace(fake_start_price, fake_end_price, batch_size)
+            # self.reset_states_parallel(states_list=states_list)
+            fake_interpolated_noises = self.predict_parallel(fake_interpolated_prices, states_list=states_list)
 
-            fake_interpolated_prices = interpolated_prices
-            fake_interpolated_noises = interpolated_noises
+            # fake_interpolated_prices = interpolated_prices
+            # fake_interpolated_noises = interpolated_noises
             # NOTE: correct here, don't change
             states_list = [o[i] for o in operator_outputs]
 
