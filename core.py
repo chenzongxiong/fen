@@ -134,8 +134,8 @@ def do_guess_seq(start,
     --------------------
     guess_price_seq: a list of guess price, the length of it is equal to `seq`
     '''
-    logger_string1 = "Step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, prev true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}"
-    logger_string2 = "Step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}"
+    logger_string1 = "Step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, prev true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}, mu: {}, sigma {}"
+    logger_string2 = "Step: {}, true_price: {:.5f}, guess price: {:.5f}, guess noise: {:.5f}, generated noise: {:.5f}, true noise: {:.5f}, curr_diff: {:.5f}, prev_diff: {:.5f}, direction: {}, delta: {}, mu: {}, sigma: {}"
     delta = 0.001
     ####################################################################################################
     # guess_price_seq: the first value in it is the start point of price in prediction                 #
@@ -179,11 +179,12 @@ def do_guess_seq(start,
             guess_hysteresis_list.append((guess, guess_noise))
             curr_diff = guess_noise - bk
             if np.abs(curr_diff) < 0.01 or curr_diff * prev_diff < 0:
-                LOG.debug(colors.yellow(logger_string1.format(step, float(curr_gt_price), float(guess), float(guess_noise), float(bk), float(curr_gt_prediction), float(prev_gt_prediction), float(curr_diff), float(prev_diff), direction, delta)))
+                LOG.debug(colors.yellow(logger_string1.format(step, float(curr_gt_price), float(guess), float(guess_noise), float(bk), float(curr_gt_prediction), float(prev_gt_prediction), float(curr_diff), float(prev_diff), direction,
+                                                              delta, mu, sigma)))
                 good_guess = True
                 break
 
-            LOG.debug(logger_string2.format(step, float(curr_gt_price), float(guess), float(guess_noise), float(bk), float(curr_gt_prediction), float(curr_diff), float(prev_diff), direction, delta))
+            LOG.debug(logger_string2.format(step, float(curr_gt_price), float(guess), float(guess_noise), float(bk), float(curr_gt_prediction), float(curr_diff), float(prev_diff), direction, delta, mu, sigma))
 
         #########################################################################################################################
         # hysteresis_info:                                                                                                      #
@@ -248,7 +249,7 @@ def repeat(k,
     --------------------
     guess_price_seq: the avearge of this guess price sequence.
     '''
-    logger_string3 = "================ Guess k: {} successfully, predict price: {:.5f}, grouth-truth price: {:.5f} prev gt price: {:.5f} ====================="
+    logger_string3 = "================ Guess k: {} successfully, predict price: {:.5f}, grouth-truth price: {:.5f} prev gt price: {:.5f}, std: {:.5f} ====================="
 
     hysteresis_info = []
     guess_price_seq_stack = []
@@ -274,10 +275,15 @@ def repeat(k,
         guess_price_seq_stack.append(guess_price_seq)
 
     guess_price_seq_stack_ = np.array(guess_price_seq_stack)
+    # LOG.debug("guess_price_seq_stack_: {}".format(guess_price_seq_stack_))
+    # LOG.debug("guess_price_seq_stack_.shape: {}".format(guess_price_seq_stack_.shape))
+    # LOG.debug("guess_price_seq_stack_.mean(): {}".format(guess_price_seq_stack_.mean()))
+    # LOG.debug("guess_price_seq_stack_.std(): {}".format(guess_price_seq_stack_.std()))
+
     avg_guess = guess_price_seq_stack_.mean(axis=0)[-1]
-    LOG.debug(colors.red(logger_string3.format(k, float(avg_guess), float(curr_gt_price), float(prev_gt_price))))
+    LOG.debug(colors.red(logger_string3.format(k, float(avg_guess), float(curr_gt_price), float(prev_gt_price), float(guess_price_seq_stack_.std()))))
     LOG.debug("********************************************************************************")
-    utils.plot_internal_transaction(hysteresis_info, k, predicted_price=float(avg_guess), mu=mu, sigma=sigma)
+    utils.plot_internal_transaction(hysteresis_info, k, predicted_price=float(avg_guess), mu=mu, sigma=sigma, guess_price_seq=guess_price_seq_stack_)
 
     return avg_guess
 
@@ -1697,8 +1703,8 @@ class MyModel(object):
               start_pos=1000, end_pos=1100,
               delta=0.001, max_iteration=10000):
         start_pos = 500
-        end_pos = 600
         # end_pos = 510
+        end_pos = 600
         # end_pos = 1012
         assert start_pos > 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")

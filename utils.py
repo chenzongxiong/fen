@@ -238,10 +238,32 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
     mu = kwargs.pop('mu', 0)
     sigma = kwargs.pop('sigma', 1)
 
-    fig, (ax1, ax2) = plt.subplots(2, sharex='all')
+    # fig, (ax1, ax2, ax3) = plt.subplots(3, sharex='all')
+    # fig, (ax1, ax2, ax3) = plt.subplots(3, sharex=False)
+    # fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex='col')
+    fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+    # fig, axes = plt.subplots(2, 2, sharex='col')
+    # ax1, ax2, ax3, ax4 = axes[0, 0], axes[1, 0], axes[0, 1], axes[1, 1]
     plot_simulation_info(i-1, ax1)
     plot_hysteresis_info(hysteresis_info, i, predicted_price=predicted_price, ax=ax2)
     # plt.show()
+    guess_price_seq = kwargs.pop('guess_price_seq', None)
+    if guess_price_seq is not None:
+        # fig1, (ax3, ax4) = plt.subplots(2, sharex=True, figsize=(20, 20))
+        fig1, (ax3, ax4) = plt.subplots(2, sharex=False)
+        guess_price_seq = guess_price_seq.reshape(-1)
+        plot_price_span(guess_price_seq, ax3)
+        plot_price_distribution(guess_price_seq, ax4)
+
+        if mu is None and sigma is None:
+            fname = './frames/{}-distribution.png'.format(i)
+        else:
+            fname = './frames-mu-{}-sigma-{}/{}-distribution.png'.format(mu, sigma, i)
+
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
+        fig1.savefig(fname, dpi=100)
+
+
     if mu is None and sigma is None:
         fname = './frames/{}.png'.format(i)
     else:
@@ -314,6 +336,28 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None, **kwargs
 
     ax.set_xlabel("prices")
     ax.set_ylabel("noise")
+
+
+def plot_price_span(guess_price_seq, ax):
+    x = range(guess_price_seq.shape[0])
+    ax.plot(x, guess_price_seq, marker='.', linewidth=1)
+    ax.set_xlabel('')
+    ax.set_ylabel('prices')
+
+
+import scipy.stats as stats
+
+def plot_price_distribution(guess_price_seq, ax):
+    ax.hist(guess_price_seq, bins=100)
+
+    mu = guess_price_seq.mean()
+    sigma = guess_price_seq.std()
+    x = np.linspace(mu - 3*sigma, mu + 3*sigma, 100)
+    ax.plot(x, stats.norm.pdf(x, mu, sigma))
+
+    ax.set_xlabel('price')
+    ax.set_ylabel('occurrence')
+
 
 
 _CACHE = None
