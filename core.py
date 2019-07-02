@@ -953,7 +953,7 @@ class Play(object):
         samples = inputs.shape[-1] // input_dim
 
         for j in range(samples):
-            self.reset_states(states)
+            # self.reset_states(states)
             x = inputs[j*input_dim:(j+1)*input_dim].reshape(1, 1, -1)
             output = self.model.predict(x, steps=steps_per_epoch, verbose=verbose).reshape(-1)
             outputs.append(output)
@@ -2123,7 +2123,7 @@ class MyModel(object):
 
             LOG.debug("plot {}".format(fname))
             os.makedirs(os.path.dirname(fname), exist_ok=True)
-            fig.savefig(fname, dpi=400)
+            fig.savefig(fname, dpi=100)
 
     def _plot_sim(self, ax,
                   fake_price_list, fake_noise_list,
