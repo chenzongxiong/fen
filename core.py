@@ -1702,9 +1702,9 @@ class MyModel(object):
     def trend(self, prices, B, mu, sigma,
               start_pos=1000, end_pos=1100,
               delta=0.001, max_iteration=10000):
-        start_pos = 500
-        # end_pos = 510
-        end_pos = 600
+        tart_pos = 500
+        end_pos = 510
+        # end_pos = 600
         # end_pos = 1012
         assert start_pos > 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
@@ -1783,7 +1783,8 @@ class MyModel(object):
         guess_prices = []
         k = start_pos
         seq = 1
-        repeating = 100
+        # repeating = 100
+        repeating = 1
 
         nb_plays = self._nb_plays
         activation = self._activation
