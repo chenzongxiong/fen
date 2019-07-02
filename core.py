@@ -2091,10 +2091,11 @@ class MyModel(object):
 
         operator_outputs = self.get_op_outputs_parallel(prices)
 
-        results = self.predict_parallel(prices)
+        # results = self.predict_parallel(prices)
         states_list = None
 
-        result_list = []
+        # result_list = []
+
         for i in range(length):
              # fig, (ax1, ax2) = plt.subplots(2, sharex='all')
             fig, ax1 = plt.subplots(1)
@@ -2108,7 +2109,7 @@ class MyModel(object):
             # self.reset_states_parallel(states_list=states_list)
             interpolated_noises = self.predict_parallel(interpolated_prices, states_list=states_list)
 
-            result_list.append(interpolated_noises[0])
+            # result_list.append(interpolated_noises[0])
 
             fake_start_price, fake_end_price = fake_price_list[0], fake_price_list[-1]
             fake_interpolated_prices = np.linspace(fake_start_price, fake_end_price, batch_size)
@@ -2126,11 +2127,16 @@ class MyModel(object):
 
             # import ipdb; ipdb.set_trace()
             fake_size = fake_price_list.shape[-1]
-            fake_interpolated_prices = fake_interpolated_prices[::batch_size//fake_size]
-            fake_interpolated_noises = fake_interpolated_noises[::batch_size//fake_size]
+            fake_interpolated_prices_ = fake_interpolated_prices[::batch_size//fake_size]
+            fake_interpolated_noises_ = fake_interpolated_noises[::batch_size//fake_size]
+            fake_interpolated_prices = np.hstack([fake_interpolated_prices_, fake_interpolated_prices[-1]])
+            fake_interpolated_noises = np.hstack([fake_interpolated_noises_, fake_interpolated_noises[-1]])
+
             size = price_list.shape[-1]
-            interpolated_prices = interpolated_prices[::batch_size//size]
-            interpolated_noises = interpolated_noises[::batch_size//size]
+            interpolated_prices_ = interpolated_prices[::batch_size//size]
+            interpolated_noises_ = interpolated_noises[::batch_size//size]
+            interpolated_prices = np.hstack([interpolated_prices_, interpolated_prices[-1]])
+            interpolated_noises = np.hstack([interpolated_noises_, interpolated_noises[-1]])
 
             self._plot_interpolated(ax1, fake_interpolated_prices, fake_interpolated_noises,
                                     interpolated_prices, interpolated_noises, fake_B1,
