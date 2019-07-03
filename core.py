@@ -2083,7 +2083,7 @@ class MyModel(object):
         self._fmt_brief = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'
         self._fmt_truth = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'
         self._fmt_fake = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'
-        length = 100
+        length = 600
         assert length <= prices.shape[-1] - 1, "Length must be less than prices.shape-1"
         batch_size = self.batch_input_shape[-1]
         # states_list = None
@@ -2127,14 +2127,21 @@ class MyModel(object):
 
             # import ipdb; ipdb.set_trace()
             fake_size = fake_price_list.shape[-1]
-            fake_interpolated_prices_ = fake_interpolated_prices[::batch_size//fake_size]
-            fake_interpolated_noises_ = fake_interpolated_noises[::batch_size//fake_size]
+            fake_step = batch_size//fake_size
+            if fake_step <= 0:
+                fake_step = 1
+
+            fake_interpolated_prices_ = fake_interpolated_prices[::fake_step]
+            fake_interpolated_noises_ = fake_interpolated_noises[::fake_step]
             fake_interpolated_prices = np.hstack([fake_interpolated_prices_, fake_interpolated_prices[-1]])
             fake_interpolated_noises = np.hstack([fake_interpolated_noises_, fake_interpolated_noises[-1]])
 
             size = price_list.shape[-1]
-            interpolated_prices_ = interpolated_prices[::batch_size//size]
-            interpolated_noises_ = interpolated_noises[::batch_size//size]
+            step = batch_size // size
+            if step <= 0:
+                step = 1
+            interpolated_prices_ = interpolated_prices[::step]
+            interpolated_noises_ = interpolated_noises[::step]
             interpolated_prices = np.hstack([interpolated_prices_, interpolated_prices[-1]])
             interpolated_noises = np.hstack([interpolated_noises_, interpolated_noises[-1]])
 
