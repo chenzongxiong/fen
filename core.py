@@ -211,7 +211,7 @@ def do_guess_seq(start,
         interval += 1
 
         LOG.debug("After do_guess_helper, len(individual_p_list): {}, len(individual_p_list[0]): {}".format(len(individual_p_list), len(individual_p_list[0])))
-    return guess_price_seq[1:]
+    return guess_price_seq[1:], bk
 
 
 def repeat(k,
@@ -255,26 +255,27 @@ def repeat(k,
     guess_price_seq_stack = []
 
     individual_p_list = [[o[k-1]] for o in operator_outputs]
-
+    bk_list = []
     for _ in range(repeating):
-        guess_price_seq = do_guess_seq(k,
-                                       seq,
-                                       prev_gt_price,
-                                       curr_gt_price,
-                                       prev_gt_prediction,
-                                       curr_gt_prediction,
-                                       mu,
-                                       sigma,
-                                       nb_plays,
-                                       activation,
-                                       sign,
-                                       individual_p_list,
-                                       weights,
-                                       hysteresis_info)
-
+        guess_price_seq, bk = do_guess_seq(k,
+                                           seq,
+                                           prev_gt_price,
+                                           curr_gt_price,
+                                           prev_gt_prediction,
+                                           curr_gt_prediction,
+                                           mu,
+                                           sigma,
+                                           nb_plays,
+                                           activation,
+                                           sign,
+                                           individual_p_list,
+                                           weights,
+                                           hysteresis_info)
+        bk_list.append(bk)
         guess_price_seq_stack.append(guess_price_seq)
 
     guess_price_seq_stack_ = np.array(guess_price_seq_stack)
+    bk_list_ = np.array(bk_list)
     # LOG.debug("guess_price_seq_stack_: {}".format(guess_price_seq_stack_))
     # LOG.debug("guess_price_seq_stack_.shape: {}".format(guess_price_seq_stack_.shape))
     # LOG.debug("guess_price_seq_stack_.mean(): {}".format(guess_price_seq_stack_.mean()))
@@ -283,7 +284,7 @@ def repeat(k,
     avg_guess = guess_price_seq_stack_.mean(axis=0)[-1]
     LOG.debug(colors.red(logger_string3.format(k, float(avg_guess), float(curr_gt_price), float(prev_gt_price), float(guess_price_seq_stack_.std()))))
     LOG.debug("********************************************************************************")
-    utils.plot_internal_transaction(hysteresis_info, k, predicted_price=float(avg_guess), mu=mu, sigma=sigma, guess_price_seq=guess_price_seq_stack_)
+    utils.plot_internal_transaction(hysteresis_info, k, predicted_price=float(avg_guess), mu=mu, sigma=sigma, guess_price_seq=guess_price_seq_stack_, bk_list=bk_list_)
 
     return avg_guess
 
@@ -1713,7 +1714,7 @@ class MyModel(object):
     def trend(self, prices, B, mu, sigma,
               start_pos=1000, end_pos=1100,
               delta=0.001, max_iteration=10000):
-        tart_pos = 500
+        start_pos = 500
         end_pos = 510
         # end_pos = 600
         # end_pos = 1012

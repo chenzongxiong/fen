@@ -248,12 +248,15 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
     plot_hysteresis_info(hysteresis_info, i, predicted_price=predicted_price, ax=ax2)
     # plt.show()
     guess_price_seq = kwargs.pop('guess_price_seq', None)
+    bk_list = kwargs.pop('bk_list', None)
     if guess_price_seq is not None:
         # fig1, (ax3, ax4) = plt.subplots(2, sharex=True, figsize=(20, 20))
-        fig1, (ax3, ax4) = plt.subplots(2, sharex=False)
+        fig1, (ax3, ax4, ax5) = plt.subplots(3, sharex=False)
         guess_price_seq = guess_price_seq.reshape(-1)
+        bk_list = bk_list.reshape(-1)
         plot_price_span(guess_price_seq, ax3)
         plot_price_distribution(guess_price_seq, ax4)
+        plot_noise_distribution(bk_list, ax5)
 
         if mu is None and sigma is None:
             fname = './frames/{}-distribution.png'.format(i)
@@ -356,6 +359,17 @@ def plot_price_distribution(guess_price_seq, ax):
     ax.plot(x, stats.norm.pdf(x, mu, sigma))
 
     ax.set_xlabel('price')
+    ax.set_ylabel('occurrence')
+
+
+def plot_noise_distribution(bk_list, ax):
+    ax.hist(bk_list, bins=100)
+    mu = bk_list.mean()
+    sigma = bk_list.std()
+    x = np.linspace(mu - 3*sigma, mu + 3*sigma, 100)
+    ax.plot(x, stats.norm.pdf(x, mu, sigma))
+
+    ax.set_xlabel('noise')
     ax.set_ylabel('occurrence')
 
 
