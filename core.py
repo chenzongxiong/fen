@@ -2123,6 +2123,8 @@ class MyModel(object):
 
             fake_size = fake_price_list.shape[-1]
             if fake_size >= 50:
+                if fake_size // 50 <= 1:
+                    fake_size = 100
                 fake_price_list_ = fake_price_list[::fake_size // 50]
                 fake_price_list = np.hstack([fake_price_list_, fake_price_list[-1]])
                 fake_noise_list_ = fake_noise_list[::fake_size // 50]
@@ -2130,6 +2132,8 @@ class MyModel(object):
 
             size = price_list.shape[-1]
             if size >= 50:
+                if size // 50 <= 1:
+                   size = 100
                 price_list_ = price_list[::size // 50]
                 price_list = np.hstack([price_list_, price_list[-1]])
                 noise_list_ = noise_list[::size // 50]
