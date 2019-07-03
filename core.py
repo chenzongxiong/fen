@@ -2097,7 +2097,7 @@ class MyModel(object):
 
         for i in range(length):
              # fig, (ax1, ax2) = plt.subplots(2, sharex='all')
-            fig, ax1 = plt.subplots(1)
+            fig, ax1 = plt.subplots(1, figsize=(10, 10))
             fake_price_list, fake_noise_list, price_list, noise_list, fake_B1, fake_B2, fake_B3, _B1, _B2, _B3 = self._load_sim_dataset(i)
             start_price, end_price = price_list[0], price_list[-1]
             if abs(prices[i] - start_price) > 1e-7 or \

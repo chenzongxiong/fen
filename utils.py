@@ -241,7 +241,7 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
     # fig, (ax1, ax2, ax3) = plt.subplots(3, sharex='all')
     # fig, (ax1, ax2, ax3) = plt.subplots(3, sharex=False)
     # fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex='col')
-    fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+    fig, (ax1, ax2) = plt.subplots(2, sharex=True, figsize=(10, 10))
     # fig, axes = plt.subplots(2, 2, sharex='col')
     # ax1, ax2, ax3, ax4 = axes[0, 0], axes[1, 0], axes[0, 1], axes[1, 1]
     plot_simulation_info(i-1, ax1)
@@ -251,7 +251,7 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
     bk_list = kwargs.pop('bk_list', None)
     if guess_price_seq is not None:
         # fig1, (ax3, ax4) = plt.subplots(2, sharex=True, figsize=(20, 20))
-        fig1, (ax3, ax4, ax5) = plt.subplots(3, sharex=False, figsize=(20, 20))
+        fig1, (ax3, ax4, ax5) = plt.subplots(3, sharex=False, figsize=(10, 10))
         guess_price_seq = guess_price_seq.reshape(-1)
         bk_list = bk_list.reshape(-1)
         plot_price_span(guess_price_seq, ax3)
@@ -301,8 +301,8 @@ def plot_simulation_info(i, ax):
 
     ax.plot(fake_price_list, fake_B1, 'r', fake_price_list, fake_B2, 'c--', fake_price_list, fake_B3, 'k--')
     ax.plot(price_list, _B1, 'r', price_list, _B2, 'c', price_list, _B3, 'k-')
-    ax.plot(fake_price_list, fake_stock_list, color='blue', marker='*', markersize=2, linestyle='--')
-    ax.plot(price_list, stock_list, color='blue', marker='o', markersize=4)
+    ax.plot(fake_price_list, fake_stock_list, color='blue', marker='s', markersize=2, linestyle='--')
+    ax.plot(price_list, stock_list, color='blue', marker='.', markersize=4)
     ax.set_xlabel("prices")
     ax.set_ylabel("#Noise")
 
