@@ -2082,7 +2082,7 @@ class MyModel(object):
         self._fmt_brief = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'
         self._fmt_truth = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'
         self._fmt_fake = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'
-        length = 600
+        length = 10
         assert length <= prices.shape[-1] - 1, "Length must be less than prices.shape-1"
         batch_size = self.batch_input_shape[-1]
         # states_list = None
@@ -2138,6 +2138,10 @@ class MyModel(object):
                 noise_list_ = noise_list[::size // 50]
                 noise_list = np.hstack([noise_list_, noise_list[-1]])
 
+
+            fake_price_list = price_list
+            fake_noise_list = noise_list
+
             self._plot_sim(ax1, fake_price_list, fake_noise_list,
                            price_list, noise_list, fake_B1,
                            fake_B2, fake_B3, _B1, _B2, _B3)
@@ -2161,6 +2165,9 @@ class MyModel(object):
             interpolated_noises_ = interpolated_noises[::step]
             interpolated_prices = np.hstack([interpolated_prices_, interpolated_prices[-1]])
             interpolated_noises = np.hstack([interpolated_noises_, interpolated_noises[-1]])
+
+            fake_interpolated_prices = interpolated_prices
+            fake_interpolated_noises = interpolated_noises
 
             self._plot_interpolated(ax1, fake_interpolated_prices, fake_interpolated_noises,
                                     interpolated_prices, interpolated_noises, fake_B1,
