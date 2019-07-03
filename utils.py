@@ -251,7 +251,7 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
     bk_list = kwargs.pop('bk_list', None)
     if guess_price_seq is not None:
         # fig1, (ax3, ax4) = plt.subplots(2, sharex=True, figsize=(20, 20))
-        fig1, (ax3, ax4, ax5) = plt.subplots(3, sharex=False)
+        fig1, (ax3, ax4, ax5) = plt.subplots(3, sharex=False, figsize=(20, 20))
         guess_price_seq = guess_price_seq.reshape(-1)
         bk_list = bk_list.reshape(-1)
         plot_price_span(guess_price_seq, ax3)
