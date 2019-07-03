@@ -2121,6 +2121,20 @@ class MyModel(object):
             # NOTE: correct here, don't change
             states_list = [o[i] for o in operator_outputs]
 
+            fake_size = fake_price_list.shape[-1]
+            if fake_size >= 30:
+                fake_price_list_ = fake_price_list[::fake_size // 30]
+                fake_price_list = np.hstack([fake_price_list, fake_price_list[-1]])
+                fake_noise_list_ = fake_noise_list[::fake_size // 30]
+                fake_noise_list = np.hstack([fake_noise_list, fake_noise_list[-1]])
+
+            size = price_list.shape[-1]
+            if size >= 30:
+                price_list_ = price_list[::size // 30]
+                price_list = np.hstack([price_list, price_list[-1]])
+                noise_list_ = noise_list[::size // 30]
+                noise_list = np.hstack([noise_list, noise_list[-1]])
+
             self._plot_sim(ax1, fake_price_list, fake_noise_list,
                            price_list, noise_list, fake_B1,
                            fake_B2, fake_B3, _B1, _B2, _B3)
