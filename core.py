@@ -86,7 +86,7 @@ def do_guess_helper(step, direction, start_price, nb_plays, activation, sign, pr
             pp2 = np.exp(pp2) - 1
             pp = pp1 + pp2
         elif activation == 'softmax':
-            raise Exception("not implement softmax yet")
+            pp = np.log(1 + np.exp(pp))
         else:
             raise Exception("not support for activation {}".format(colors.red(activation)))
 
@@ -382,6 +382,8 @@ def gradient_nonlinear_layer(fZ, weights=None, activation=None, reduce_sum=True)
         a = tf.cast(_fZ >= 0, dtype=tf.float32)
         b = tf.cast(_fZ < 0, dtype=tf.float32)
         partial_gradient = a + b * (_fZ + 1)
+    elif activation == 'softmax':
+        partial_gradient = 1.0 - 1.0 / tf.math.exp(fZ)
     else:
         raise Exception("activation: {} not support".format(activation))
 
@@ -659,6 +661,10 @@ class Operator(RNN):
                 tf.keras.backend.set_value(state, value)
 
 
+def my_softmax(x):
+    return tf.math.log(1 + tf.math.exp(x))
+
+
 class MyDense(Layer):
     def __init__(self, units=1,
                  activation="tanh",
@@ -681,7 +687,11 @@ class MyDense(Layer):
         self.units = units
         self._weight = weight
 
-        self.activation = activations.get(activation)
+        if activation == 'softmax':
+            self.activation = my_softmax
+        else:
+            self.activation = activations.get(activation)
+
         self.kernel_initializer = initializers.get(kernel_initializer)
         self.kernel_regularizer = regularizers.get(kernel_regularizer)
         self.kernel_constraint = constraints.get(kernel_constraint)
@@ -1250,7 +1260,7 @@ class MyModel(object):
         if self._unittest is False:
             assert timestep == 1, colors.red('timestep must be 1')
 
-        assert activation in [None, 'tanh', 'relu', 'elu'], colors.red("activation {} not support".format(activation))
+        assert activation in [None, 'tanh', 'relu', 'elu', 'softmax'], colors.red("activation {} not support".format(activation))
 
         # fix random seed to 123
         seed = 123
@@ -1555,12 +1565,12 @@ class MyModel(object):
             # (T * 1)
             # by hand
             J_by_hand = tf.reduce_mean(tf.concat(self.J_list_by_hand, axis=-1), axis=-1, keepdims=True)
-            self.J_by_hand = tf.reshape(J_by_hand, shape=(-1,))
 
             if self._unittest is True:
                 # we don't care about the graidents of loss function, it's calculated by tensorflow.
                 return
 
+            self.J_by_hand = tf.reshape(J_by_hand, shape=(-1,))
             normalized_J_by_hand = tf.clip_by_value(tf.abs(self.J_by_hand), clip_value_min=1e-18, clip_value_max=1e18)
 
             # TODO: support derivation for p0
@@ -1713,8 +1723,10 @@ class MyModel(object):
     def trend(self, prices, B, mu, sigma,
               start_pos=1000, end_pos=1100,
               delta=0.001, max_iteration=10000):
-        tart_pos = 500
-        end_pos = 510
+        start_pos = 0
+        end_pos = 10
+        # start_pos = 500
+        # end_pos = 510
         # end_pos = 600
         # end_pos = 1012
         assert start_pos > 0, colors.red("start_pos must be larger than 0")

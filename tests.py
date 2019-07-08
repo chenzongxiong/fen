@@ -4,6 +4,7 @@ import tensorflow as tf
 # tf.enable_eager_execution()
 
 from tensorflow.python.framework import ops
+from tensorflow.python.keras import activations
 from tensorflow.python.ops.parallel_for.gradients import jacobian
 import pickle
 import pickletools
@@ -180,11 +181,13 @@ class TestCases(unittest.TestCase):
     #     self.assertTrue(np.allclose(np.diag(J).reshape(-1), result_by_hand.reshape(-1)))
     #     self.assertTrue(np.allclose(J.sum(axis=0).reshape(-1), result_by_tf.reshape(-1)))
 
-    # def test_gradient_mydense(self):
-    #     self._test_gradient_mydense_helper(activation=None)
-    #     self._test_gradient_mydense_helper(activation='tanh')
-    #     self._test_gradient_mydense_helper(activation='relu')
-    #     self._test_gradient_mydense_helper(activation='elu')
+    def test_gradient_mydense(self):
+        # self._test_gradient_mydense_helper(activation=None)
+        # self._test_gradient_mydense_helper(activation='tanh')
+        # self._test_gradient_mydense_helper(activation='relu')
+        # self._test_gradient_mydense_helper(activation='elu')
+        # self._test_gradient_mydense_helper(activation='softmax')
+        pass
 
     # def test_gradient_mysimpledense(self):
     #     input_1 = ops.convert_to_tensor(self.inputs.reshape([1, -1, 2]), dtype=tf.float32)
@@ -200,132 +203,137 @@ class TestCases(unittest.TestCase):
     #     result_by_tf, result_by_hand = self.session.run([gradient_by_tf, gradient_by_hand])
     #     self.assertTrue(np.allclose(result_by_tf, result_by_hand, atol=1e-7))
 
-    # def test_gradient_operator_mydense(self):
-    #     self._test_gradient_operator_mydense_helper(activation=None)
-    #     self._test_gradient_operator_mydense_helper(activation='tanh')
-    #     self._test_gradient_operator_mydense_helper(activation='relu')
-    #     self._test_gradient_operator_mydense_helper(activation='elu')
+    def test_gradient_operator_mydense(self):
+        # self._test_gradient_operator_mydense_helper(activation=None)
+        # self._test_gradient_operator_mydense_helper(activation='tanh')
+        # self._test_gradient_operator_mydense_helper(activation='relu')
+        # self._test_gradient_operator_mydense_helper(activation='elu')
+        # self._test_gradient_operator_mydense_helper(activation='softmax')
+        pass
 
-    # def test_gradient_all(self):
-    #     self._test_gradient_all_helper(activation=None)
-    #     self._test_gradient_all_helper(activation='tanh')
-    #     self._test_gradient_all_helper(activation='relu')
-    #     self._test_gradient_all_helper(activation='elu')
+    def test_gradient_all(self):
+        # self._test_gradient_all_helper(activation=None)
+        # self._test_gradient_all_helper(activation='tanh')
+        # self._test_gradient_all_helper(activation='relu')
+        # self._test_gradient_all_helper(activation='elu')
+        # self._test_gradient_all_helper(activation='softmax')
+        pass
 
-    # def _test_gradient_mydense_helper(self, activation):
-    #     units = 10
-    #     input_1 = ops.convert_to_tensor(self.inputs.reshape([1, -1, 1]), dtype=tf.float32)
-    #     mydense = core.MyDense(units=units,
-    #                            activation=activation,
-    #                            use_bias=True,
-    #                            debug=False)
+    def _test_gradient_mydense_helper(self, activation):
+        units = 10
+        input_1 = ops.convert_to_tensor(self.inputs.reshape([1, -1, 1]), dtype=tf.float32)
+        mydense = core.MyDense(units=units,
+                               activation=activation,
+                               use_bias=True,
+                               debug=False)
 
-    #     output_1 = mydense(input_1)
-    #     gradient_by_tf = tf.gradients(output_1, input_1)[0]
-    #     gradient_by_hand = core.gradient_nonlinear_layer(output_1, mydense.kernel, activation=activation)
-    #     utils.init_tf_variables()
-    #     result_by_tf, result_by_hand = self.session.run([gradient_by_tf, gradient_by_hand])
-    #     self.assertTrue(np.allclose(result_by_tf.reshape(-1), result_by_hand.reshape(-1), atol=1e-7))
+        output_1 = mydense(input_1)
+        gradient_by_tf = tf.gradients(output_1, input_1)[0]
+        gradient_by_hand = core.gradient_nonlinear_layer(output_1, mydense.kernel, activation=activation)
+        utils.init_tf_variables()
+        result_by_tf, result_by_hand = self.session.run([gradient_by_tf, gradient_by_hand])
+        self.assertTrue(np.allclose(result_by_tf.reshape(-1), result_by_hand.reshape(-1), atol=1e-7))
 
-    # def _test_gradient_operator_mydense_helper(self, activation):
-    #     units = 5
-    #     debug = False
-    #     input_1 = ops.convert_to_tensor(self.inputs.reshape([1, 1, -1]), dtype=tf.float32)
-    #     operator = core.Operator(debug=debug)
-    #     output_1 = operator(input_1)
-    #     mydense = core.MyDense(units=units,
-    #                            activation=activation,
-    #                            use_bias=True,
-    #                            debug=debug)
-    #     output_2 = mydense(output_1)
-    #     gradient_by_tf = tf.gradients(output_2, input_1)[0]
+    def _test_gradient_operator_mydense_helper(self, activation):
+        units = 5
+        debug = False
+        input_1 = ops.convert_to_tensor(self.inputs.reshape([1, 1, -1]), dtype=tf.float32)
+        operator = core.Operator(debug=debug)
+        output_1 = operator(input_1)
+        mydense = core.MyDense(units=units,
+                               activation=activation,
+                               use_bias=True,
+                               debug=debug)
+        output_2 = mydense(output_1)
+        gradient_by_tf = tf.gradients(output_2, input_1)[0]
 
-    #     gradient_by_hand = core.gradient_operator_nonlinear_layers(output_1,
-    #                                                                output_2,
-    #                                                                operator.kernel,
-    #                                                                mydense.kernel,
-    #                                                                activation,
-    #                                                                debug=True,
-    #                                                                inputs=input_1)
+        gradient_by_hand = core.gradient_operator_nonlinear_layers(output_1,
+                                                                   output_2,
+                                                                   operator.kernel,
+                                                                   mydense.kernel,
+                                                                   activation,
+                                                                   debug=True,
+                                                                   inputs=input_1)
 
-    #     utils.init_tf_variables()
-    #     result_by_tf, result_by_hand = self.session.run([gradient_by_tf, gradient_by_hand])
-    #     self.assertTrue(np.allclose(result_by_tf.reshape(-1), result_by_hand.reshape(-1)))
+        utils.init_tf_variables()
+        result_by_tf, result_by_hand = self.session.run([gradient_by_tf, gradient_by_hand])
+        self.assertTrue(np.allclose(result_by_tf.reshape(-1), result_by_hand.reshape(-1)))
 
-    # def _test_gradient_all_helper(self, activation):
-    #     units = 5
-    #     debug = False
-    #     input_1 = ops.convert_to_tensor(self.inputs.reshape([1, 1, -1]), dtype=tf.float32)
-    #     operator = core.Operator(debug=debug)
-    #     output_1 = operator(input_1)
-    #     mydense = core.MyDense(units=units,
-    #                            activation=activation,
-    #                            use_bias=True,
-    #                            debug=debug)
-    #     output_2 = mydense(output_1)
+    def _test_gradient_all_helper(self, activation):
+        units = 5
+        debug = False
+        input_1 = ops.convert_to_tensor(self.inputs.reshape([1, 1, -1]), dtype=tf.float32)
+        operator = core.Operator(debug=debug)
+        output_1 = operator(input_1)
+        mydense = core.MyDense(units=units,
+                               activation=activation,
+                               use_bias=True,
+                               debug=debug)
+        output_2 = mydense(output_1)
 
-    #     mysimpledense = core.MySimpleDense(units=1,
-    #                                        use_bias=True,
-    #                                        activation=None,
-    #                                        debug=debug)
-    #     output_3 = mysimpledense(output_2)
-    #     gradient_by_tf = tf.reshape(tf.gradients(output_3, input_1)[0], shape=output_1.shape)
-    #     gradient_by_hand = core.gradient_all_layers(output_1,
-    #                                                 output_2,
-    #                                                 operator.kernel,
-    #                                                 mydense.kernel,
-    #                                                 mysimpledense.kernel,
-    #                                                 activation,
-    #                                                 debug=True,
-    #                                                 inputs=input_1)
-    #     utils.init_tf_variables()
-    #     result_by_tf, result_by_hand = self.session.run([gradient_by_tf, gradient_by_hand])
-    #     self.assertTrue(np.allclose(result_by_tf, result_by_hand))
+        mysimpledense = core.MySimpleDense(units=1,
+                                           use_bias=True,
+                                           activation=None,
+                                           debug=debug)
+        output_3 = mysimpledense(output_2)
+        gradient_by_tf = tf.reshape(tf.gradients(output_3, input_1)[0], shape=output_1.shape)
+        gradient_by_hand = core.gradient_all_layers(output_1,
+                                                    output_2,
+                                                    operator.kernel,
+                                                    mydense.kernel,
+                                                    mysimpledense.kernel,
+                                                    activation,
+                                                    debug=True,
+                                                    inputs=input_1)
+        utils.init_tf_variables()
+        result_by_tf, result_by_hand = self.session.run([gradient_by_tf, gradient_by_hand])
+        self.assertTrue(np.allclose(result_by_tf, result_by_hand))
 
-    # def test_multiple_plays(self):
-    #     # Note: test one by one, uncomment the case you want to test
-    #     # self._test_multiple_plays_helper(1, None, 1)
-    #     # self._test_multiple_plays_helper(1, None, 5)
-    #     # self._test_multiple_plays_helper(2, None, 1)
-    #     # self._test_multiple_plays_helper(2, None, 5)
-    #     # self._test_multiple_plays_helper(1, 'tanh', 1)
-    #     # self._test_multiple_plays_helper(1, 'tanh', 5)
-    #     # self._test_multiple_plays_helper(2, 'tanh', 1)
-    #     # self._test_multiple_plays_helper(2, 'tanh', 5)
-    #     # self._test_multiple_plays_helper(1, 'relu', 1)
-    #     # self._test_multiple_plays_helper(1, 'relu', 5)
-    #     # self._test_multiple_plays_helper(2, 'relu', 1)
-    #     # self._test_multiple_plays_helper(2, 'relu', 5)
-    #     # self._test_multiple_plays_helper(1, 'elu', 1)
-    #     # self._test_multiple_plays_helper(1, 'elu', 5)
-    #     # self._test_multiple_plays_helper(2, 'elu', 1)
-    #     self._test_multiple_plays_helper(2, 'elu', 5)
-    #     pass
+    def test_multiple_plays(self):
+        # Note: test one by one, uncomment the case you want to test
+        # self._test_multiple_plays_helper(1, None, 1)
+        # self._test_multiple_plays_helper(1, None, 5)
+        # self._test_multiple_plays_helper(2, None, 1)
+        # self._test_multiple_plays_helper(2, None, 5)
+        # self._test_multiple_plays_helper(1, 'tanh', 1)
+        # self._test_multiple_plays_helper(1, 'tanh', 5)
+        # self._test_multiple_plays_helper(2, 'tanh', 1)
+        # self._test_multiple_plays_helper(2, 'tanh', 5)
+        # self._test_multiple_plays_helper(1, 'relu', 1)
+        # self._test_multiple_plays_helper(1, 'relu', 5)
+        # self._test_multiple_plays_helper(2, 'relu', 1)
+        # self._test_multiple_plays_helper(2, 'relu', 5)
+        # self._test_multiple_plays_helper(1, 'elu', 1)
+        # self._test_multiple_plays_helper(1, 'elu', 5)
+        # self._test_multiple_plays_helper(2, 'elu', 1)
+        # self._test_multiple_plays_helper(2, 'elu', 5)
+        self._test_multiple_plays_helper(2, 'softmax', 5)
+        pass
 
-    # def _test_multiple_plays_helper(self, nb_plays, activation, input_dim):
-    #     units = 5
-    #     # timestep = self.inputs.shape[0] // input_dim
-    #     timestep = 1
-    #     mymodel = core.MyModel(nb_plays=nb_plays,
-    #                            units=units,
-    #                            input_dim=input_dim,
-    #                            timestep=timestep,
-    #                            activation=activation,
-    #                            debug=True,
-    #                            unittest=True)
-    #     mymodel.compile(self.inputs[:input_dim], mu=0, sigma=1)
-    #     utils.init_tf_variables()
+    def _test_multiple_plays_helper(self, nb_plays, activation, input_dim):
+        units = 5
+        # timestep = self.inputs.shape[0] // input_dim
+        timestep = 1
+        mymodel = core.MyModel(nb_plays=nb_plays,
+                               units=units,
+                               input_dim=input_dim,
+                               timestep=timestep,
+                               activation=activation,
+                               debug=True,
+                               unittest=True)
+        mymodel.compile(self.inputs[:input_dim], mu=0, sigma=1)
+        utils.init_tf_variables()
 
-    #     result_by_tf, result_by_hand, result_J_list_by_tf, result_J_list_by_hand = self.session.run([mymodel.J_by_tf, mymodel.J_by_hand,
-    #                                                                                                  mymodel.J_list_by_tf, mymodel.J_list_by_hand],
-    #                                                                                                 feed_dict=mymodel._x_feed_dict)
-    #     for by_tf, by_hand in zip(result_J_list_by_tf, result_J_list_by_hand):
-    #         if not np.allclose(by_hand, by_tf, atol=1e-7):
-    #             print("ERROR: ")
-    #             import ipdb; ipdb.set_trace()
+        result_by_tf, result_by_hand, result_J_list_by_tf, result_J_list_by_hand = self.session.run([mymodel.J_by_tf, mymodel.J_by_hand,
+                                                                                                     mymodel.J_list_by_tf, mymodel.J_list_by_hand],
+                                                                                                    feed_dict=mymodel._x_feed_dict)
+        for by_tf, by_hand in zip(result_J_list_by_tf, result_J_list_by_hand):
+            if not np.allclose(by_hand, by_tf, atol=1e-7):
+                print("ERROR: ")
+                import ipdb; ipdb.set_trace()
 
-    #     self.assertTrue(np.allclose(result_by_tf, result_by_hand, atol=1e-7))
-    #     del mymodel
+        self.assertTrue(np.allclose(result_by_tf.reshape(-1), result_by_hand.reshape(-1), atol=1e-7))
+        del mymodel
 
 
     # def test_confusion_matrix(self):
@@ -500,20 +508,27 @@ class TestCases(unittest.TestCase):
     #     model.fit(inputs, outputs, verbose=1, epochs=1, steps_per_epoch=2)
 
 
-    def test_mean_of_J(self):
-        a1 = tf.constant([1, 2, 3, 4], shape=(1, 4, 1))
-        a2 = tf.constant([5, 6, 7, 8], shape=(1, 4, 1))
-        a = tf.reduce_mean(tf.concat([a1, a2], axis=-1), axis=-1, keepdims=True)
-        truth = tf.constant([3, 4, 5, 6], shape=(1, 4, 1))
-        self.assertTrue(a.shape.as_list() == truth.shape.as_list())
-        a_result, b_result = self.session.run([a, truth])
-        self.assertTrue(np.allclose(a_result, b_result))
+    # def test_mean_of_J(self):
+    #     a1 = tf.constant([1, 2, 3, 4], shape=(1, 4, 1))
+    #     a2 = tf.constant([5, 6, 7, 8], shape=(1, 4, 1))
+    #     a = tf.reduce_mean(tf.concat([a1, a2], axis=-1), axis=-1, keepdims=True)
+    #     truth = tf.constant([3, 4, 5, 6], shape=(1, 4, 1))
+    #     self.assertTrue(a.shape.as_list() == truth.shape.as_list())
+    #     a_result, b_result = self.session.run([a, truth])
+    #     self.assertTrue(np.allclose(a_result, b_result))
 
-    def test_is_tensor(self):
-        a = np.array([1, 2, 3, 4])
-        a1 = ops.convert_to_tensor(a)
-        self.assertTrue(isinstance(a1, tf.Tensor))
+    # def test_is_tensor(self):
+    #     a = np.array([1, 2, 3, 4])
+    #     a1 = ops.convert_to_tensor(a)
+    #     self.assertTrue(isinstance(a1, tf.Tensor))
 
+    def test_activation_softmax(self):
+        a = np.array([1, 2, 3, 4], dtype=np.float32).reshape([1, 4, 1])
+        a1 = np.log(1 + np.exp(a))
+        aa = tf.constant([1, 2, 3, 4], shape=(1, 4, 1), dtype=tf.float32)
+        aa1 = core.my_softmax(aa)
+        aa2 = self.session.run(aa1)
+        self.assertTrue(np.allclose(a1, aa2))
 
 if __name__ == '__main__':
     unittest.main()
