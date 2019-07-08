@@ -31,7 +31,7 @@ def fit(inputs,
         ensemble=1):
 
     epochs = 20000
-    epochs = 1
+    # epochs = 1
 
     start = time.time()
     input_dim = batch_size
