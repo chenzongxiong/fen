@@ -668,7 +668,7 @@ if __name__ == "__main__":
             predicted_fname = "{}-epochs-{}.csv".format(predicted_fname[:-4], best_epoch)
 
     elif do_plot is True:
-        inputs, outputs = inputs[:batch_size], outputs[:batch_size]
+        inputs, outputs = inputs[:batch_size*2], outputs[:batch_size*2]
         plot_graphs_together(price_list=inputs, noise_list=outputs, mu=__mu__, sigma=__sigma__,
                              weights_name=weights_fname,
                              units=__units__,
