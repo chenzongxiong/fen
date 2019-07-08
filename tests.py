@@ -189,19 +189,19 @@ class TestCases(unittest.TestCase):
         # self._test_gradient_mydense_helper(activation='softmax')
         pass
 
-    # def test_gradient_mysimpledense(self):
-    #     input_1 = ops.convert_to_tensor(self.inputs.reshape([1, -1, 2]), dtype=tf.float32)
-    #     mysimpledense = core.MySimpleDense(units=1,
-    #                                        use_bias=True,
-    #                                        debug=False)
-    #     output_1 = mysimpledense(input_1)
-    #     gradient_by_tf = tf.gradients(output_1, input_1)[0]
-    #     utils.init_tf_variables()
-    #     gradient_by_hand = core.gradient_linear_layer(mysimpledense.kernel,
-    #                                                   multiples=self.inputs.shape[0]//input_1.shape[-1].value)
+    def test_gradient_mysimpledense(self):
+        input_1 = ops.convert_to_tensor(self.inputs.reshape([1, -1, 2]), dtype=tf.float32)
+        mysimpledense = core.MySimpleDense(units=1,
+                                           use_bias=True,
+                                           debug=False)
+        output_1 = mysimpledense(input_1)
+        gradient_by_tf = tf.gradients(output_1, input_1)[0]
+        utils.init_tf_variables()
+        gradient_by_hand = core.gradient_linear_layer(mysimpledense.kernel,
+                                                      multiples=self.inputs.shape[0]//input_1.shape[-1].value)
 
-    #     result_by_tf, result_by_hand = self.session.run([gradient_by_tf, gradient_by_hand])
-    #     self.assertTrue(np.allclose(result_by_tf, result_by_hand, atol=1e-7))
+        result_by_tf, result_by_hand = self.session.run([gradient_by_tf, gradient_by_hand])
+        self.assertTrue(np.allclose(result_by_tf, result_by_hand, atol=1e-7))
 
     def test_gradient_operator_mydense(self):
         # self._test_gradient_operator_mydense_helper(activation=None)
@@ -307,7 +307,7 @@ class TestCases(unittest.TestCase):
         # self._test_multiple_plays_helper(1, 'elu', 5)
         # self._test_multiple_plays_helper(2, 'elu', 1)
         # self._test_multiple_plays_helper(2, 'elu', 5)
-        self._test_multiple_plays_helper(2, 'softmax', 5)
+        # self._test_multiple_plays_helper(2, 'softmax', 5)
         pass
 
     def _test_multiple_plays_helper(self, nb_plays, activation, input_dim):
@@ -399,8 +399,8 @@ class TestCases(unittest.TestCase):
 
 
     def test_stateful_model(self):
-        # self._test_stateful_model_simple(nb_plays=1)
-        # self._test_stateful_model_simple(nb_plays=2)
+        self._test_stateful_model_simple(nb_plays=1)
+        self._test_stateful_model_simple(nb_plays=2)
 
         # self._test_stateful_model(1)
         # self._test_stateful_model(2)
@@ -415,42 +415,42 @@ class TestCases(unittest.TestCase):
         # self._test_stateful_model(2, 20)
         pass
 
-    # def _test_stateful_model_simple(self, nb_plays):
-    #     units = 5
-    #     input_dim = 10          # it's batch_size
+    def _test_stateful_model_simple(self, nb_plays):
+        units = 5
+        input_dim = 10          # it's batch_size
 
-    #     activation = None
-    #     input_1, input_2 = self.inputs[:10], self.inputs[10:]
+        activation = None
+        input_1, input_2 = self.inputs[:10], self.inputs[10:]
 
-    #     mymodel = core.MyModel(nb_plays=nb_plays,
-    #                            units=units,
-    #                            input_dim=input_dim,
-    #                            timestep=1,
-    #                            activation=activation,
-    #                            debug=True)
+        mymodel = core.MyModel(nb_plays=nb_plays,
+                               units=units,
+                               input_dim=input_dim,
+                               timestep=1,
+                               activation=activation,
+                               debug=True)
 
-    #     mymodel.compile(input_1, mu=0, sigma=1, test_stateful=True)
+        mymodel.compile(input_1, mu=0, sigma=1, test_stateful=True)
 
-    #     ins = [input_1.reshape(mymodel.batch_input_shape)]
-    #     utils.init_tf_variables()
+        ins = [input_1.reshape(mymodel.batch_input_shape)]
+        utils.init_tf_variables()
 
-    #     states_list = [0] * mymodel._nb_plays
-    #     mymodel.reset_states(states_list=states_list)
-    #     output_1 = mymodel.train_function(ins)
+        states_list = [0] * mymodel._nb_plays
+        mymodel.reset_states(states_list=states_list)
+        output_1 = mymodel.train_function(ins)
 
-    #     ins = [input_2.reshape(mymodel.batch_input_shape)]
-    #     states_list = [o.reshape(-1)[-1] for o in output_1]
-    #     mymodel.reset_states(states_list=states_list)
-    #     output_2 = mymodel.train_function(ins)
+        ins = [input_2.reshape(mymodel.batch_input_shape)]
+        states_list = [o.reshape(-1)[-1] for o in output_1]
+        mymodel.reset_states(states_list=states_list)
+        output_2 = mymodel.train_function(ins)
 
-    #     results = []
-    #     for o1, o2 in zip(output_1, output_2):
-    #         result = np.hstack([o1.reshape(-1), o2.reshape(-1)])
-    #         results.append(result)
+        results = []
+        for o1, o2 in zip(output_1, output_2):
+            result = np.hstack([o1.reshape(-1), o2.reshape(-1)])
+            results.append(result)
 
-    #     truth = [self.truth_with_state_zero] * mymodel._nb_plays
-    #     for r, t in zip(results, truth):
-    #         self.assertTrue(np.allclose(r, t))
+        truth = [self.truth_with_state_zero] * mymodel._nb_plays
+        for r, t in zip(results, truth):
+            self.assertTrue(np.allclose(r, t))
 
     def _test_stateful_model(self, nb_plays, input_dim=10):
         length = self.inputs.shape[-1]
