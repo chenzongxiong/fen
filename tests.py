@@ -369,85 +369,87 @@ class TestCases(unittest.TestCase):
     #     self.assertTrue(np.allclose(result_2.reshape(-1), self.truth_with_state_one))
     #     self.assertTrue(np.allclose(states, op_states))
 
-    def test_stateful(self):
-        input_dim = self.inputs.shape[-1]
-        activation = None
-        timestep = self.inputs.shape[0] // input_dim
+    # def test_stateful(self):
+    #     input_dim = self.inputs.shape[-1]
+    #     activation = None
+    #     timestep = self.inputs.shape[0] // input_dim
 
-        mymodel = core.MyModel(nb_plays=1,
-                               units=5,
-                               input_dim=input_dim,
-                               timestep=timestep,
-                               activation=activation,
-                               debug=True)
+    #     mymodel = core.MyModel(nb_plays=1,
+    #                            units=5,
+    #                            input_dim=input_dim,
+    #                            timestep=timestep,
+    #                            activation=activation,
+    #                            debug=True)
 
-        mymodel.compile(self.inputs, mu=0, sigma=1, test_stateful=True)
-        ins = [self.inputs.reshape(1, 1, -1)]
-        utils.init_tf_variables()
+    #     mymodel.compile(self.inputs, mu=0, sigma=1, test_stateful=True)
+    #     ins = [self.inputs.reshape(1, 1, -1)]
+    #     utils.init_tf_variables()
 
-        states_list = [0] * mymodel._nb_plays
-        mymodel.reset_states(states_list=states_list)
-        op_output_1 = mymodel.train_function(ins)[0]
-        self.assertTrue(np.allclose(op_output_1.reshape(-1), self.truth_with_state_zero))
+    #     states_list = [0] * mymodel._nb_plays
+    #     mymodel.reset_states(states_list=states_list)
+    #     op_output_1 = mymodel.train_function(ins)[0]
 
-        states_list = [1] * mymodel._nb_plays
-        mymodel.reset_states(states_list=states_list)
-        op_output_2 = mymodel.train_function(ins)[0]
-        self.assertTrue(np.allclose(op_output_2.reshape(-1), self.truth_with_state_one))
+    #     self.assertTrue(np.allclose(op_output_1.reshape(-1), self.truth_with_state_zero))
+
+    #     states_list = [1] * mymodel._nb_plays
+    #     mymodel.reset_states(states_list=states_list)
+    #     op_output_2 = mymodel.train_function(ins)[0]
+
+    #     self.assertTrue(np.allclose(op_output_2.reshape(-1), self.truth_with_state_one))
 
 
     def test_stateful_model(self):
-        self._test_stateful_model_simple(nb_plays=1)
-        self._test_stateful_model_simple(nb_plays=2)
+        # self._test_stateful_model_simple(nb_plays=1)
+        # self._test_stateful_model_simple(nb_plays=2)
 
-        self._test_stateful_model(1)
-        self._test_stateful_model(2)
+        # self._test_stateful_model(1)
+        # self._test_stateful_model(2)
 
-        self._test_stateful_model(1, 2)
-        self._test_stateful_model(2, 2)
+        # self._test_stateful_model(1, 2)
+        # self._test_stateful_model(2, 2)
 
-        self._test_stateful_model(1, 5)
-        self._test_stateful_model(2, 5)
+        # self._test_stateful_model(1, 5)
+        # self._test_stateful_model(2, 5)
 
         self._test_stateful_model(1, 20)
         self._test_stateful_model(2, 20)
 
-    def _test_stateful_model_simple(self, nb_plays):
-        units = 5
-        input_dim = 10          # it's batch_size
+    # def _test_stateful_model_simple(self, nb_plays):
+    #     units = 5
+    #     input_dim = 10          # it's batch_size
 
-        activation = None
-        input_1, input_2 = self.inputs[:10], self.inputs[10:]
+    #     activation = None
+    #     input_1, input_2 = self.inputs[:10], self.inputs[10:]
 
-        mymodel = core.MyModel(nb_plays=nb_plays,
-                               units=units,
-                               input_dim=input_dim,
-                               timestep=1,
-                               activation=activation,
-                               debug=True)
+    #     mymodel = core.MyModel(nb_plays=nb_plays,
+    #                            units=units,
+    #                            input_dim=input_dim,
+    #                            timestep=1,
+    #                            activation=activation,
+    #                            debug=True)
 
-        mymodel.compile(input_1, mu=0, sigma=1, test_stateful=True)
+    #     mymodel.compile(input_1, mu=0, sigma=1, test_stateful=True)
 
-        ins = [input_1.reshape(mymodel.batch_input_shape)]
-        utils.init_tf_variables()
+    #     ins = [input_1.reshape(mymodel.batch_input_shape)]
+    #     utils.init_tf_variables()
 
-        states_list = [0] * mymodel._nb_plays
-        mymodel.reset_states(states_list=states_list)
-        output_1 = mymodel.train_function(ins)
+    #     states_list = [0] * mymodel._nb_plays
+    #     mymodel.reset_states(states_list=states_list)
+    #     output_1 = mymodel.train_function(ins)
 
-        ins = [input_2.reshape(mymodel.batch_input_shape)]
-        states_list = [o.reshape(-1)[-1] for o in output_1]
-        mymodel.reset_states(states_list=states_list)
-        output_2 = mymodel.train_function(ins)
+    #     ins = [input_2.reshape(mymodel.batch_input_shape)]
+    #     states_list = [o.reshape(-1)[-1] for o in output_1]
+    #     mymodel.reset_states(states_list=states_list)
+    #     output_2 = mymodel.train_function(ins)
 
-        results = []
-        for o1, o2 in zip(output_1, output_2):
-            result = np.hstack([o1.reshape(-1), o2.reshape(-1)])
-            results.append(result)
+    #     results = []
+    #     for o1, o2 in zip(output_1, output_2):
+    #         result = np.hstack([o1.reshape(-1), o2.reshape(-1)])
+    #         results.append(result)
 
-        truth = [self.truth_with_state_zero] * mymodel._nb_plays
-        for r, t in zip(results, truth):
-            self.assertTrue(np.allclose(r, t))
+    #     truth = [self.truth_with_state_zero] * mymodel._nb_plays
+    #     for r, t in zip(results, truth):
+    #         self.assertTrue(np.allclose(r, t))
 
     def _test_stateful_model(self, nb_plays, input_dim=10):
         length = self.inputs.shape[-1]
@@ -523,13 +525,13 @@ class TestCases(unittest.TestCase):
     #     a1 = ops.convert_to_tensor(a)
     #     self.assertTrue(isinstance(a1, tf.Tensor))
 
-    def test_activation_softmax(self):
-        a = np.array([1, 2, 3, 4], dtype=np.float32).reshape([1, 4, 1])
-        a1 = np.log(1 + np.exp(a))
-        aa = tf.constant([1, 2, 3, 4], shape=(1, 4, 1), dtype=tf.float32)
-        aa1 = core.my_softmax(aa)
-        aa2 = self.session.run(aa1)
-        self.assertTrue(np.allclose(a1, aa2))
+    # def test_activation_softmax(self):
+    #     a = np.array([1, 2, 3, 4], dtype=np.float32).reshape([1, 4, 1])
+    #     a1 = np.log(1 + np.exp(a))
+    #     aa = tf.constant([1, 2, 3, 4], shape=(1, 4, 1), dtype=tf.float32)
+    #     aa1 = core.my_softmax(aa)
+    #     aa2 = self.session.run(aa1)
+    #     self.assertTrue(np.allclose(a1, aa2))
 
 
     # def test_create_tensor(self):

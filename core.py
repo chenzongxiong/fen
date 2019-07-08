@@ -514,7 +514,16 @@ class PhiCell(Layer):
     def build(self, input_shape):
         if self.debug:
             LOG.debug("Initialize *weight* as pre-defined: {} ....".format(self._weight))
-            self.kernel = tf.Variable([[self._weight]], name="weight", dtype=tf.float32)
+            # self.kernel = tf.Variable([[self._weight]], name="weight", dtype=tf.float32)
+            # self.kernel = tf.Variable([[1.0]], name="weight", dtype=tf.float32)
+            self.kernel = self.add_weight(
+                "weight",
+                shape=(1, 1),
+                initializer=tf.keras.initializers.Constant(value=1, dtype=tf.float32),
+                regularizer=self.kernel_regularizer,
+                constraint=self.kernel_constraint,
+                dtype=tf.float32,
+                trainable=True)
         else:
             LOG.debug("Initialize *weight* randomly...")
             assert self.units == 1, "Phi Cell unit must be equal to 1"
@@ -710,16 +719,33 @@ class MyDense(Layer):
                 _init_kernel = np.array([[self._init_kernel for i in range(self.units)]])
             else:
                 _init_kernel = np.random.uniform(low=0.0, high=1.5, size=self.units)
+
             _init_kernel = _init_kernel.reshape([1, -1])
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
-            self.kernel = tf.Variable(_init_kernel, name="theta", dtype=tf.float32)
+            # self.kernel = tf.Variable(_init_kernel, name="theta", dtype=tf.float32)
+            self.kernel = self.add_weight(
+                "theta",
+                shape=(1, self.units),
+                initializer=tf.keras.initializers.Constant(value=_init_kernel, dtype=tf.float32),
+                regularizer=self.kernel_regularizer,
+                constraint=self.kernel_constraint,
+                dtype=tf.float32,
+                trainable=True)
 
             if self.use_bias is True:
                 # _init_bias = 0
                 _init_bias = self._init_bias
                 LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
 
-                self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
+                # self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
+                self.bias = self.add_weight(
+                    "bias",
+                    shape=(1, self.units),
+                    initializer=tf.keras.initializers.Constant(value=_init_bias, dtype=tf.float32),
+                    regularizer=self.bias_regularizer,
+                    constraint=self.bias_constraint,
+                    dtype=tf.float32,
+                    trainable=True)
         else:
             self.kernel = self.add_weight(
                 "theta",
@@ -777,13 +803,29 @@ class MySimpleDense(Dense):
                 _init_kernel = np.random.uniform(low=0.0, high=1.5, size=input_shape[-1].value)
             _init_kernel = _init_kernel.reshape(-1, 1)
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
+            # self.kernel = tf.Variable(_init_kernel, name="kernel", dtype=tf.float32)
 
-            self.kernel = tf.Variable(_init_kernel, name="kernel", dtype=tf.float32)
+            self.kernel = self.add_weight(
+                "kernel",
+                shape=(input_shape[-1].value, self.units),
+                initializer=tf.keras.initializers.Constant(value=_init_kernel, dtype=tf.float32),
+                regularizer=self.kernel_regularizer,
+                constraint=self.kernel_constraint,
+                dtype=tf.float32,
+                trainable=True)
 
             if self.use_bias:
                 _init_bias = (self._init_bias,)
                 LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
-                self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
+                # self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
+                self.bias = self.add_weight(
+                    "bias",
+                    shape=(1,),
+                    initializer=tf.keras.initializers.Constant(value=_init_bias, dtype=tf.float32),
+                    regularizer=self.bias_regularizer,
+                    constraint=self.bias_constraint,
+                    dtype=tf.float32,
+                    trainable=True)
         else:
             super(MySimpleDense, self).build(input_shape)
 
@@ -1585,6 +1627,7 @@ class MyModel(object):
             # self.loss_by_hand = tf.keras.backend.mean(self.loss_a + self.loss_b)
             # self.loss_by_hand = tf.keras.backend.sum(self.loss_a + self.loss_b)
             self.loss_by_hand = tf.math.reduce_sum(self.loss_a + self.loss_b)
+
             # import ipdb; ipdb.set_trace()
             self.loss = self.loss_by_hand
             self.reg_lambda = 0.01
@@ -1615,12 +1658,13 @@ class MyModel(object):
             self.training_inputs = training_inputs
             if kwargs.get('test_stateful', False):
                 outputs = [play.operator_layer.output for play in self.plays]
+                updates = []
             else:
                 outputs = [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred, tf.keras.backend.mean(self.loss_a), tf.keras.backend.mean(self.loss_b)] + [play.operator_layer.output for play in self.plays]
 
-            self.train_function = tf.keras.backend.function(training_inputs,
-                                                            outputs,
-                                                            updates=updates)
+        self.train_function = tf.keras.backend.function(training_inputs,
+                                                        outputs,
+                                                        updates=updates)
 
     def fit2(self,
              inputs,
