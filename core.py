@@ -695,6 +695,7 @@ class MyDense(Layer):
 
         self.kernel_initializer = initializers.get(kernel_initializer)
         self.kernel_regularizer = regularizers.get(kernel_regularizer)
+
         self.kernel_constraint = constraints.get(kernel_constraint)
         if use_bias is True:
             self.bias_initializer = initializers.get(bias_initializer)
@@ -1256,6 +1257,7 @@ class MyModel(object):
                  diff_weights=False,
                  network_type=constants.NetworkType.PLAY,
                  learning_rate=0.001,
+                 ensemble=1,
                  **kwargs):
         self._unittest = kwargs.pop('unittest', False)
         if self._unittest is False:
@@ -1286,7 +1288,7 @@ class MyModel(object):
                 weight = 1.0
 
             # weight = 10 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
-            weight = 2 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
+            weight = ensemble * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
             LOG.debug("MyModel generates {} with Weight: {}".format(colors.red("Play #{}".format(nb_play+1)), weight))
             if debug is True:
                 weight = 1.0
@@ -1566,12 +1568,12 @@ class MyModel(object):
             # (T * 1)
             # by hand
             J_by_hand = tf.reduce_mean(tf.concat(self.J_list_by_hand, axis=-1), axis=-1, keepdims=True)
+            self.J_by_hand = tf.reshape(J_by_hand, shape=(-1,))
 
             if self._unittest is True:
                 # we don't care about the graidents of loss function, it's calculated by tensorflow.
                 return
 
-            self.J_by_hand = tf.reshape(J_by_hand, shape=(-1,))
             normalized_J_by_hand = tf.clip_by_value(tf.abs(self.J_by_hand), clip_value_min=1e-18, clip_value_max=1e18)
 
             # TODO: support derivation for p0
@@ -1580,8 +1582,20 @@ class MyModel(object):
             # NOTE: current version is fixing mu/sigma and learn weights
             self.loss_a = tf.keras.backend.square((self.diff - mu)/sigma) / 2
             self.loss_b = - tf.keras.backend.log(normalized_J_by_hand)
-            self.loss_by_hand = tf.keras.backend.mean(self.loss_a + self.loss_b)
+            # self.loss_by_hand = tf.keras.backend.mean(self.loss_a + self.loss_b)
+            # self.loss_by_hand = tf.keras.backend.sum(self.loss_a + self.loss_b)
+            self.loss_by_hand = tf.math.reduce_sum(self.loss_a + self.loss_b)
+            # import ipdb; ipdb.set_trace()
             self.loss = self.loss_by_hand
+            self.reg_lambda = 0.01
+            self.reg_mu = 0.01
+            regularizers1 = [self.reg_lambda * tf.math.reduce_sum(tf.math.square(play.nonlinear_layer.kernel)) for play in self.plays]
+            regularizers2 = [self.reg_mu * tf.math.reduce_sum(tf.math.square(play.linear_layer.kernel)) for play in self.plays]
+            for regularizer in regularizers1:
+                self.loss += regularizer
+
+            for regularizer in regularizers2:
+                self.loss += regularizer
 
             if outputs is not None:
                 mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))

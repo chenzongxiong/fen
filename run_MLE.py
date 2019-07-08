@@ -27,10 +27,11 @@ def fit(inputs,
         loss_file_name="./tmp/my_model_loss_history.csv",
         weights_name='model.h5',
         loss_name='mse',
-        batch_size=10):
+        batch_size=10,
+        ensemble=1):
 
-    epochs = 10000
-    # epochs = 1
+    epochs = 20000
+    epochs = 1
 
     start = time.time()
     input_dim = batch_size
@@ -43,10 +44,11 @@ def fit(inputs,
                       units=units,
                       activation=activation,
                       nb_plays=nb_plays,
-                      learning_rate=learning_rate)
+                      learning_rate=learning_rate,
+                      ensemble=ensemble)
     LOG.debug("Learning rate is {}".format(learning_rate))
 
-    preload_weights = True
+    preload_weights = False
 
     if loss_name == 'mse':
         mymodel.fit(inputs,
@@ -364,6 +366,9 @@ if __name__ == "__main__":
     parser.add_argument('--__sigma__', dest='__sigma__',
                         default=110,
                         type=float)
+    parser.add_argument('--ensemble', dest='ensemble',
+                        default=2,  # start from 1
+                        type=int)
 
     argv = parser.parse_args(sys.argv[1:])
     # Hyper Parameters
@@ -386,7 +391,7 @@ if __name__ == "__main__":
     do_trend = argv.trend
     do_plot = argv.plot
     do_visualize_activated_plays = argv.visualize_activated_plays
-
+    ensemble = argv.ensemble
     with_noise = True
 
     diff_weights = True
@@ -462,6 +467,7 @@ if __name__ == "__main__":
                                                                     __units__=__units__,
                                                                     __nb_plays__=__nb_plays__,
                                                                     loss=loss_name,
+                                                                    ensemble=ensemble,
                                                                     batch_size=batch_size)
 
     if interp != 1:
@@ -506,7 +512,6 @@ if __name__ == "__main__":
                                                           nb_plays=nb_plays,
                                                           points=points,
                                                           input_dim=input_dim)
-
     LOG.debug("Load data from file: {}".format(colors.cyan(fname)))
     if do_prediction is True and do_trend is True:
         raise Exception("both do predictions and do_trend are True")
@@ -553,6 +558,7 @@ if __name__ == "__main__":
                                                                      __units__=__units__,
                                                                      __nb_plays__=__nb_plays__,
                                                                      loss=loss_name,
+                                                                     ensemble=ensemble,
                                                                      batch_size=batch_size)
 
     predicted_fname = constants.DATASET_PATH[predictions_file_key].format(interp=interp,
@@ -570,6 +576,7 @@ if __name__ == "__main__":
                                                                           __units__=__units__,
                                                                           __nb_plays__=__nb_plays__,
                                                                           loss=loss_name,
+                                                                          ensemble=ensemble,
                                                                           batch_size=batch_size)
 
     if mc_mode is True and do_trend is True:
@@ -588,6 +595,7 @@ if __name__ == "__main__":
                                                                                 __units__=__units__,
                                                                                 __nb_plays__=__nb_plays__,
                                                                                 loss=loss_name,
+                                                                                ensemble=ensemble,
                                                                                 batch_size=batch_size)
 
 
@@ -691,7 +699,8 @@ if __name__ == "__main__":
                                 loss_file_name=loss_history_file,
                                 weights_name=weights_fname,
                                 loss_name=loss_name,
-                                batch_size=batch_size)
+                                batch_size=batch_size,
+                                ensemble=ensemble)
 
     LOG.debug("Write data into predicted_fname: {}".format(predicted_fname))
     tdata.DatasetSaver.save_data(inputs, predictions, predicted_fname)
