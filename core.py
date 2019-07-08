@@ -672,7 +672,10 @@ class Operator(RNN):
 
 
 def my_softmax(x):
-    return tf.math.log(1 + tf.math.exp(x))
+    a = tf.cast(x >= 0, dtype=tf.float32)
+    b = tf.cast(x < 0, dtype=tf.float32)
+    c = tf.math.exp(b * x) * b + 1./tf.math.exp(- a * x) * a
+    return tf.math.log(1 + c)
 
 
 class MyDense(Layer):

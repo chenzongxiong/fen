@@ -307,7 +307,7 @@ class TestCases(unittest.TestCase):
         # self._test_multiple_plays_helper(1, 'elu', 5)
         # self._test_multiple_plays_helper(2, 'elu', 1)
         # self._test_multiple_plays_helper(2, 'elu', 5)
-        # self._test_multiple_plays_helper(2, 'softmax', 5)
+        self._test_multiple_plays_helper(2, 'softmax', 5)
         pass
 
     def _test_multiple_plays_helper(self, nb_plays, activation, input_dim):
@@ -411,8 +411,9 @@ class TestCases(unittest.TestCase):
         # self._test_stateful_model(1, 5)
         # self._test_stateful_model(2, 5)
 
-        self._test_stateful_model(1, 20)
-        self._test_stateful_model(2, 20)
+        # self._test_stateful_model(1, 20)
+        # self._test_stateful_model(2, 20)
+        pass
 
     # def _test_stateful_model_simple(self, nb_plays):
     #     units = 5
@@ -525,13 +526,13 @@ class TestCases(unittest.TestCase):
     #     a1 = ops.convert_to_tensor(a)
     #     self.assertTrue(isinstance(a1, tf.Tensor))
 
-    # def test_activation_softmax(self):
-    #     a = np.array([1, 2, 3, 4], dtype=np.float32).reshape([1, 4, 1])
-    #     a1 = np.log(1 + np.exp(a))
-    #     aa = tf.constant([1, 2, 3, 4], shape=(1, 4, 1), dtype=tf.float32)
-    #     aa1 = core.my_softmax(aa)
-    #     aa2 = self.session.run(aa1)
-    #     self.assertTrue(np.allclose(a1, aa2))
+    def test_activation_softmax(self):
+        a = np.array([1, 2, 3, 4], dtype=np.float32).reshape([1, 4, 1])
+        a1 = np.log(1 + np.exp(a))
+        aa = tf.constant([1, 2, 3, 4], shape=(1, 4, 1), dtype=tf.float32)
+        aa1 = core.my_softmax(aa)
+        aa2 = self.session.run(aa1)
+        self.assertTrue(np.allclose(a1, aa2))
 
 
     # def test_create_tensor(self):
