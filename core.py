@@ -729,7 +729,6 @@ class MyDense(Layer):
 
             _init_kernel = _init_kernel.reshape([1, -1])
             LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
-            # self.kernel = tf.Variable(_init_kernel, name="theta", dtype=tf.float32)
             self.kernel = self.add_weight(
                 "theta",
                 shape=(1, self.units),
@@ -744,7 +743,6 @@ class MyDense(Layer):
                 _init_bias = self._init_bias
                 LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
 
-                # self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
                 self.bias = self.add_weight(
                     "bias",
                     shape=(1, self.units),
@@ -896,7 +894,6 @@ class Play(object):
                                                                                        self._play_timestep))
                     raise Exception("The batch size cannot be divided by the length of input sequence.")
 
-                # self.batch_size = length // (self._play_timestep * self._play_input_dim)
                 self._play_batch_size = length // (self._play_timestep * self._play_input_dim)
                 self.batch_size = 1
                 self._batch_input_shape = tf.TensorShape([self.batch_size, self._play_timestep, self._play_input_dim])
@@ -907,8 +904,8 @@ class Play(object):
         length = self._batch_input_shape[1].value * self._batch_input_shape[2].value
         self.batch_size = self._batch_input_shape[0].value
         assert self.batch_size == 1, colors.red("only support batch_size is 1")
-        if not getattr(self, "_unittest", False):
-            assert self._play_timestep == 1, colors.red("only support outter-timestep 1")
+        # if not getattr(self, "_unittest", False):
+        #     assert self._play_timestep == 1, colors.red("only support outter-timestep 1")
 
         self.model = tf.keras.models.Sequential()
 
@@ -1308,8 +1305,8 @@ class MyModel(object):
                  ensemble=1,
                  **kwargs):
         self._unittest = kwargs.pop('unittest', False)
-        if self._unittest is False:
-            assert timestep == 1, colors.red('timestep must be 1')
+        # if self._unittest is False:
+        #     assert timestep == 1, colors.red('timestep must be 1')
 
         assert activation in [None, 'tanh', 'relu', 'elu', 'softmax'], colors.red("activation {} not support".format(activation))
 
@@ -1317,7 +1314,7 @@ class MyModel(object):
         seed = 123
         np.random.seed(seed)
         LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is {}".format(seed)))
-
+        self._timestep = timestep
         self.plays = []
         self._nb_plays = nb_plays
         self._units = units
@@ -1649,6 +1646,7 @@ class MyModel(object):
             if outputs is not None:
                 mse_loss1 = tf.keras.backend.mean(tf.square(self.y_pred - tf.reshape(outputs, shape=self.y_pred.shape)))
                 mse_loss2 = tf.keras.backend.mean(tf.square(self.y_pred + tf.reshape(outputs, shape=self.y_pred.shape)))
+
             else:
                 mse_loss1 = tf.constant(-1.0, dtype=tf.float32)
                 mse_loss2 = tf.constant(-1.0, dtype=tf.float32)
@@ -1696,9 +1694,9 @@ class MyModel(object):
             outputs = ops.convert_to_tensor(outputs, tf.float32)
 
         # self.compile(inputs, mu=mu, sigma=sigma, outputs=outputs, **kwargs)
-        training_inputs, validate_inputs = inputs[:self._input_dim], inputs[self._input_dim:]
+        training_inputs, validate_inputs = inputs[:self._input_dim*self._timestep], inputs[self._input_dim*self._timestep:]
         if outputs is not None:
-            training_outputs, validate_outputs = outputs[:self._input_dim], outputs[self._input_dim:]
+            training_outputs, validate_outputs = outputs[:self._input_dim*self._timestep], outputs[self._input_dim*self._timestep:]
         else:
             training_outputs, validate_outputs = None, None
 
@@ -1754,11 +1752,13 @@ class MyModel(object):
         logger_string_epoch = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}, loss_a: {:.7f}, loss_b: {:.7f}"
         logger_string_step = "Steps: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}, loss_a: {:.7f}, loss_b: {:.7f}"
 
+        ins = [inputs.reshape(1, self._timestep, self._input_dim)]
         for i in range(epochs):
             self.reset_states()
             for j in range(steps_per_epoch):
-                ins = inputs[j*input_dim:(j+1)*input_dim]
-                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, loss_a, loss_b, *operator_outputs = self.train_function([ins.reshape(1, 1, -1)])
+                # ins = inputs[j*input_dim:(j+1)*input_dim]
+                # cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, loss_a, loss_b, *operator_outputs = self.train_function([ins.reshape(1, 1, -1)])
+                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, loss_a, loss_b, *operator_outputs = self.train_function(ins)
                 states_list = [o.reshape(-1)[-1] for o in operator_outputs]
                 self.reset_states(states_list=states_list)
 

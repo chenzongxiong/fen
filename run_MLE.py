@@ -36,8 +36,11 @@ def fit(inputs,
     start = time.time()
     input_dim = batch_size
 
-    timestep = 1
-    steps_per_epoch = inputs.shape[0] // input_dim
+    # timestep = 1
+    input_dim = 10
+    timestep = inputs.shape[0] // input_dim
+    # steps_per_epoch = inputs.shape[0] // input_dim
+    steps_per_epoch = 1
 
     mymodel = MyModel(input_dim=input_dim,
                       timestep=timestep,
