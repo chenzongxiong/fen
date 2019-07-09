@@ -138,7 +138,11 @@ def get_session(debug=False, interactive=False):
     elif interactive is True:
         _SESSION = tf.InteractiveSession()
     else:
-        _SESSION = tf.keras.backend.get_session()
+        # _SESSION = tf.keras.backend.get_session()
+        config = tf.ConfigProto(log_device_placement=True, allow_soft_placement=True,
+                                intra_op_parallelism_threads=os.cpu_count())
+        config.gpu_options.allow_growth = True
+        _SESSION = tf.Session(config=config)
 
     return _SESSION
 
@@ -150,7 +154,8 @@ def clear_session():
 
 def init_tf_variables():
     import tensorflow as tf
-    sess = tf.keras.backend.get_session()
+    # sess = tf.keras.backend.get_session()
+    sess = get_session()
     init = tf.global_variables_initializer()
     sess.run(init)
 

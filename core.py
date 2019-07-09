@@ -47,6 +47,7 @@ SENTINEL = utils.sentinel_marker()
 
 tf.keras.backend.set_epsilon(1e-9)
 
+tf.keras.backend.set_session(session)
 
 def do_guess_helper(step, direction, start_price, nb_plays, activation, sign, prev_states, weights, delta=0.001):
     '''
@@ -1701,10 +1702,19 @@ class MyModel(object):
         else:
             training_outputs, validate_outputs = None, None
 
-        # kwargs['validate_inputs'] = validate_inputs
-        # kwargs['validate_outputs'] = validate_outputs
+        devices = sess.list_devices()
+        has_gpu = False
+        for device in devices:
+            if 'GPU' == device.device_type:
+                has_gpu = True
+                break
 
-        self.compile(training_inputs, mu=mu, sigma=sigma, outputs=training_outputs, **kwargs)
+        if has_gpu is True:
+            with tf.device('/gpu:0'):
+                self.compile(training_inputs, mu=mu, sigma=sigma, outputs=training_outputs, **kwargs)
+        else:
+            self.compile(training_inputs, mu=mu, sigma=sigma, outputs=training_outputs, **kwargs)
+
         # ins = self._x + self._y
         # ins = self._x
         input_dim =  self.batch_input_shape[-1]
