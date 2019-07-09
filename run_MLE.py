@@ -10,7 +10,7 @@ from core import MyModel, confusion_matrix
 import trading_data as tdata
 import constants
 import colors
-
+import utils
 LOG = logging.getLogger(__name__)
 epochs = constants.EPOCHS
 EPOCHS = constants.EPOCHS
@@ -63,7 +63,7 @@ def fit(inputs,
                     loss_file_name=loss_file_name,
                     learning_rate=learning_rate)
     elif loss_name == 'mle':
-        devices = sess.list_devices()
+        devices = utils.get_session().list_devices()
         has_gpu = False
         for device in devices:
             if 'GPU' == device.device_type:
