@@ -1286,9 +1286,10 @@ class MyModel(object):
         assert activation in [None, 'tanh', 'relu', 'elu', 'softmax'], colors.red("activation {} not support".format(activation))
 
         # fix random seed to 123
-        seed = 123
-        np.random.seed(seed)
+        # seed = 123
+        np.random.seed(ensemble)
         LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is {}".format(seed)))
+
         self._timestep = timestep
         self.plays = []
         self._nb_plays = nb_plays
@@ -1308,7 +1309,8 @@ class MyModel(object):
                 weight = 1.0
 
             # weight = 10 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
-            weight = ensemble * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
+            # weight = ensemble * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
+            weight = 2 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
             LOG.debug("MyModel generates {} with Weight: {}".format(colors.red("Play #{}".format(nb_play+1)), weight))
             if debug is True:
                 weight = 1.0
@@ -1697,12 +1699,15 @@ class MyModel(object):
             self.load_weights(weights_fname)
 
         if kwargs.get('test_stateful', False):
+            LOG.debug(colors.red("fit on unittest"))
             return self._fit_on_unittest(inputs, epochs, steps_per_epoch)
 
-        import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
         if self._timestep == 1:
+            LOG.debug(colors.red("fit on batch"))
             self._fit_on_batch(inputs, epochs, steps_per_epoch, __mu__=__mu__, __sigma__=__sigma__)
         else:
+            LOG.debug(colors.red("fit on dataset"))
             self._fit_on_dataset(inputs, epochs, __mu__=__mu__, __sigma__=__sigma__)
 
     def _fit_on_unittest(self, inputs, epochs, steps_per_epoch):
