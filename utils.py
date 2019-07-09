@@ -187,51 +187,52 @@ def slide_window_average(arr, window_size=5, step=1):
     return avg
 
 
-def _parents(op):
-  return set(input.op for input in op.inputs)
+# def _parents(op):
+#   return set(input.op for input in op.inputs)
 
-def parents(op, indent=0, ops_have_been_seen=set()):
-    # for op in ops:
-    #     _ops = list(set(input.op for input in op.inputs))
-    #     print("_ops: {}".format(_ops))]
-    #     parents(_ops, indent=indent+1, ops_have_been_seen=ops_have_been_seen)
-    print(len(op.inputs))
-    for inp in op.inputs:
-        print(op.name, '-->', inp.op.name)
-        parents(inp.op)
+# def parents(op, indent=0, ops_have_been_seen=set()):
+#     # for op in ops:
+#     #     _ops = list(set(input.op for input in op.inputs))
+#     #     print("_ops: {}".format(_ops))]
+#     #     parents(_ops, indent=indent+1, ops_have_been_seen=ops_have_been_seen)
+#     print(len(op.inputs))
+#     for inp in op.inputs:
+#         print(op.name, '-->', inp.op.name)
+#         parents(inp.op)
 
-    print("Indent: {}".format(indent))
-
-
-def children(op):
-  return set(op for out in op.outputs for op in out.consumers())
-
-def get_graph():
-  """Creates dictionary {node: {child1, child2, ..},..} for current
-  TensorFlow graph. Result is compatible with networkx/toposort"""
-  import tensorflow as tf
-  ops = tf.get_default_graph().get_operations()
-  return {op: children(op) for op in ops}
+#     print("Indent: {}".format(indent))
 
 
+# def children(op):
+#   return set(op for out in op.outputs for op in out.consumers())
 
-def print_tf_graph(graph):
-  """Prints tensorflow graph in dictionary form."""
-  for node in graph:
-    for child in graph[node]:
-      print("%s -> %s" % (node.name, child.name))
-    print("--------------------------------------------------------------------------------")
+# def get_graph():
+#   """Creates dictionary {node: {child1, child2, ..},..} for current
+#   TensorFlow graph. Result is compatible with networkx/toposort"""
+#   import tensorflow as tf
+#   ops = tf.get_default_graph().get_operations()
+#   return {op: children(op) for op in ops}
 
 
-import networkx as nx
-def plot_graph(G):
-    '''Plot a DAG using NetworkX'''
-    def mapping(node):
-        return node.name
-    G = nx.DiGraph(G)
-    nx.relabel_nodes(G, mapping, copy=False)
-    nx.draw(G, cmap = plt.get_cmap('jet'), with_labels=True)
-    plt.show()
+
+# def print_tf_graph(graph):
+#   """Prints tensorflow graph in dictionary form."""
+#   for node in graph:
+#     for child in graph[node]:
+#       print("%s -> %s" % (node.name, child.name))
+#     print("--------------------------------------------------------------------------------")
+
+
+# import networkx as nx
+
+# def plot_graph(G):
+#     '''Plot a DAG using NetworkX'''
+#     def mapping(node):
+#         return node.name
+#     G = nx.DiGraph(G)
+#     nx.relabel_nodes(G, mapping, copy=False)
+#     nx.draw(G, cmap = plt.get_cmap('jet'), with_labels=True)
+#     plt.show()
 
 
 def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **kwargs):
