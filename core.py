@@ -1288,7 +1288,7 @@ class MyModel(object):
         # fix random seed to 123
         # seed = 123
         np.random.seed(ensemble)
-        LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is {}".format(seed)))
+        LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is {}".format(ensemble)))
 
         self._timestep = timestep
         self.plays = []
