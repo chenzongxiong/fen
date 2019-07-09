@@ -557,42 +557,42 @@ class PhiCell(Layer):
         LOG.debug("PhiCell._inputs.shape: {}".format(self._inputs.shape))
         LOG.debug("PhiCell._state.shape: {}".format(self._state.shape))
         ############### IMPL from Scratch #####################
-        # outputs_ = tf.multiply(self._inputs, self.kernel)
-        # outputs = [self._state]
-        # for i in range(outputs_.shape[-1].value):
-        #     output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1]), self._width), outputs[-1])
-        #     outputs.append(output)
+        outputs_ = tf.multiply(self._inputs, self.kernel)
+        outputs = [self._state]
+        for i in range(outputs_.shape[-1].value):
+            output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1]), self._width), outputs[-1])
+            outputs.append(output)
 
-        # outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
-        # state = outputs[-1]
-        # outputs = tf.reshape(outputs, shape=self._inputs.shape)
+        outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
+        state = outputs[-1]
+        outputs = tf.reshape(outputs, shape=self._inputs.shape)
 
-        # LOG.debug("before reshaping state.shape: {}".format(state.shape))
-        # state = tf.reshape(state, shape=(-1, 1))
-        # LOG.debug("after reshaping state.shape: {}".format(state.shape))
-        # return outputs, [state]
+        LOG.debug("before reshaping state.shape: {}".format(state.shape))
+        state = tf.reshape(state, shape=(-1, 1))
+        LOG.debug("after reshaping state.shape: {}".format(state.shape))
+        return outputs, [state]
 
         ################ IMPL via RNN ###########################
-        def inner_steps(inputs, states):
-            LOG.debug("inputs: {}, states: {}".format(inputs, states))
-            outputs = Phi(inputs - states[-1], self._width) + states[-1]
-            return outputs, [outputs]
+        # def inner_steps(inputs, states):
+        #     LOG.debug("inputs: {}, states: {}".format(inputs, states))
+        #     outputs = Phi(inputs - states[-1], self._width) + states[-1]
+        #     return outputs, [outputs]
 
-        # import ipdb; ipdb.set_trace()
-        self._inputs = tf.multiply(self._inputs, self.kernel)
-        inputs_ = tf.reshape(self._inputs, shape=(1, self._inputs.shape[0].value*self._inputs.shape[1].value, 1))
-        if isinstance(states, list) or isinstance(states, tuple):
-            self._states = ops.convert_to_tensor(states[-1], dtype=tf.float32)
-        else:
-            self._states = ops.convert_to_tensor(states, dtype=tf.float32)
+        # # import ipdb; ipdb.set_trace()
+        # self._inputs = tf.multiply(self._inputs, self.kernel)
+        # inputs_ = tf.reshape(self._inputs, shape=(1, self._inputs.shape[0].value*self._inputs.shape[1].value, 1))
+        # if isinstance(states, list) or isinstance(states, tuple):
+        #     self._states = ops.convert_to_tensor(states[-1], dtype=tf.float32)
+        # else:
+        #     self._states = ops.convert_to_tensor(states, dtype=tf.float32)
 
-        assert self._state.shape.ndims == 2, colors.red("PhiCell states must be 2 dimensions")
-        states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
-        last_outputs_, outputs_, states_x = tf.keras.backend.rnn(inner_steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
+        # assert self._state.shape.ndims == 2, colors.red("PhiCell states must be 2 dimensions")
+        # states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
+        # last_outputs_, outputs_, states_x = tf.keras.backend.rnn(inner_steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
 
-        LOG.debug("outputs_.shape: {}".format(outputs_))
-        LOG.debug("states_x.shape: {}".format(states_x))
-        return outputs_, list(states_x)
+        # LOG.debug("outputs_.shape: {}".format(outputs_))
+        # LOG.debug("states_x.shape: {}".format(states_x))
+        # return outputs_, list(states_x)
 
 
 class Operator(RNN):
