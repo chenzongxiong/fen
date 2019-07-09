@@ -49,6 +49,7 @@ def fit(inputs,
                       nb_plays=nb_plays,
                       learning_rate=learning_rate,
                       ensemble=ensemble)
+
     LOG.debug("Learning rate is {}".format(learning_rate))
 
     preload_weights = False
@@ -62,16 +63,39 @@ def fit(inputs,
                     loss_file_name=loss_file_name,
                     learning_rate=learning_rate)
     elif loss_name == 'mle':
-        mymodel.fit2(inputs=inputs,
-                     mu=mu,
-                     sigma=sigma,
-                     outputs=outputs,
-                     epochs=epochs,
-                     verbose=1,
-                     steps_per_epoch=steps_per_epoch,
-                     loss_file_name=loss_file_name,
-                     preload_weights=preload_weights,
-                     weights_fname=weights_fname)
+        devices = sess.list_devices()
+        has_gpu = False
+        for device in devices:
+            if 'GPU' == device.device_type:
+                has_gpu = True
+                break
+
+        if has_gpu is True:
+            LOG.debug("--------------------Use GPU--------------------")
+            with tf.device('/gpu:0'):
+                mymodel.fit2(inputs=inputs,
+                             mu=mu,
+                             sigma=sigma,
+                             outputs=outputs,
+                             epochs=epochs,
+                             verbose=1,
+                             steps_per_epoch=steps_per_epoch,
+                             loss_file_name=loss_file_name,
+                             preload_weights=preload_weights,
+                             weights_fname=weights_fname)
+        else:
+            LOG.debug("--------------------Use CPU--------------------")
+            with tf.device('/cpu:0'):
+                mymodel.fit2(inputs=inputs,
+                             mu=mu,
+                             sigma=sigma,
+                             outputs=outputs,
+                             epochs=epochs,
+                             verbose=1,
+                             steps_per_epoch=steps_per_epoch,
+                             loss_file_name=loss_file_name,
+                             preload_weights=preload_weights,
+                             weights_fname=weights_fname)
 
     else:
         raise Exception("loss {} not support".format(loss_name))

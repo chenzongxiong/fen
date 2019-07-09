@@ -1700,18 +1700,7 @@ class MyModel(object):
         else:
             training_outputs, validate_outputs = None, None
 
-        devices = sess.list_devices()
-        has_gpu = False
-        for device in devices:
-            if 'GPU' == device.device_type:
-                has_gpu = True
-                break
-
-        if has_gpu is True:
-            with tf.device('/gpu:0'):
-                self.compile(training_inputs, mu=mu, sigma=sigma, outputs=training_outputs, **kwargs)
-        else:
-            self.compile(training_inputs, mu=mu, sigma=sigma, outputs=training_outputs, **kwargs)
+        self.compile(training_inputs, mu=mu, sigma=sigma, outputs=training_outputs, **kwargs)
 
         # ins = self._x + self._y
         # ins = self._x
