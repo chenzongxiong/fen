@@ -47,7 +47,6 @@ SENTINEL = utils.sentinel_marker()
 
 tf.keras.backend.set_epsilon(1e-9)
 
-tf.keras.backend.set_session(session)
 
 def do_guess_helper(step, direction, start_price, nb_plays, activation, sign, prev_states, weights, delta=0.001):
     '''
@@ -508,7 +507,10 @@ class PhiCell(Layer):
         self.units = 1
         self.state_size = [1]
 
-        self.kernel_initializer = tf.keras.initializers.Constant(value=weight, dtype=tf.float32)
+        if self.debug:
+            self._weight = 1.0
+
+        self.kernel_initializer = tf.keras.initializers.Constant(value=self._weight, dtype=tf.float32)
         self.kernel_regularizer = regularizers.get(kernel_regularizer)
         self.kernel_constraint = constraints.get(kernel_constraint)
 
@@ -518,29 +520,17 @@ class PhiCell(Layer):
     def build(self, input_shape):
         if self.debug:
             LOG.debug("Initialize *weight* as pre-defined: {} ....".format(self._weight))
-            # self.kernel = tf.Variable([[self._weight]], name="weight", dtype=tf.float32)
-            # self.kernel = tf.Variable([[1.0]], name="weight", dtype=tf.float32)
-            self.kernel = self.add_weight(
-                "weight",
-                shape=(1, 1),
-                initializer=tf.keras.initializers.Constant(value=1, dtype=tf.float32),
-                regularizer=self.kernel_regularizer,
-                constraint=self.kernel_constraint,
-                dtype=tf.float32,
-                trainable=True)
         else:
             LOG.debug("Initialize *weight* randomly...")
-            assert self.units == 1, "Phi Cell unit must be equal to 1"
 
-            self.kernel = self.add_weight(
-                "weight",
-                shape=(1, 1),
-                initializer=self.kernel_initializer,
-                regularizer=self.kernel_regularizer,
-                constraint=self.kernel_constraint,
-                dtype=tf.float32,
-                trainable=True)
-
+        self.kernel = self.add_weight(
+            "weight",
+            shape=(1, 1),
+            initializer=self.kernel_initializer,
+            regularizer=self.kernel_regularizer,
+            constraint=self.kernel_constraint,
+            dtype=tf.float32,
+            trainable=True)
         self.built = True
 
     def call(self, inputs, states):
@@ -553,46 +543,46 @@ class PhiCell(Layer):
         """
         self._inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
         self._state = ops.convert_to_tensor(states[-1], dtype=tf.float32)
-        LOG.debug("PhiCellinputs.shape: {}".format(inputs.shape))
+        LOG.debug("PhiCell.inputs.shape: {}".format(inputs.shape))
         LOG.debug("PhiCell._inputs.shape: {}".format(self._inputs.shape))
         LOG.debug("PhiCell._state.shape: {}".format(self._state.shape))
         ############### IMPL from Scratch #####################
-        outputs_ = tf.multiply(self._inputs, self.kernel)
-        outputs = [self._state]
-        for i in range(outputs_.shape[-1].value):
-            output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1]), self._width), outputs[-1])
-            outputs.append(output)
+        # outputs_ = tf.multiply(self._inputs, self.kernel)
+        # outputs = [self._state]
+        # for i in range(outputs_.shape[-1].value):
+        #     output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1]), self._width), outputs[-1])
+        #     outputs.append(output)
 
-        outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
-        state = outputs[-1]
-        outputs = tf.reshape(outputs, shape=self._inputs.shape)
+        # outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
+        # state = outputs[-1]
+        # outputs = tf.reshape(outputs, shape=self._inputs.shape)
 
-        LOG.debug("before reshaping state.shape: {}".format(state.shape))
-        state = tf.reshape(state, shape=(-1, 1))
-        LOG.debug("after reshaping state.shape: {}".format(state.shape))
-        return outputs, [state]
+        # LOG.debug("before reshaping state.shape: {}".format(state.shape))
+        # state = tf.reshape(state, shape=(-1, 1))
+        # LOG.debug("after reshaping state.shape: {}".format(state.shape))
+        # return outputs, [state]
 
         ################ IMPL via RNN ###########################
-        # def inner_steps(inputs, states):
-        #     LOG.debug("inputs: {}, states: {}".format(inputs, states))
-        #     outputs = Phi(inputs - states[-1], self._width) + states[-1]
-        #     return outputs, [outputs]
+        def inner_steps(inputs, states):
+            LOG.debug("inputs: {}, states: {}".format(inputs, states))
+            outputs = Phi(inputs - states[-1], self._width) + states[-1]
+            return outputs, [outputs]
 
-        # # import ipdb; ipdb.set_trace()
-        # self._inputs = tf.multiply(self._inputs, self.kernel)
-        # inputs_ = tf.reshape(self._inputs, shape=(1, self._inputs.shape[0].value*self._inputs.shape[1].value, 1))
-        # if isinstance(states, list) or isinstance(states, tuple):
-        #     self._states = ops.convert_to_tensor(states[-1], dtype=tf.float32)
-        # else:
-        #     self._states = ops.convert_to_tensor(states, dtype=tf.float32)
+        # import ipdb; ipdb.set_trace()
+        self._inputs = tf.multiply(self._inputs, self.kernel)
+        inputs_ = tf.reshape(self._inputs, shape=(1, self._inputs.shape[0].value*self._inputs.shape[1].value, 1))
+        if isinstance(states, list) or isinstance(states, tuple):
+            self._states = ops.convert_to_tensor(states[-1], dtype=tf.float32)
+        else:
+            self._states = ops.convert_to_tensor(states, dtype=tf.float32)
 
-        # assert self._state.shape.ndims == 2, colors.red("PhiCell states must be 2 dimensions")
-        # states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
-        # last_outputs_, outputs_, states_x = tf.keras.backend.rnn(inner_steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
+        assert self._state.shape.ndims == 2, colors.red("PhiCell states must be 2 dimensions")
+        states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
+        last_outputs_, outputs_, states_x = tf.keras.backend.rnn(inner_steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
 
-        # LOG.debug("outputs_.shape: {}".format(outputs_))
-        # LOG.debug("states_x.shape: {}".format(states_x))
-        # return outputs_, list(states_x)
+        LOG.debug("outputs_.shape: {}".format(outputs_))
+        LOG.debug("states_x.shape: {}".format(states_x))
+        return outputs_, list(states_x)
 
 
 class Operator(RNN):
@@ -709,12 +699,24 @@ class MyDense(Layer):
         else:
             self.activation = activations.get(activation)
 
-        self.kernel_initializer = initializers.get(kernel_initializer)
-        self.kernel_regularizer = regularizers.get(kernel_regularizer)
+        if hasattr(self, '_init_kernel'):
+            _init_kernel = np.array([[self._init_kernel for i in range(self.units)]])
+        else:
+            _init_kernel = np.random.uniform(low=0.0, high=1.5, size=self.units)
+        self._init_kernel = _init_kernel.reshape([1, -1])
 
+        if self._debug is True:
+            self.kernel_initializer = tf.keras.initializers.Constant(value=self._init_kernel, dtype=tf.float32)
+            if use_bias is True:
+                self.bias_initializer = tf.keras.initializers.Constant(value=self._init_bias, dtype=tf.float32)
+        else:
+            self.kernel_initializer = initializers.get(kernel_initializer)
+            if use_bias is True:
+                self.bias_initializer = initializers.get(bias_initializer)
+
+        self.kernel_regularizer = regularizers.get(kernel_regularizer)
         self.kernel_constraint = constraints.get(kernel_constraint)
         if use_bias is True:
-            self.bias_initializer = initializers.get(bias_initializer)
             self.bias_regularizer = regularizers.get(bias_regularizer)
             self.bias_constraint = constraints.get(bias_constraint)
         self.use_bias = use_bias
@@ -722,54 +724,28 @@ class MyDense(Layer):
     def build(self, input_shape):
         if self._debug:
             LOG.debug("init mydense kernel/bias as pre-defined")
-            if hasattr(self, '_init_kernel'):
-                _init_kernel = np.array([[self._init_kernel for i in range(self.units)]])
-            else:
-                _init_kernel = np.random.uniform(low=0.0, high=1.5, size=self.units)
-
-            _init_kernel = _init_kernel.reshape([1, -1])
-            LOG.debug(colors.yellow("kernel: {}".format(_init_kernel)))
-            self.kernel = self.add_weight(
-                "theta",
-                shape=(1, self.units),
-                initializer=tf.keras.initializers.Constant(value=_init_kernel, dtype=tf.float32),
-                regularizer=self.kernel_regularizer,
-                constraint=self.kernel_constraint,
-                dtype=tf.float32,
-                trainable=True)
-
+            LOG.debug(colors.yellow("kernel: {}".format(self._init_kernel)))
             if self.use_bias is True:
-                # _init_bias = 0
-                _init_bias = self._init_bias
-                LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
+                LOG.debug(colors.yellow("bias: {}".format(self._init_bias)))
 
-                self.bias = self.add_weight(
-                    "bias",
-                    shape=(1, self.units),
-                    initializer=tf.keras.initializers.Constant(value=_init_bias, dtype=tf.float32),
-                    regularizer=self.bias_regularizer,
-                    constraint=self.bias_constraint,
-                    dtype=tf.float32,
-                    trainable=True)
-        else:
-            self.kernel = self.add_weight(
-                "theta",
+        self.kernel = self.add_weight(
+            "theta",
+            shape=(1, self.units),
+            initializer=self.kernel_initializer,
+            regularizer=self.kernel_regularizer,
+            constraint=self.kernel_constraint,
+            dtype=tf.float32,
+            trainable=True)
+
+        if self.use_bias:
+            self.bias = self.add_weight(
+                "bias",
                 shape=(1, self.units),
-                initializer=self.kernel_initializer,
-                regularizer=self.kernel_regularizer,
-                constraint=self.kernel_constraint,
+                initializer=self.bias_initializer,
+                regularizer=self.bias_regularizer,
+                constraint=self.bias_constraint,
                 dtype=tf.float32,
                 trainable=True)
-
-            if self.use_bias:
-                self.bias = self.add_weight(
-                    "bias",
-                    shape=(1, self.units),
-                    initializer=self.bias_initializer,
-                    regularizer=self.bias_regularizer,
-                    constraint=self.bias_constraint,
-                    dtype=tf.float32,
-                    trainable=True)
 
         self.built = True
 
@@ -822,7 +798,6 @@ class MySimpleDense(Dense):
             if self.use_bias:
                 _init_bias = (self._init_bias,)
                 LOG.debug(colors.yellow("bias: {}".format(_init_bias)))
-                # self.bias = tf.Variable(_init_bias, name="bias", dtype=tf.float32)
                 self.bias = self.add_weight(
                     "bias",
                     shape=(1,),
@@ -1685,7 +1660,7 @@ class MyModel(object):
              weights_fname=None,
              **kwargs):
 
-        writer = utils.get_tf_summary_writer("./log/mle")
+        # writer = utils.get_tf_summary_writer("./log/mle")
 
         if outputs is not None:
             # glob ground-truth mu and sigma of outputs
@@ -1693,61 +1668,106 @@ class MyModel(object):
             __sigma__ = (outputs[1:] - outputs[:-1]).std()
             outputs = ops.convert_to_tensor(outputs, tf.float32)
 
-        # self.compile(inputs, mu=mu, sigma=sigma, outputs=outputs, **kwargs)
         training_inputs, validate_inputs = inputs[:self._input_dim*self._timestep], inputs[self._input_dim*self._timestep:]
         if outputs is not None:
             training_outputs, validate_outputs = outputs[:self._input_dim*self._timestep], outputs[self._input_dim*self._timestep:]
         else:
             training_outputs, validate_outputs = None, None
 
-        self.compile(training_inputs, mu=mu, sigma=sigma, outputs=training_outputs, **kwargs)
+        devices = utils.get_session().list_devices()
+        has_gpu = False
+        for device in devices:
+            if 'GPU' == device.device_type:
+                has_gpu = True
+                break
+        if has_gpu is True:
+            with tf.device('/gpu:0'):
+                self.compile(training_inputs, mu=mu, sigma=sigma, outputs=training_outputs, **kwargs)
+        else:
+            with tf.device('/cpu:0'):
+                self.compile(training_inputs, mu=mu, sigma=sigma, outputs=training_outputs, **kwargs)
 
-        # ins = self._x + self._y
-        # ins = self._x
         input_dim =  self.batch_input_shape[-1]
-        # ins = inputs.reshape(-1, 1, input_dim)
         utils.init_tf_variables()
 
-        writer.add_graph(tf.get_default_graph())
-        self.cost_history = []
-        cost = np.inf
-        patience_list = []
-        prev_cost = np.inf
-
+        # writer.add_graph(tf.get_default_graph())
         # load weights pre-trained
         if preload_weights is True and weights_fname is not None:
             # find the best match weights from weights directory
             self.load_weights(weights_fname)
 
         if kwargs.get('test_stateful', False):
-            outputs_list = [[] for _ in range(self._nb_plays)]
-            assert epochs == 1, 'only epochs == 1 in unittest'
-            for i in range(epochs):
-                self.reset_states()
-                for j in range(steps_per_epoch):
-                    ins = inputs[j*input_dim:(j+1)*input_dim]
-                    output = self.train_function([ins.reshape(1, 1, -1)])
-                    states_list = [o.reshape(-1)[-1] for o in output]
-                    self.reset_states(states_list=states_list)
-                    for k, o in enumerate(output):
-                        outputs_list[k].append(o.reshape(-1))
+            return self._fit_on_unittest(inputs, epochs, steps_per_epoch)
 
-            results = []
-            for output in outputs_list:
-                results.append(np.hstack(output))
-            assert len(results) == self._nb_plays
-            return results
+        import ipdb; ipdb.set_trace()
+        if self._timestep == 1:
+            self._fit_on_batch(inputs, epochs, steps_per_epoch, __mu__=__mu__, __sigma__=__sigma__)
+        else:
+            self._fit_on_dataset(inputs, epochs, __mu__=__mu__, __sigma__=__sigma__)
 
-        logger_string_epoch = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}, loss_a: {:.7f}, loss_b: {:.7f}"
-        logger_string_step = "Steps: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}, loss_a: {:.7f}, loss_b: {:.7f}"
-
-        ins = [inputs.reshape(1, self._timestep, self._input_dim)]
+    def _fit_on_unittest(self, inputs, epochs, steps_per_epoch):
+        outputs_list = [[] for _ in range(self._nb_plays)]
+        assert epochs == 1, 'only epochs == 1 in unittest'
         for i in range(epochs):
             self.reset_states()
             for j in range(steps_per_epoch):
-                # ins = inputs[j*input_dim:(j+1)*input_dim]
-                # cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, loss_a, loss_b, *operator_outputs = self.train_function([ins.reshape(1, 1, -1)])
-                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, loss_a, loss_b, *operator_outputs = self.train_function(ins)
+                ins = inputs[j*self._input_dim:(j+1)*self._input_dim]
+                output = self.train_function([ins.reshape(1, 1, -1)])
+                states_list = [o.reshape(-1)[-1] for o in output]
+                self.reset_states(states_list=states_list)
+                for k, o in enumerate(output):
+                    outputs_list[k].append(o.reshape(-1))
+
+        results = []
+        for output in outputs_list:
+            results.append(np.hstack(output))
+        assert len(results) == self._nb_plays
+        return results
+
+    def _fit_on_dataset(self, inputs, epochs, __mu__, __sigma__):
+        logger_string_epoch = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}, loss_a: {:.7f}, loss_b: {:.7f}"
+        ins = [inputs.reshape(1, self._timestep, self._input_dim)]
+
+        self.cost_history = []
+        cost = np.inf
+        patience_list = []
+        prev_cost = np.inf
+
+        for i in range(epochs):
+            self.reset_states()
+            cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, loss_a, loss_b, *operator_outputs = self.train_function(ins)
+            if prev_cost <= cost:
+                patience_list.append(cost)
+            else:
+                prev_cost = cost
+                patience_list = []
+            loss_by_hand, loss_by_tf = 0, 0
+
+            LOG.debug(logger_string_epoch.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf), loss_a, loss_b))
+
+            LOG.debug("================================================================================")
+            # save weights every 1000 epochs
+            if i % 1000 == 0 and i != 0:
+                self.save_weights("{}-epochs-{}.h5".format(weights_fname[:-3], i))
+
+            self.cost_history.append([i, cost, mse_cost1, mse_cost2, loss_a, loss_b])
+
+        cost_history = np.array(self.cost_history)
+        tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1:], loss_file_name)
+
+    def _fit_on_batch(self, inputs, epochs, steps_per_epoch, __mu__, __sigma__):
+        logger_string_epoch = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}, loss_a: {:.7f}, loss_b: {:.7f}"
+
+        self.cost_history = []
+        cost = np.inf
+        patience_list = []
+        prev_cost = np.inf
+
+        for i in range(epochs):
+            self.reset_states()
+            for j in range(steps_per_epoch):
+                ins = inputs[j*self._input_dim:(j+1)*self._input_dim]
+                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, loss_a, loss_b, *operator_outputs = self.train_function([ins.reshape(1, 1, -1)])
                 states_list = [o.reshape(-1)[-1] for o in operator_outputs]
                 self.reset_states(states_list=states_list)
 
@@ -1768,6 +1788,7 @@ class MyModel(object):
 
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1:], loss_file_name)
+
 
     def predict(self, inputs):
         if isinstance(inputs, tf.Tensor):
