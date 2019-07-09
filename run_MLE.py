@@ -11,6 +11,8 @@ import trading_data as tdata
 import constants
 import colors
 import utils
+import tensorflow as tf
+
 LOG = logging.getLogger(__name__)
 epochs = constants.EPOCHS
 EPOCHS = constants.EPOCHS
