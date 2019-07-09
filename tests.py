@@ -307,7 +307,7 @@ class TestCases(unittest.TestCase):
         # self._test_multiple_plays_helper(1, 'elu', 5)
         # self._test_multiple_plays_helper(2, 'elu', 1)
         # self._test_multiple_plays_helper(2, 'elu', 5)
-        # self._test_multiple_plays_helper(2, 'softmax', 5)
+        self._test_multiple_plays_helper(2, 'softmax', 5)
         pass
 
     def _test_multiple_plays_helper(self, nb_plays, activation, input_dim):
@@ -399,8 +399,8 @@ class TestCases(unittest.TestCase):
 
 
     def test_stateful_model(self):
-        self._test_stateful_model_simple(nb_plays=1)
-        self._test_stateful_model_simple(nb_plays=2)
+        # self._test_stateful_model_simple(nb_plays=1)
+        # self._test_stateful_model_simple(nb_plays=2)
 
         # self._test_stateful_model(1)
         # self._test_stateful_model(2)

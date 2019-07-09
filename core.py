@@ -384,7 +384,10 @@ def gradient_nonlinear_layer(fZ, weights=None, activation=None, reduce_sum=True)
         b = tf.cast(_fZ < 0, dtype=tf.float32)
         partial_gradient = a + b * (_fZ + 1)
     elif activation == 'softmax':
-        partial_gradient = 1.0 - 1.0 / tf.math.exp(fZ)
+        a = tf.cast(fZ >= 0, dtype=tf.float32)
+        b = tf.cast(fZ < 0, dtype=tf.float32)
+        c = tf.math.exp(-fZ*a) * a + 1./tf.math.exp(fZ*b) * b
+        partial_gradient = 1 - c
     else:
         raise Exception("activation: {} not support".format(activation))
 
@@ -949,8 +952,7 @@ class Play(object):
                                                                      write_grads=False,
                                                                      write_images=False)
 
-        # if not getattr(self, "_preload_weights", False):
-        #     utils.init_tf_variables()
+
         if self._network_type == constants.NetworkType.OPERATOR:
             LOG.debug(colors.yellow("SUMMARY of Operator"))
         elif self._network_type == constants.NetworkType.PLAY:
