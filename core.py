@@ -1740,8 +1740,8 @@ class MyModel(object):
               start_pos=1000, end_pos=1100,
               delta=0.001, max_iteration=10000):
 
-        start_pos = 500
-        end_pos = 600
+        start_pos = 1000
+        end_pos = 1100
 
         assert start_pos > 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")

@@ -5,8 +5,8 @@ import trading_data as tdata
 if __name__ == '__main__':
     # ensembles = [1, 2, 3, 4, 5]
     # best_epoch_list = [6000, 6000, 1000, 1000, 1000]
-    ensembles = [2, 3]
-    best_epoch_list = [6000, 10000]
+    ensembles = [2, 3, 5]
+    best_epoch_list = [6000, 10000, 10000]
     input_dim = 1000
     timestep = 1
     nb_plays = 100
