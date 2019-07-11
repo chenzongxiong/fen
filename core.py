@@ -2128,7 +2128,7 @@ class MyModel(object):
             sign = +1
 
         import ipdb; ipdb.set_trace()
-
+        LOG.debug("The counts is: {}, percentage is: {}".format(counts, counts/prices.shape[0]))
         if sign is None:
             raise Exception("the neural network doesn't train well, counts is {}".format(counts))
 

@@ -243,7 +243,7 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
             raise Exception("no trained parameters found")
 
         best_epoch = max(epochs)
-        best_epoch = 10000
+        # best_epoch = 10000
         LOG.debug("Best epoch is {}".format(best_epoch))
         dirname = '{}-epochs-{}/{}plays'.format(weights_fname[:-3], best_epoch, nb_plays)
         if not os.path.isdir(dirname):
