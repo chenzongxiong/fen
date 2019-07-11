@@ -485,7 +485,6 @@ if __name__ == "__main__":
                                                                     loss=loss_name,
                                                                     ensemble=ensemble,
                                                                     batch_size=batch_size)
-
     if interp != 1:
         if do_prediction is False:
             raise
@@ -643,6 +642,8 @@ if __name__ == "__main__":
     LOG.debug('# weights_fname: {}'.format(weights_fname))
     LOG.debug('################################################################################')
 
+    import ipdb; ipdb.set_trace()
+
 
     # try:
     #     import ipdb; ipdb.set_trace()
@@ -702,7 +703,6 @@ if __name__ == "__main__":
         sys.exit(0)
     else:
         LOG.debug("START to FIT via {}".format(colors.red(loss_name.upper())))
-        # import ipdb; ipdb.set_trace()
         inputs, outputs = inputs[:batch_size], outputs[:batch_size]
 
         predictions, loss = fit(inputs=inputs,
