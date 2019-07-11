@@ -5,6 +5,7 @@ import inspect
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot as plt
+from matplotlib import colors as mcolors
 from matplotlib.animation import FuncAnimation
 import multiprocessing as mp
 MP_CONTEXT = mp.get_context('spawn')
@@ -2297,16 +2298,14 @@ class MyModel(object):
                            interpolated_prices,
                            interpolated_noises,
                            fake_B1, fake_B2, fake_B3,
-                           _B1, _B2, _B3):
-
-        from matplotlib import colors as mcolors
-        # import ipdb; ipdb.set_trace()
+                           _B1, _B2, _B3,
+                           color=mcolors.CSS4_COLORS['orange']):
 
         self._plot_sim(ax,
                        fake_interpolated_prices, fake_interpolated_noises,
                        interpolated_prices, interpolated_noises,
                        fake_interpolated_noises[0], fake_B2, fake_B3,
-                       interpolated_noises[0], _B2, _B3, mcolors.CSS4_COLORS['orange'], plot_target_line=False)
+                       interpolated_noises[0], _B2, _B3, color, plot_target_line=False)
 
 
 class EnsembleModel(object):
@@ -2388,16 +2387,18 @@ class EnsembleModel(object):
             for j in range(N):
                 new_packed_result_list[j][i] = packed_result_list[i][j]
 
+        colors = ['green', 'red', 'cyan', 'magenta', 'black', 'yellow']
         for i, packed_result in enumerate(new_packed_result_list):
             fig, ax1 = plt.subplots(1, figsize=(10, 10))
-            for result in packed_result:
+            for j, result in enumerate(packed_result):
+                color = colors[self._models[j]._ensemble]
                 fake_price_list, fake_noise_list, price_list, noise_list, fake_interpolated_prices, fake_interpolated_noises, interpolated_prices, interpolated_noises, fake_B1, fake_B2, fake_B3, _B1, _B2, _B3 = result
                 self._models[0]._plot_sim(ax1, fake_price_list, fake_noise_list,
                                           price_list, noise_list, fake_B1,
                                           fake_B2, fake_B3, _B1, _B2, _B3)
                 self._models[0]._plot_interpolated(ax1, fake_interpolated_prices, fake_interpolated_noises,
                                                    interpolated_prices, interpolated_noises, fake_B1,
-                                                   fake_B2, fake_B3, _B1, _B2, _B3)
+                                                   fake_B2, fake_B3, _B1, _B2, _B3, color=color)
             fname = './frames-nb_plays-{}-units-{}-batch_size-{}-mu-{}-sigma-{}/ensemble/{}.png'.format(
                 self._nb_plays, self._units, self._input_dim, mu, sigma, i)
             LOG.debug("plot {}".format(fname))
