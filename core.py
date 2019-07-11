@@ -2127,8 +2127,10 @@ class MyModel(object):
         elif counts / prices.shape[0] <= 0.3:
             sign = +1
 
+        import ipdb; ipdb.set_trace()
+
         if sign is None:
-            raise Exception("the neural network doesn't train well")
+            raise Exception("the neural network doesn't train well, counts is {}".format(counts))
 
         # determine correct direction of results
         states_list = None

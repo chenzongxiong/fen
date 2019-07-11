@@ -224,12 +224,12 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
                          weights_name='model.h5',
                          trends_list_fname=None, ensemble=1):
     best_epoch = None
-    # import ipdb; ipdb.set_trace()
 
-    try:
-        with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
-            line = f.read()
-    except FileNotFoundError:
+    # try:
+    #     with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
+    #         line = f.read()
+    # except FileNotFoundError:
+    if True:
         epochs = []
         base = '/'.join(weights_fname.split('/')[:-1])
         for _dir in os.listdir(base):
@@ -243,6 +243,7 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
             raise Exception("no trained parameters found")
 
         best_epoch = max(epochs)
+        best_epoch = 10000
         LOG.debug("Best epoch is {}".format(best_epoch))
         dirname = '{}-epochs-{}/{}plays'.format(weights_fname[:-3], best_epoch, nb_plays)
         if not os.path.isdir(dirname):
