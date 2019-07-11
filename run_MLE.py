@@ -243,7 +243,7 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
             raise Exception("no trained parameters found")
 
         best_epoch = max(epochs)
-        # best_epoch = 10000
+        best_epoch = 15000
         LOG.debug("Best epoch is {}".format(best_epoch))
         dirname = '{}-epochs-{}/{}plays'.format(weights_fname[:-3], best_epoch, nb_plays)
         if not os.path.isdir(dirname):
@@ -253,7 +253,7 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
             line = f.read()
 
     shape = list(map(int, line.split(":")))
-
+    import ipdb; ipdb.set_trace()
     assert len(shape) == 3, "shape must be 3 dimensions"
     input_dim = shape[2]
 
@@ -268,7 +268,7 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
                       parallel_prediction=parallelism,
                       ensemble=ensemble)
 
-    mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': parallelism})
+    mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': parallelism, 'best_epoch': best_epoch, 'use_epochs': True})
     mymodel.plot_graphs_together(prices=price_list, noises=noise_list, mu=mu, sigma=sigma)
 
 

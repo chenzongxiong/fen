@@ -1981,7 +1981,7 @@ class MyModel(object):
         suffix = fname.split(".")[-1]
         dirname = "{}/{}plays".format(fname[:-3], self._nb_plays)
 
-        if not os.path.isdir(dirname):
+        if not os.path.isdir(dirname) or extra.get('use_epochs', False):
             LOG.debug(colors.red("Fail to Load Weights."))
             epochs = []
             base = '/'.join(fname.split('/')[:-1])
@@ -1995,6 +1995,9 @@ class MyModel(object):
             if not epochs:
                 return False
             best_epoch = max(epochs)
+            if extra.get('best_epoch', None) is not None:
+                best_epoch = extra.get('best_epoch')
+
             LOG.debug("Loading weights from Epoch: {}".format(epochs))
             dirname = '{}-epochs-{}/{}plays'.format(fname[:-3], best_epoch, self._nb_plays)
             LOG.debug("Loading weights from epochs file: {}".format(dirname))
