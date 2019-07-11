@@ -107,7 +107,10 @@ def predict(inputs,
         base = '/'.join(weights_fname.split('/')[:-1])
         for _dir in os.listdir(base):
             if os.path.isdir('{}/{}'.format(base, _dir)):
-                epochs.append(int(_dir.split('-')[-1]))
+                try:
+                    epochs.append(int(_dir.split('-')[-1]))
+                except ValueError:
+                    pass
 
         if not epochs:
             raise Exception("no trained parameters found")
@@ -221,6 +224,8 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
                          weights_name='model.h5',
                          trends_list_fname=None):
     best_epoch = None
+    # import ipdb; ipdb.set_trace()
+
     try:
         with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
             line = f.read()
@@ -229,7 +234,10 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
         base = '/'.join(weights_fname.split('/')[:-1])
         for _dir in os.listdir(base):
             if os.path.isdir('{}/{}'.format(base, _dir)):
-                epochs.append(int(_dir.split('-')[-1]))
+                try:
+                    epochs.append(int(_dir.split('-')[-1]))
+                except ValueError:
+                    pass
 
         if not epochs:
             raise Exception("no trained parameters found")

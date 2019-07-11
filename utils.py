@@ -138,11 +138,11 @@ def get_session(debug=False, interactive=False):
     elif interactive is True:
         _SESSION = tf.InteractiveSession()
     else:
-        # _SESSION = tf.keras.backend.get_session()
-        config = tf.ConfigProto(log_device_placement=False, allow_soft_placement=False,
-                                intra_op_parallelism_threads=os.cpu_count())
-        config.gpu_options.allow_growth = True
-        _SESSION = tf.Session(config=config)
+        _SESSION = tf.keras.backend.get_session()
+        # config = tf.ConfigProto(log_device_placement=False, allow_soft_placement=False,
+        #                         intra_op_parallelism_threads=os.cpu_count())
+        # config.gpu_options.allow_growth = True
+        # _SESSION = tf.Session(config=config)
 
     return _SESSION
 
