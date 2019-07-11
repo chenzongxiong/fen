@@ -1686,8 +1686,8 @@ class MyModel(object):
             with tf.device('/gpu:0'):
                 self.compile(training_inputs, mu=mu, sigma=sigma, outputs=training_outputs, **kwargs)
         else:
-            with tf.device('/cpu:0'):
-                self.compile(training_inputs, mu=mu, sigma=sigma, outputs=training_outputs, **kwargs)
+            # with tf.device('/cpu:0'):
+            self.compile(training_inputs, mu=mu, sigma=sigma, outputs=training_outputs, **kwargs)
 
         input_dim =  self.batch_input_shape[-1]
         utils.init_tf_variables()
