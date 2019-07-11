@@ -1268,7 +1268,7 @@ class MyModel(object):
 
         # fix random seed to 123
         seed = 123
-        np.random.seed(seed)
+        np.random.seed(ensemble)
         LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is {}".format(seed)))
 
         self.plays = []
@@ -1289,7 +1289,7 @@ class MyModel(object):
                 weight = 1.0
 
             # weight = 10 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
-            weight = ensemble * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
+            weight = 2 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
             LOG.debug("MyModel {} generates {} with Weight: {}".format(self._ensemble, colors.red("Play #{}".format(nb_play+1)), weight))
             if debug is True:
                 weight = 1.0
@@ -1741,7 +1741,7 @@ class MyModel(object):
               delta=0.001, max_iteration=10000):
 
         start_pos = 1000
-        end_pos = 1010
+        end_pos = 1100
 
         assert start_pos > 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
@@ -2114,7 +2114,7 @@ class MyModel(object):
         self._fmt_brief = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'
         self._fmt_truth = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'
         self._fmt_fake = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'
-        length = 50
+        length = 500
         assert length <= prices.shape[-1] - 1, "Length must be less than prices.shape-1"
         batch_size = self.batch_input_shape[-1]
         # states_list = None
