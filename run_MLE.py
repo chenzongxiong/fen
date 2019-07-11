@@ -172,21 +172,25 @@ def trend(prices,
           trends_list_fname=None):
 
     best_epoch = None
-    try:
-        with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
-            line = f.read()
-    except FileNotFoundError:
+    # try:
+    #     with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
+    #         line = f.read()
+    # except FileNotFoundError:
+    if True:
         epochs = []
         base = '/'.join(weights_fname.split('/')[:-1])
         for _dir in os.listdir(base):
             if os.path.isdir('{}/{}'.format(base, _dir)):
-                epochs.append(int(_dir.split('-')[-1]))
+                try:
+                    epochs.append(int(_dir.split('-')[-1]))
+                except ValueError:
+                    pass
 
         if not epochs:
             raise Exception("no trained parameters found")
 
         best_epoch = max(epochs)
-
+        best_epoch = 6000
         LOG.debug("Best epoch is {}".format(best_epoch))
         dirname = '{}-epochs-{}/{}plays'.format(weights_fname[:-3], best_epoch, nb_plays)
         if not os.path.isdir(dirname):
@@ -210,7 +214,7 @@ def trend(prices,
                       nb_plays=nb_plays,
                       parallel_prediction=True)
 
-    mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True})
+    mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True, 'use_epochs': True, 'best_epoch': best_epoch})
     guess_trend = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
 
     loss = float(-1.0)
@@ -253,7 +257,6 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
             line = f.read()
 
     shape = list(map(int, line.split(":")))
-    import ipdb; ipdb.set_trace()
     assert len(shape) == 3, "shape must be 3 dimensions"
     input_dim = shape[2]
 
@@ -642,7 +645,6 @@ if __name__ == "__main__":
     LOG.debug('# weights_fname: {}'.format(weights_fname))
     LOG.debug('################################################################################')
 
-    import ipdb; ipdb.set_trace()
 
 
     # try:
