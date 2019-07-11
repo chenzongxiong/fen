@@ -2215,10 +2215,7 @@ class MyModel(object):
             # interpolated_noises = fake_interpolated_noises
 
 
-            interpolated_prices = sign * interpolated_prices
             interpolated_noises = sign * interpolated_noises
-
-            fake_interpolated_prices = sign * fake_interpolated_prices
             fake_interpolated_noises = sign * fake_interpolated_noises
 
             self._plot_interpolated(ax1, fake_interpolated_prices, fake_interpolated_noises,
