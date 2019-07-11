@@ -222,7 +222,7 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
                          activation='tanh',
                          nb_plays=1,
                          weights_name='model.h5',
-                         trends_list_fname=None):
+                         trends_list_fname=None, ensemble=1):
     best_epoch = None
     # import ipdb; ipdb.set_trace()
 
@@ -264,7 +264,8 @@ def plot_graphs_together(price_list, noise_list, mu, sigma,
                       units=units,
                       activation=activation,
                       nb_plays=nb_plays,
-                      parallel_prediction=parallelism)
+                      parallel_prediction=parallelism,
+                      ensemble=ensemble)
 
     mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': parallelism})
     mymodel.plot_graphs_together(prices=price_list, noises=noise_list, mu=mu, sigma=sigma)
@@ -695,7 +696,8 @@ if __name__ == "__main__":
                              weights_name=weights_fname,
                              units=__units__,
                              activation=__activation__,
-                             nb_plays=__nb_plays__)
+                             nb_plays=__nb_plays__,
+                             ensemble=ensemble)
         sys.exit(0)
     else:
         LOG.debug("START to FIT via {}".format(colors.red(loss_name.upper())))

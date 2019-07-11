@@ -2111,7 +2111,7 @@ class MyModel(object):
         self._fmt_brief = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'
         self._fmt_truth = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'
         self._fmt_fake = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'
-        length = 600
+        length = 10
         assert length <= prices.shape[-1] - 1, "Length must be less than prices.shape-1"
         batch_size = self.batch_input_shape[-1]
         # states_list = None
@@ -2119,7 +2119,18 @@ class MyModel(object):
 
         operator_outputs = self.get_op_outputs_parallel(prices)
 
-        # results = self.predict_parallel(prices)
+        results = self.predict_parallel(prices)
+        counts = ((prices[1:]-prices[:-1] >= 0) == (results[1:] - results[:-1] >= 0)).sum()
+        sign = None
+        if counts / prices.shape[0] >= 0.7:
+            sign = +1
+        elif counts / prices.shape[0] <= 0.3:
+            sign = -1
+
+        if sign is None:
+            raise Exception("the neural network doesn't train well")
+        import ipdb; ipdb.set_trace()
+        # determine correct direction of results
         states_list = None
 
         # result_list = []
@@ -2170,8 +2181,8 @@ class MyModel(object):
             # fake_price_list = price_list
             # fake_noise_list = noise_list
 
-            price_list = fake_price_list
-            noise_list = fake_noise_list
+            # price_list = fake_price_list
+            # noise_list = fake_noise_list
 
             self._plot_sim(ax1, fake_price_list, fake_noise_list,
                            price_list, noise_list, fake_B1,
@@ -2200,8 +2211,16 @@ class MyModel(object):
             # fake_interpolated_prices = interpolated_prices
             # fake_interpolated_noises = interpolated_noises
 
-            interpolated_prices = fake_interpolated_prices
-            interpolated_noises = fake_interpolated_noises
+            # interpolated_prices = fake_interpolated_prices
+            # interpolated_noises = fake_interpolated_noises
+
+
+            interpolated_prices = sign * interpolated_prices
+            interpolated_noises = sign * interpolated_noises
+
+
+            fake_interpolated_prices = sign * fake_interpolated_prices
+            fake_interpolated_noises = sign * fake_interpolated_noises
 
             self._plot_interpolated(ax1, fake_interpolated_prices, fake_interpolated_noises,
                                     interpolated_prices, interpolated_noises, fake_B1,
