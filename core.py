@@ -168,7 +168,8 @@ def do_guess_seq(start,
 
         if np.allclose(predict_noise_seq[-1], guess_noise) is False:
             # sanity checking
-            import ipdb; ipdb.set_trace()
+            LOG.error("predict_noise_seq[-1] is: {}, guess_noise is: {}, they should be the samem, state: {}, activation: {}, sign: {}".format(predict_noise_seq[-1], guess_noise, prev_states, activation, sign))
+            # import ipdb; ipdb.set_trace()
 
         prev_diff, curr_diff = None, guess_noise - bk
         good_guess = False
@@ -1820,8 +1821,8 @@ class MyModel(object):
         guess_prices = []
         k = start_pos
         seq = 1
-        # repeating = 100
         repeating = 100
+        # repeating = 1
 
         nb_plays = self._nb_plays
         activation = self._activation
