@@ -168,7 +168,7 @@ def do_guess_seq(start,
 
         if np.allclose(predict_noise_seq[-1], guess_noise) is False:
             # sanity checking
-            LOG.error("predict_noise_seq[-1] is: {}, guess_noise is: {}, they should be the samem, state: {}, activation: {}, sign: {}".format(predict_noise_seq[-1], guess_noise, prev_states, activation, sign))
+            LOG.error("predict_noise_seq[-1] is: {}, guess_noise is: {}, they should be the same".format(predict_noise_seq[-1], guess_noise)),
             # import ipdb; ipdb.set_trace()
 
         prev_diff, curr_diff = None, guess_noise - bk

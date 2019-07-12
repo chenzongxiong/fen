@@ -190,7 +190,7 @@ def trend(prices,
             raise Exception("no trained parameters found")
 
         best_epoch = max(epochs)
-        best_epoch = 6000
+        best_epoch = 15000
         LOG.debug("Best epoch is {}".format(best_epoch))
         dirname = '{}-epochs-{}/{}plays'.format(weights_fname[:-3], best_epoch, nb_plays)
         if not os.path.isdir(dirname):
