@@ -39,7 +39,7 @@ def fit(inputs,
     input_dim = batch_size
 
     # timestep = 1
-    input_dim = 10
+    # input_dim = 1000
     timestep = inputs.shape[0] // input_dim
     # steps_per_epoch = inputs.shape[0] // input_dim
     steps_per_epoch = 1

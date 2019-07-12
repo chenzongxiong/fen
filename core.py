@@ -1268,9 +1268,9 @@ class MyModel(object):
         assert activation in [None, 'tanh', 'relu', 'elu', 'softmax'], colors.red("activation {} not support".format(activation))
 
         # fix random seed to 123
-        seed = 123
+        # seed = 123
         np.random.seed(ensemble)
-        LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is {}".format(seed)))
+        LOG.debug(colors.red("Make sure you are using the right random seed. currently seed is {}".format(ensemble)))
 
         self.plays = []
         self._nb_plays = nb_plays
