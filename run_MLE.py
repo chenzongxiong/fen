@@ -537,7 +537,8 @@ if __name__ == "__main__":
 
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
     if do_trend is False:
-        inputs, outputs = inputs[:points], outputs[:points]
+        # inputs, outputs = inputs[:points], outputs[:points]
+        pass
     if mc_mode is True:
         # inputs, outputs = outputs, inputs
         pass

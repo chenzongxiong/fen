@@ -1589,8 +1589,8 @@ class MyModel(object):
             self.loss_by_hand = tf.math.reduce_sum(self.loss_a + self.loss_b)
             # import ipdb; ipdb.set_trace()
             self.loss = self.loss_by_hand
-            self.reg_lambda = 0.01
-            self.reg_mu = 0.01
+            self.reg_lambda = 0.005
+            self.reg_mu = 0.005
             regularizers1 = [self.reg_lambda * tf.math.reduce_sum(tf.math.square(play.nonlinear_layer.kernel)) for play in self.plays]
             regularizers2 = [self.reg_mu * tf.math.reduce_sum(tf.math.square(play.linear_layer.kernel)) for play in self.plays]
             for regularizer in regularizers1:
