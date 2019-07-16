@@ -648,18 +648,17 @@ if __name__ == "__main__":
 
 
 
-    try:
-        import ipdb; ipdb.set_trace()
-        a, b = tdata.DatasetLoader.load_data(predicted_fname)
-        # inp, trend_list = tdata.DatasetLoader.load_data(trends_list_fname)
-        # assert np.allclose(a, inp, atol=1e-5)
-        confusion = confusion_matrix(a, b)
-        LOG.debug(colors.purple("confusion matrix is: {}".format(confusion)))
+    # try:
+    #     a, b = tdata.DatasetLoader.load_data(predicted_fname)
+    #     # inp, trend_list = tdata.DatasetLoader.load_data(trends_list_fname)
+    #     # assert np.allclose(a, inp, atol=1e-5)
+    #     confusion = confusion_matrix(a, b)
+    #     LOG.debug(colors.purple("confusion matrix is: {}".format(confusion)))
 
-        plot(a, b, trend_list)
-        sys.exit(0)
-    except FileNotFoundError:
-        LOG.warning("Not found prediction file, no way to create confusion matrix")
+    #     plot(a, b, trend_list)
+    #     sys.exit(0)
+    # except FileNotFoundError:
+    #     LOG.warning("Not found prediction file, no way to create confusion matrix")
 
     if mc_mode is True and do_trend is True:
         predictions, loss = trend(prices=inputs[:batch_size*2],
