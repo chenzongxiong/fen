@@ -648,18 +648,18 @@ if __name__ == "__main__":
 
 
 
-    # try:
-    #     import ipdb; ipdb.set_trace()
-    #     a, b = tdata.DatasetLoader.load_data(predicted_fname)
-    #     inp, trend_list = tdata.DatasetLoader.load_data(trends_list_fname)
-    #     assert np.allclose(a, inp, atol=1e-5)
-    #     confusion = confusion_matrix(a, b)
-    #     LOG.debug(colors.purple("confusion matrix is: {}".format(confusion)))
+    try:
+        import ipdb; ipdb.set_trace()
+        a, b = tdata.DatasetLoader.load_data(predicted_fname)
+        # inp, trend_list = tdata.DatasetLoader.load_data(trends_list_fname)
+        # assert np.allclose(a, inp, atol=1e-5)
+        confusion = confusion_matrix(a, b)
+        LOG.debug(colors.purple("confusion matrix is: {}".format(confusion)))
 
-    #     plot(a, b, trend_list)
-    #     sys.exit(0)
-    # except FileNotFoundError:
-    #     LOG.warning("Not found prediction file, no way to create confusion matrix")
+        plot(a, b, trend_list)
+        sys.exit(0)
+    except FileNotFoundError:
+        LOG.warning("Not found prediction file, no way to create confusion matrix")
 
     if mc_mode is True and do_trend is True:
         predictions, loss = trend(prices=inputs[:batch_size*2],
@@ -671,7 +671,9 @@ if __name__ == "__main__":
                                   nb_plays=__nb_plays__,
                                   weights_name=weights_fname,
                                   trends_list_fname=trends_list_fname)
-        inputs = inputs[batch_size:batch_size+predictions.shape[-1]]
+        # inputs = inputs[batch_size:batch_size+predictions.shape[-1]]
+        # inputs = inputs[batch_size:batch_size+predictions.shape[-1]]
+        inputs = inputs[1000:1100]
     elif do_visualize_activated_plays is True:
         LOG.debug(colors.red("Load weights from {}, DO VISUALIZE ACTIVATED PLAYS".format(weights_fname)))
         visualize(inputs=inputs[:batch_size],
