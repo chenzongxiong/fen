@@ -2323,6 +2323,7 @@ class EnsembleModel(object):
                  nb_plays,
                  parallel_prediction,
                  best_epoch_list):
+
         self._input_dim = input_dim
         self._timestep = timestep
         self._units = units
@@ -2330,17 +2331,18 @@ class EnsembleModel(object):
         self._nb_plays = nb_plays
         self._batch_size = input_dim
         self._models = []
-
+        self._ensembles = ensembles
         for ensemble in ensembles:
-            self._models.append(
-                MyModel(input_dim=input_dim,
-                        timestep=timestep,
-                        units=units,
-                        activation=activation,
-                        nb_plays=nb_plays,
-                        parallel_prediction=parallel_prediction,
-                        ensemble=ensemble)
-            )
+            pass
+            # self._models.append(
+            #     MyModel(input_dim=input_dim,
+            #             timestep=timestep,
+            #             units=units,
+            #             activation=activation,
+            #             nb_plays=nb_plays,
+            #             parallel_prediction=parallel_prediction,
+            #             ensemble=ensemble)
+            # )
         self._shape = (1, timestep, input_dim)
         self._parallelism = parallel_prediction
         self._best_epoch_list = best_epoch_list
@@ -2434,3 +2436,58 @@ class EnsembleModel(object):
             LOG.debug("plot {}".format(fname))
             os.makedirs(os.path.dirname(fname), exist_ok=True)
             fig.savefig(fname, dpi=100)
+
+    def trend(self):
+        import trading_data as tdata
+        models_diff_weights_mc_stock_model_trends = './new-dataset/models/diff_weights/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions-mu-{mu}-sigma-{sigma}-points-{points}/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/ensemble-{ensemble}/loss-{loss}/trends-batch_size-{batch_size}.csv'
+
+        avg = []
+        # for i, model in enumerate(self._models):
+        for ensemble in self._ensembles:
+            predicted_fname = models_diff_weights_mc_stock_model_trends.format(
+                method='sin',
+                activation=None,
+                state=0,
+                mu=0,
+                sigma=110,
+                units=20,
+                nb_plays=20,
+                points=1000,
+                input_dim=1,
+                __activation__=self._activation,
+                __units__=self._units,
+                __mu__=0,
+                __sigma__=110,
+                __state__=0,
+                __nb_plays__=self._nb_plays,
+                loss='mle',
+                ensemble=ensemble,
+                batch_size=1500)
+
+            a, b = tdata.DatasetLoader.load_data(predicted_fname)
+            avg.append(b)
+
+        avg = np.vstack(avg).mean(axis=0)
+
+        formatter = './new-dataset/models/diff_weights/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions-mu-{mu}-sigma-{sigma}-points-{points}/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/ensemble/loss-{loss}/trends-batch_size-{batch_size}.csv'
+        ensemble_trend_fname = formatter.format(
+                method='sin',
+                activation=None,
+                state=0,
+                mu=0,
+                sigma=110,
+                units=20,
+                nb_plays=20,
+                points=1000,
+                input_dim=1,
+                __activation__=self._activation,
+                __units__=self._units,
+                __mu__=0,
+                __sigma__=110,
+                __state__=0,
+                __nb_plays__=self._nb_plays,
+                loss='mle',
+                batch_size=1500)
+
+        tdata.DatasetSaver.save_data(a, avg, ensemble_trend_fname)
+        LOG.debug("Generate ensemble results {}".format(ensemble_trend_fname))
