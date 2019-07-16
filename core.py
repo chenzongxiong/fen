@@ -169,7 +169,7 @@ def do_guess_seq(start,
         if np.allclose(predict_noise_seq[-1], guess_noise) is False:
             # sanity checking
             LOG.error("predict_noise_seq[-1] is: {}, guess_noise is: {}, they should be the same".format(predict_noise_seq[-1], guess_noise)),
-            import ipdb; ipdb.set_trace()
+            # import ipdb; ipdb.set_trace()
 
         prev_diff, curr_diff = None, guess_noise - bk
         good_guess = False
@@ -1199,7 +1199,7 @@ def runner(queue, results):
 
 class WorkerPool(object):
     def __init__(self, pool_size=None):
-        self.pool_size = os.cpu_counts() if pool_size is None else pool_size
+        self.pool_size = constants.CPU_COUNTS if pool_size is None else pool_size
         LOG.debug("Create a worker pool with size {}".format(self.pool_size))
         self._results = mp.Manager().dict()
         self.queues = [MP_CONTEXT.JoinableQueue() for _ in range(self.pool_size)]
