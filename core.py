@@ -169,7 +169,7 @@ def do_guess_seq(start,
         if np.allclose(predict_noise_seq[-1], guess_noise) is False:
             # sanity checking
             LOG.error("predict_noise_seq[-1] is: {}, guess_noise is: {}, they should be the same".format(predict_noise_seq[-1], guess_noise)),
-            # import ipdb; ipdb.set_trace()
+            import ipdb; ipdb.set_trace()
 
         prev_diff, curr_diff = None, guess_noise - bk
         good_guess = False
@@ -1768,6 +1768,7 @@ class MyModel(object):
         # sigma: use empirical standard derviation                                     #
         ################################################################################
         original_prediction = self.predict_parallel(prices)
+        prices = prices[:original_prediction.shape[-1]]
         mu = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).mean()
         sigma = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).std()
         LOG.debug(colors.cyan("emprical mean: {}, emprical standard dervation: {}".format(mu, sigma)))
