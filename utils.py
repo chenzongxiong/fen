@@ -39,11 +39,13 @@ def update(i, *fargs):
         for x in range(len(colors)):
             ax.scatter(inputs[i:i+step, x], outputs[i:i+step, x], color=colors[x])
     elif mode == "snake":
-        inputs_len = inputs.shape[0] // 2
+        inputs_len = inputs.shape[0]
         for x in range(len(colors)):
-            ax.scatter(inputs[0:inputs_len, x], outputs[0:inputs_len, x], color='cyan')
+            # ax.scatter(inputs[0:inputs_len, x], outputs[0:inputs_len, x], color='cyan')
+            ax.scatter(inputs[:, x], outputs[:, x], color='cyan')
         for x in range(len(colors)):
-            ax.scatter(inputs[i+inputs_len:i+step+inputs_len, x], outputs[i+inputs_len:i+step+inputs_len, x], color=colors[x], s=s)
+            ax.scatter(inputs[i:i+step, x], outputs[i:i+step, x], color=colors[x], s=s)
+            # ax.scatter(inputs[i+inputs_len:i+step+inputs_len, x], outputs[i+inputs_len:i+step+inputs_len, x], color=colors[x], s=s)
 
 
 def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
@@ -65,7 +67,7 @@ def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
 
     assert len(colors) == outputs.shape[1]
 
-    fig, ax = plt.subplots(figsize=(20, 20))
+    fig, ax = plt.subplots(figsize=(30, 15))
     fig.set_tight_layout(True)
     points = inputs.shape[0]
     ax.set_xlim(xlim)
@@ -77,14 +79,14 @@ def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
         anim = FuncAnimation(fig, update, frames=np.arange(0, points, step),
                              fargs=fargs, interval=400)
     elif mode == "snake":
-        frame_step = step // 4
+        frame_step = step // 2
         if frame_step == 0:
             frame_step = 2
-        # frame_step = 2
-        anim = FuncAnimation(fig, update, frames=np.arange(0, points // 2, frame_step),
+
+        anim = FuncAnimation(fig, update, frames=np.arange(0, points, frame_step),
                              fargs=fargs, interval=400)
 
-    anim.save(fname, dpi=40, writer='imagemagick')
+    anim.save(fname, dpi=80, writer='imagemagick')
 
 
 COLORS = ["blue", "black", "orange", "cyan", "red", "magenta", "yellow", "green"]

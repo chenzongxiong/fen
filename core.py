@@ -3,7 +3,7 @@ import time
 import copy
 import inspect
 import matplotlib
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from matplotlib import colors as mcolors
 from matplotlib.animation import FuncAnimation

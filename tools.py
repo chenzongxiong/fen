@@ -94,15 +94,18 @@ import trading_data as tdata
 
 # fname1 = './new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-20/nb_plays-20/points-1000/input_dim-1/predictions-mu-0-sigma-110-points-1000/activation#-tanh/state#-0/units#-100/nb_plays#-100/loss-mle/predictions-batch_size-1000-epochs-6000.csv'
 fname1 = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-10000/nb_plays-20/points-1000/input_dim-1/mu-0-sigma-110-points-1000.csv'
+length = 1500
 prices, random_walk1 = tdata.DatasetLoader.load_data(fname1)
-random_walk1 = random_walk1[:300]
+random_walk1 = random_walk1[:length]
 noise1 = random_walk1[1:] - random_walk1[:-1]
-import ipdb; ipdb.set_trace()
+# import ipdb; ipdb.set_trace()
 # fname2 = './new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-20/nb_plays-20/points-1000/input_dim-1/predictions-mu-0-sigma-110-points-1000/activation#-tanh/state#-0/units#-100/nb_plays#-100/loss-mle/predictions-batch_size-1000.csv'
 # fname2 = '/Users/zxchen/Desktop/predictions-elu-batch_size-300-epochs-8000.csv'
-fname2 = '/Users/zxchen/Desktop/predictions-elu-batch_size-300-epochs-20000.csv'
+# fname2 = '/Users/zxchen/Desktop/predictions-elu-batch_size-300-epochs-20000.csv'
+name = 'predictions-elu-batch_size-1500-epochs-16000-ensemble-6'
+fname2 = '/Users/zxchen/Desktop/{}.csv'.format(name)
 prices, random_walk2 = tdata.DatasetLoader.load_data(fname2)
-random_walk2 = random_walk2[:300]
+random_walk2 = random_walk2[:length]
 noise2 = random_walk2[1:] - random_walk2[:-1]
 
-tdata.DatasetSaver.save_data(noise1, noise2, '/Users/zxchen/Desktop/diff-elu-epochs-20000.csv')
+tdata.DatasetSaver.save_data(noise1, noise2, '/Users/zxchen/Desktop/diff-{}.csv'.format(name))

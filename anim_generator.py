@@ -2,6 +2,8 @@ import os
 import sys
 import argparse
 import numpy as np
+from scipy.interpolate import interp1d
+
 
 import log as logging
 import constants
@@ -415,7 +417,6 @@ def model_nb_plays_generator_with_noise():
             predictions_interp = predictions_interp[:clip_length]
         else:
             if train_invert is False:
-                from scipy.interpolate import interp1d
                 diff = _inputs[1:] - _inputs[:-1]
                 LOG.debug("Max jump between two successive x is {}".format(np.max(np.abs(diff))))
 
@@ -655,8 +656,41 @@ def model_nb_plays_noise_test_generator():
 
 
 
+def simulation():
+    fname = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-10000/nb_plays-20/points-1000/input_dim-1/mu-0-sigma-110-points-1000.csv'
+    inputs, outputs = tdata.DatasetLoader.load_data(fname)
+    points = 2000
+    inputs, outputs = inputs[:points], outputs[:points]
+
+    interp = 1
+    t = np.linspace(1, points, points)
+    f = interp1d(t, inputs, kind='cubic')
+    t_interp = np.linspace(1, points, (int)(interp*points-interp+1))
+    inputs_interp = f(t_interp)
+
+
+    # import matplotlib.pyplot as plt
+    # length = 50
+    # plt.plot(t[:length], inputs[:length], 'o')
+    # plt.plot(t_interp[:interp*length-1], inputs_interp[:(interp*length-1)], '-x')
+    # plt.show()
+
+
+                # plt.plot(t_[:length], ground_truth[:length], 'o')
+                # plt.plot(t_interp[:interp*length-1], ground_truth_interp[:(interp*length-1)], '-x')
+                # plt.show()
+
+
+    colors = utils.generate_colors()
+    fname = '/Users/zxchen/Desktop/2.gif'
+    utils.save_animation(inputs, outputs, fname, step=20, colors=colors, mode="snake")
+
+
 
 if __name__ == "__main__":
+    generate_debug_data()
+    # simulation()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--operator", dest="operator",
                         required=False,
