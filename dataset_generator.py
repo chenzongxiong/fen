@@ -260,22 +260,27 @@ def generate_debug_data():
     eps = (max_price - min_price) / cycles
 
     price_list = []
-    points = cycles * 100
+
     for i in range(cycles):
+        j = (i // 5 + 1)
         if i == 0:
-            a = np.linspace(0, min_price, 50)
+            a = np.linspace(0, min_price, 200 // j)
+            #a = np.sin(a)
         else:
-            a = np.linspace(max_price-(i-1)*eps, min_price, 50)
-        # b = np.linspace(max_price-i*eps, min_price, 50)
-        b = np.linspace(min_price, max_price-i*eps, 50)
+            a = np.linspace(max_price-(i-1)*eps, min_price, 200//j)
+        #     a = np.sin(a)
+
+        b = np.linspace(min_price, max_price-i*eps, 200//j)
+        # b = np.sin(b)
 
         price_list.append(np.hstack([a, b]))
 
     prices = np.hstack(price_list)
+    points = prices.shape[0]
     import matplotlib.pyplot as plt
     plt.plot(range(points), prices, '.')
     plt.show()
-
+    print("points: {}".format(points))
     fname = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-10000/nb_plays-20/points-1000/input_dim-1/mu-0-sigma-110-points-1000-debug.csv'
     noises = np.zeros(points)
     tdata.DatasetSaver.save_data(prices, noises, fname)
