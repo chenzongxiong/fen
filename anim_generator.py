@@ -661,14 +661,14 @@ def simulation():
     fname = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-20/nb_plays-20/points-1000/input_dim-1/predictions-mu-0-sigma-110-points-1000/activation#-elu/state#-0/units#-100/nb_plays#-100/ensemble-6/loss-mle/predictions-batch_size-1500-epochs-16000-debug.csv'
 
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
-    points = 2000
-    inputs, outputs = inputs[:points], outputs[:points]
+    # points = 2000
+    # inputs, outputs = inputs[:points], outputs[:points]
 
-    interp = 1
-    t = np.linspace(1, points, points)
-    f = interp1d(t, inputs, kind='cubic')
-    t_interp = np.linspace(1, points, (int)(interp*points-interp+1))
-    inputs_interp = f(t_interp)
+    # interp = 1
+    # t = np.linspace(1, points, points)
+    # f = interp1d(t, inputs, kind='cubic')
+    # t_interp = np.linspace(1, points, (int)(interp*points-interp+1))
+    # inputs_interp = f(t_interp)
 
 
     # import matplotlib.pyplot as plt
@@ -684,7 +684,8 @@ def simulation():
 
 
     colors = utils.generate_colors()
-    fname = '/Users/zxchen/Desktop/debug-1.gif'
+    # fname = '/Users/zxchen/Desktop/debug-1.gif'
+    fname = './debug-1.gif'
     utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
 
 
