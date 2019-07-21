@@ -648,27 +648,27 @@ if __name__ == "__main__":
 
 
 
-    try:
-        predicted_fname = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-20/nb_plays-20/points-1000/input_dim-1/predictions-mu-0-sigma-110-points-1000/activation#-elu/state#-0/units#-100/nb_plays#-100/ensemble/loss-mle/trends-batch_size-1500.csv'
-        a, b = tdata.DatasetLoader.load_data(predicted_fname)
-        # inp, trend_list = tdata.DatasetLoader.load_data(trends_list_fname)
-        # assert np.allclose(a, inp, atol=1e-5)
-        confusion = confusion_matrix(a, b)
-        LOG.debug(colors.purple("confusion matrix is: {}".format(confusion)))
+    # try:
+    #     predicted_fname = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-20/nb_plays-20/points-1000/input_dim-1/predictions-mu-0-sigma-110-points-1000/activation#-elu/state#-0/units#-100/nb_plays#-100/ensemble/loss-mle/trends-batch_size-1500.csv'
+    #     a, b = tdata.DatasetLoader.load_data(predicted_fname)
+    #     # inp, trend_list = tdata.DatasetLoader.load_data(trends_list_fname)
+    #     # assert np.allclose(a, inp, atol=1e-5)
+    #     confusion = confusion_matrix(a, b)
+    #     LOG.debug(colors.purple("confusion matrix is: {}".format(confusion)))
 
-        # plot(a, b, trend_list)
+    #     # plot(a, b, trend_list)
 
-        hnn_rsme = (((b[:-1] - a[:-1]) ** 2).mean())**(0.5)
-        baseline_rsme =  (((a[1:] - a[:-1]) ** 2).mean())**(0.5)
-        # loss2 = np.abs(guess_prices - prices[start_pos:end_pos])
-        # loss3 = (prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1]) ** 2
-        # loss4 = np.abs(prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1])
-        LOG.debug("hnn-RMSE: {}".format(hnn_rsme))
-        LOG.debug("baseline-RMSE: {}".format(baseline_rsme))
+    #     hnn_rsme = (((b[:-1] - a[:-1]) ** 2).mean())**(0.5)
+    #     baseline_rsme =  (((a[1:] - a[:-1]) ** 2).mean())**(0.5)
+    #     # loss2 = np.abs(guess_prices - prices[start_pos:end_pos])
+    #     # loss3 = (prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1]) ** 2
+    #     # loss4 = np.abs(prices[start_pos:end_pos] - prices[start_pos-1:end_pos-1])
+    #     LOG.debug("hnn-RMSE: {}".format(hnn_rsme))
+    #     LOG.debug("baseline-RMSE: {}".format(baseline_rsme))
 
-        sys.exit(0)
-    except FileNotFoundError:
-        LOG.warning("Not found prediction file, no way to create confusion matrix")
+    #     sys.exit(0)
+    # except FileNotFoundError:
+    #     LOG.warning("Not found prediction file, no way to create confusion matrix")
 
     if mc_mode is True and do_trend is True:
         predictions, loss = trend(prices=inputs[:batch_size*2],
