@@ -2380,7 +2380,7 @@ class EnsembleModel(object):
                 __nb_plays__=self._nb_plays,
                 loss='mle',
                 ensemble=model._ensemble,
-                batch_size=1000)
+                batch_size=self._input_dim)
             model.load_weights(weights_fname,
                                extra={'shape': self._shape,
                                       'parallelism': self._parallelism,
@@ -2446,6 +2446,7 @@ class EnsembleModel(object):
             fname = './frames-nb_plays-{}-units-{}-batch_size-{}-mu-{}-sigma-{}/ensemble/{}.png'.format(
                 self._nb_plays, self._units, self._input_dim, mu, sigma, i)
             LOG.debug("plot {}".format(fname))
+
             os.makedirs(os.path.dirname(fname), exist_ok=True)
             fig.savefig(fname, dpi=100)
 
@@ -2480,6 +2481,8 @@ class EnsembleModel(object):
             avg.append(b)
 
         avg = np.vstack(avg).mean(axis=0)
+
+        import ipdb; ipdb.set_trace()
 
         formatter = './new-dataset/models/diff_weights/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions-mu-{mu}-sigma-{sigma}-points-{points}/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/ensemble/loss-{loss}/trends-batch_size-{batch_size}.csv'
         ensemble_trend_fname = formatter.format(
