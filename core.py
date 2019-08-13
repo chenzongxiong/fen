@@ -3,7 +3,7 @@ import time
 import copy
 import inspect
 import matplotlib
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from matplotlib import colors as mcolors
 from matplotlib.animation import FuncAnimation
@@ -48,6 +48,8 @@ SENTINEL = utils.sentinel_marker()
 
 tf.keras.backend.set_epsilon(1e-9)
 
+
+hacking = 1
 
 def do_guess_helper(step, direction, start_price, nb_plays, activation, sign, prev_states, weights, delta=0.001):
     '''
@@ -149,10 +151,14 @@ def do_guess_seq(start,
     predict_noise_seq = [prev_gt_prediction]
     interval = 0
 
+
     while interval < seq:
         k = start + interval
-        bk = np.random.normal(loc=mu, scale=sigma) + predict_noise_seq[-1]
+        # bk = np.random.normal(loc=mu, scale=sigma) + predict_noise_seq[-1]
         # bk = curr_gt_prediction
+        global hacking
+        bk = 110 * hacking
+        hacking = - hacking
         if bk > predict_noise_seq[-1]:
             direction = -1
         elif bk < predict_noise_seq[-1]:
@@ -1828,8 +1834,8 @@ class MyModel(object):
         guess_prices = []
         k = start_pos
         seq = 1
-        repeating = 100
-        # repeating = 1
+        # repeating = 100
+        repeating = 2
 
         nb_plays = self._nb_plays
         activation = self._activation
