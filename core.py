@@ -2345,16 +2345,15 @@ class EnsembleModel(object):
         self._models = []
         self._ensembles = ensembles
         for ensemble in ensembles:
-            pass
-            # self._models.append(
-            #     MyModel(input_dim=input_dim,
-            #             timestep=timestep,
-            #             units=units,
-            #             activation=activation,
-            #             nb_plays=nb_plays,
-            #             parallel_prediction=parallel_prediction,
-            #             ensemble=ensemble)
-            # )
+            self._models.append(
+                MyModel(input_dim=input_dim,
+                        timestep=timestep,
+                        units=units,
+                        activation=activation,
+                        nb_plays=nb_plays,
+                        parallel_prediction=parallel_prediction,
+                        ensemble=ensemble)
+            )
         self._shape = (1, timestep, input_dim)
         self._parallelism = parallel_prediction
         self._best_epoch_list = best_epoch_list
@@ -2405,7 +2404,8 @@ class EnsembleModel(object):
             for j in range(N):
                 new_packed_result_list[j][i] = packed_result_list[i][j]
 
-        colors = ['green', 'red', 'cyan', 'magenta', 'black', 'yellow']
+        colors = ['green', 'red', 'cyan', 'magenta', 'black', 'yellow', 'gold', 'olive', 'grey', 'saddlebrown', 'purple', 'plum', 'pink', 'burlywood', 'darkkhaki', 'deepskyblue', 'turquoise', 'lime', 'thistle', 'mediumvioletred']
+
         for i, packed_result in enumerate(new_packed_result_list):
             fig, ax1 = plt.subplots(1, figsize=(10, 10))
             avg_fake_noise_list = avg_noise_list = avg_fake_interpolated_noise_list = avg_interpolated_noise_list = None

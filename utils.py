@@ -86,7 +86,7 @@ def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
         anim = FuncAnimation(fig, update, frames=np.arange(0, points, frame_step),
                              fargs=fargs, interval=400)
 
-    anim.save(fname, dpi=80, writer='imagemagick')
+    anim.save(fname, dpi=40, writer='imagemagick')
 
 
 COLORS = ["blue", "black", "orange", "cyan", "red", "magenta", "yellow", "green"]
