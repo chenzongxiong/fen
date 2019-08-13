@@ -2141,9 +2141,9 @@ class MyModel(object):
 
         counts = ((prices[1:]-prices[:-1] >= 0) == (results[1:] - results[:-1] >= 0)).sum()
         sign = None
-        if counts / prices.shape[0] >= 0.7:
+        if counts / prices.shape[0] >= 0.65:
             sign = -1
-        elif counts / prices.shape[0] <= 0.3:
+        elif counts / prices.shape[0] <= 0.35:
             sign = +1
 
         LOG.debug("The counts is: {}, percentage is: {}".format(counts, counts/prices.shape[0]))

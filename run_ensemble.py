@@ -6,7 +6,7 @@ if __name__ == '__main__':
     ensembles = [11]
     # best_epoch_list = [6000, 6000, 1000, 1000, 1000]
     ensembles = [11, 12, 13, 14, 15, 16, 17, 18, 19]
-    ensembles = [11]
+    ensembles = [11, 12]
     # best_epoch_list = [6000, 10000, 10000]
     # best_epoch_list = [15000, 15000, 15000, 15000, 15000, 15000, 15000]
     # best_epoch_list = [20000] * 20
