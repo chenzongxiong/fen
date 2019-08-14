@@ -245,7 +245,7 @@ def slide_window_average(arr, window_size=5, step=1):
 def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **kwargs):
     mu = kwargs.pop('mu', 0)
     sigma = kwargs.pop('sigma', 1)
-
+    ensemble = kwargs.pop('ensemble', 0)
     # fig, (ax1, ax2, ax3) = plt.subplots(3, sharex='all')
     # fig, (ax1, ax2, ax3) = plt.subplots(3, sharex=False)
     # fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, sharex='col')
@@ -269,7 +269,7 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
         if mu is None and sigma is None:
             fname = './frames/{}-distribution.png'.format(i)
         else:
-            fname = './frames-mu-{}-sigma-{}/{}-distribution.png'.format(mu, sigma, i)
+            fname = './frames-mu-{}-sigma-{}-ensemble-{}/{}-distribution.png'.format(mu, sigma, ensemble, i)
 
         os.makedirs(os.path.dirname(fname), exist_ok=True)
         fig1.savefig(fname, dpi=100)
@@ -278,7 +278,7 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
     if mu is None and sigma is None:
         fname = './frames/{}.png'.format(i)
     else:
-        fname = './frames-mu-{}-sigma-{}/{}.png'.format(mu, sigma, i)
+        fname = './frames-mu-{}-sigma-{}-ensemble-{}/{}-distribution.png'.format(mu, sigma, ensemble, i)
 
     os.makedirs(os.path.dirname(fname), exist_ok=True)
     fig.savefig(fname, dpi=100)

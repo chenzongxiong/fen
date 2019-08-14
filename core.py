@@ -235,7 +235,10 @@ def repeat(k,
            activation,
            sign,
            operator_outputs,
-           weights):
+           weights,
+           ensemble,
+           real_mu,
+           real_sigma):
     '''
     Parameters:
     --------------------
@@ -292,7 +295,7 @@ def repeat(k,
     avg_guess = guess_price_seq_stack_.mean(axis=0)[-1]
     LOG.debug(colors.red(logger_string3.format(k, float(avg_guess), float(curr_gt_price), float(prev_gt_price), float(guess_price_seq_stack_.std()))))
     LOG.debug("********************************************************************************")
-    utils.plot_internal_transaction(hysteresis_info, k, predicted_price=float(avg_guess), mu=mu, sigma=sigma, guess_price_seq=guess_price_seq_stack_, bk_list=bk_list_)
+    utils.plot_internal_transaction(hysteresis_info, k, predicted_price=float(avg_guess), mu=real_mu, sigma=real_sigma, guess_price_seq=guess_price_seq_stack_, bk_list=bk_list_, ensemble=ensemble)
 
     return avg_guess
 
@@ -313,6 +316,10 @@ def wrapper_repeat(args):
     operator_outputs = args[12]
     weights = args[13]
 
+    ensemble = args[14]
+    real_mu = args[15]
+    real_sigma = args[16]
+
     return repeat(k,
                   seq,
                   repeating,
@@ -326,7 +333,10 @@ def wrapper_repeat(args):
                   activation,
                   sign,
                   operator_outputs,
-                  weights)
+                  weights,
+                  ensemble,
+                  real_mu,
+                  real_sigma)
 
 
 def phi(x, width=1.0):
@@ -1781,6 +1791,7 @@ class MyModel(object):
         ################################################################################
         original_prediction = self.predict_parallel(prices)
         prices = prices[:original_prediction.shape[-1]]
+        real_mu, real_sigma = mu, sigma
         mu = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).mean()
         sigma = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).std()
         LOG.debug(colors.cyan("emprical mean: {}, emprical standard dervation: {}".format(mu, sigma)))
@@ -1834,8 +1845,8 @@ class MyModel(object):
         guess_prices = []
         k = start_pos
         seq = 1
-        # repeating = 100
-        repeating = 2
+        repeating = 100
+        # repeating = 2
 
         nb_plays = self._nb_plays
         activation = self._activation
@@ -1861,7 +1872,10 @@ class MyModel(object):
                     activation,
                     sign,
                     operator_outputs,
-                    weights)
+                    weights,
+                    self._ensemble,
+                    real_mu,
+                    real_sigma)
             args_list.append(args)
             k += 1
 
@@ -2453,7 +2467,7 @@ class EnsembleModel(object):
     def trend(self):
         import trading_data as tdata
         models_diff_weights_mc_stock_model_trends = './new-dataset/models/diff_weights/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions-mu-{mu}-sigma-{sigma}-points-{points}/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/ensemble-{ensemble}/loss-{loss}/trends-batch_size-{batch_size}.csv'
-
+        # import ipdb; ipdb.set_trace()
         avg = []
         # for i, model in enumerate(self._models):
         for ensemble in self._ensembles:
@@ -2482,7 +2496,7 @@ class EnsembleModel(object):
 
         avg = np.vstack(avg).mean(axis=0)
 
-        import ipdb; ipdb.set_trace()
+        colors = ['green', 'red', 'cyan', 'magenta', 'black', 'yellow', 'gold', 'olive', 'grey', 'saddlebrown', 'purple', 'plum', 'pink', 'burlywood', 'darkkhaki', 'deepskyblue', 'turquoise', 'lime', 'thistle', 'mediumvioletred']
 
         formatter = './new-dataset/models/diff_weights/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions-mu-{mu}-sigma-{sigma}-points-{points}/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/ensemble/loss-{loss}/trends-batch_size-{batch_size}.csv'
         ensemble_trend_fname = formatter.format(
@@ -2502,7 +2516,7 @@ class EnsembleModel(object):
                 __state__=0,
                 __nb_plays__=self._nb_plays,
                 loss='mle',
-                batch_size=1500)
+                batch_size=self._input_dim)
 
         tdata.DatasetSaver.save_data(a, avg, ensemble_trend_fname)
         LOG.debug("Generate ensemble results {}".format(ensemble_trend_fname))

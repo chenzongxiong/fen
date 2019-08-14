@@ -169,7 +169,8 @@ def trend(prices,
           activation='tanh',
           nb_plays=1,
           weights_name='model.h5',
-          trends_list_fname=None):
+          trends_list_fname=None,
+          ensemble=1):
 
     best_epoch = None
     # try:
@@ -212,7 +213,8 @@ def trend(prices,
                       units=units,
                       activation=activation,
                       nb_plays=nb_plays,
-                      parallel_prediction=True)
+                      parallel_prediction=True,
+                      ensemble=ensemble)
 
     mymodel.load_weights(weights_fname, extra={'shape': shape, 'parallelism': True, 'use_epochs': True, 'best_epoch': best_epoch})
     guess_trend = mymodel.trend(prices=prices, B=B, mu=mu, sigma=sigma)
@@ -679,7 +681,8 @@ if __name__ == "__main__":
                                   activation=__activation__,
                                   nb_plays=__nb_plays__,
                                   weights_name=weights_fname,
-                                  trends_list_fname=trends_list_fname)
+                                  trends_list_fname=trends_list_fname,
+                                  ensemble=ensemble)
         # inputs = inputs[batch_size:batch_size+predictions.shape[-1]]
         # inputs = inputs[batch_size:batch_size+predictions.shape[-1]]
         inputs = inputs[1000:1100]
