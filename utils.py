@@ -278,7 +278,7 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
     if mu is None and sigma is None:
         fname = './frames/{}.png'.format(i)
     else:
-        fname = './frames-mu-{}-sigma-{}-ensemble-{}/{}-distribution.png'.format(mu, sigma, ensemble, i)
+        fname = './frames-mu-{}-sigma-{}-ensemble-{}/{}.png'.format(mu, sigma, ensemble, i)
 
     os.makedirs(os.path.dirname(fname), exist_ok=True)
     fig.savefig(fname, dpi=100)
