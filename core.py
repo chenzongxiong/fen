@@ -2348,7 +2348,8 @@ class EnsembleModel(object):
                  activation,
                  nb_plays,
                  parallel_prediction,
-                 best_epoch_list):
+                 best_epoch_list,
+                 use_epochs=False):
 
         self._input_dim = input_dim
         self._timestep = timestep
@@ -2371,7 +2372,7 @@ class EnsembleModel(object):
         self._shape = (1, timestep, input_dim)
         self._parallelism = parallel_prediction
         self._best_epoch_list = best_epoch_list
-        self._use_epochs = True
+        self._use_epochs = use_epochs
 
     def load_weights(self):
         models_diff_weights_mc_stock_model_saved_weights = './new-dataset/models/diff_weights/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions-mu-{mu}-sigma-{sigma}-points-{points}/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/ensemble-{ensemble}/loss-{loss}weights-batch_size-{batch_size}.h5'
