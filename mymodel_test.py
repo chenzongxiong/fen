@@ -88,6 +88,7 @@ def predict(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, me
 
     return _predictions, loss
 
+
 if __name__ == "__main__":
     LOG.debug(colors.red("Test multiple plays"))
 

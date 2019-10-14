@@ -24,12 +24,11 @@ def operator_generator_with_noise():
     sigma = 1.5
     method = 'sin'
     points = 1000
-    with_noise = True
+    with_noise = False
     individual = True
     input_dim = 1
     state = 0
-    nb_plays = 20
-
+    nb_plays = 50
 
     if with_noise is False:
         sigma = 0
@@ -60,7 +59,7 @@ def operator_generator_with_noise():
                                                                        points=points,
                                                                        input_dim=input_dim)
 
-        tdata.DatasetSaver.save_data(inputs, multi_outputs, fname_multi)
+        tdata.DatasetSaver.save_data(inputs, multi_outputs.T, fname_multi)
 
 
 def play_generator_with_noise():

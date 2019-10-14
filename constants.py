@@ -264,7 +264,9 @@ DATASET_PATH = dict(
     #################### OPERATOR ####################
     operators=_prefix+'/operators/method-{method}/state-{state}/mu-{mu}/sigma-{sigma}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/base.csv',
     operators_multi=_prefix+'/operators/method-{method}/state-{state}/mu-{mu}/sigma-{sigma}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/base_multi.csv',
-
+    operators_saved_weights=_prefix+'/operators/method-{method}/state-{state}/mu-{mu}/sigma-{sigma}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/loss-{loss}/nb_plays#-{__nb_plays__}/weights.h5',
+    operators_prediction=_prefix+'/operators/method-{method}/state-{state}/mu-{mu}/sigma-{sigma}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/loss-{loss}/nb_plays#-{__nb_plays__}/prediction.csv',
+    operators_loss_history=_prefix+'/operators/method-{method}/state-{state}/mu-{mu}/sigma-{sigma}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/loss-{loss}/history.csv',
 
     #################### Markov Chain ####################
     # models_mc=_prefix+'/models/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/base.csv',
@@ -280,4 +282,7 @@ DATASET_PATH = dict(
     models_diff_weights_mc_stock_model_trends_list=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions-mu-{mu}-sigma-{sigma}-points-{points}/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/ensemble-{ensemble}/loss-{loss}/trends-list-batch_size-{batch_size}.csv',
     models_diff_weights_mc_stock_model_saved_weights=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions-mu-{mu}-sigma-{sigma}-points-{points}/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/ensemble-{ensemble}/loss-{loss}weights-batch_size-{batch_size}.h5',
     models_diff_weights_mc_stock_model_loss_history=_prefix+'/models/diff_weights/method-{method}/activation-{activation}/state-{state}/markov_chain/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/input_dim-{input_dim}/predictions-mu-{mu}-sigma-{sigma}-points-{points}/activation#-{__activation__}/state#-{__state__}/units#-{__units__}/nb_plays#-{__nb_plays__}/ensemble-{ensemble}/loss-{loss}/history-batch_size-{batch_size}.csv',
+
+
+    ################################################################################
 )

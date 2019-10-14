@@ -906,7 +906,6 @@ class Play(object):
                                          activation=None,
                                          use_bias=True,
                                          debug=getattr(self, "_debug", False)))
-            pass
 
         if self._need_compile is True:
             LOG.info(colors.yellow("Start to compile this model"))
@@ -1002,11 +1001,17 @@ class Play(object):
 
     @property
     def weights(self):
-        weights_ = [self.operator_layer.kernel,
-                    self.nonlinear_layer.kernel,
-                    self.nonlinear_layer.bias,
-                    self.linear_layer.kernel,
-                    self.linear_layer.bias]
+        if self._network_type == constants.NetworkType.OPERATOR:
+            weights_ = [self.operator_layer.kernel]
+        elif self._network_type == constants.NetworkType.PLAY:
+            weights_ = [self.operator_layer.kernel,
+                        self.nonlinear_layer.kernel,
+                        self.nonlinear_layer.bias,
+                        self.linear_layer.kernel,
+                        self.linear_layer.bias]
+        else:
+            raise Exception("Unknown NetworkType. It must be in [OPERATOR, PLAY]")
+
         weights_ = utils.get_session().run(weights_)
         weights_ = [w.reshape(-1) for w in weights_]
         return weights_
@@ -1363,13 +1368,16 @@ class MyModel(object):
             _xs.append(_x)
             _ys.append(_y)
 
+        _xs = [_x]
+
         params_list = []
         model_outputs = []
-        feed_inputs = []
+        feed_inputs = [utils.get_cache()['play_input_layer'].input]
         feed_targets = []
 
+
         for idx, play in enumerate(self.plays):
-            feed_inputs.append(play.input)
+            # feed_inputs.append(play.input)
             model_outputs.append(play.output)
 
             shape = tf.keras.backend.int_shape(play.output)
@@ -1391,6 +1399,7 @@ class MyModel(object):
         loss = tf.keras.backend.mean(tf.math.square(y_pred - _y))
         mu = tf.keras.backend.mean(y_pred[:, 1:, :] - y_pred[:, :-1, :])
         sigma = tf.keras.backend.std(y_pred[:, 1:, :] - y_pred[:, :-1, :])
+
         # decay: decay learning rate to half every 100 steps
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, decay=decay)
         with tf.name_scope('training'):
@@ -1406,6 +1415,8 @@ class MyModel(object):
 
         # _x = [x for _ in range(self._nb_plays)]
         # _y = [y for _ in range(self._nb_plays)]
+        self._batch_input_shape = utils.get_cache()['play_input_layer'].input.shape
+
         ins = _xs + _ys
 
         self.cost_history = []
@@ -1413,7 +1424,6 @@ class MyModel(object):
         path = "/".join(loss_file_name.split("/")[:-1])
         writer.add_graph(tf.get_default_graph())
         loss_summary = tf.summary.scalar("loss", loss)
-
         for i in range(epochs):
             for j in range(steps_per_epoch):
                 cost, predicted_mu, predicted_sigma = train_function(ins)
@@ -1745,7 +1755,7 @@ class MyModel(object):
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1:], loss_file_name)
 
-    def predict(self, inputs):
+    def predict(self, inputs, individual=False):
         if isinstance(inputs, tf.Tensor):
             _inputs = inputs
         else:
@@ -1757,6 +1767,8 @@ class MyModel(object):
         outputs_ = np.array(outputs)
         prediction = outputs_.mean(axis=0)
         prediction = prediction.reshape(-1)
+        if individual is True:
+            return prediction, outputs_
         return prediction
 
     def trend(self, prices, B, mu, sigma,
@@ -2000,6 +2012,8 @@ class MyModel(object):
 
         LOG.debug(colors.cyan("Writing input shape into disk..."))
         start = time.time()
+        # import ipdb; ipdb.set_trace()
+
         with open("{}/{}plays/input_shape.txt".format(fname[:-3], len(self.plays)), "w") as f:
             f.write(":".join(map(str, self.batch_input_shape)))
         end = time.time()

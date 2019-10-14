@@ -92,8 +92,10 @@ class DatasetGenerator(object):
         else:
             _inputs = cls.systhesis_sin_input_generator(points)
 
-        timestep = points
-        input_dim = 1
+        # timestep = points
+        # input_dim = 1
+        timestep = 1
+        input_dim = points
         operator = core.MyModel(nb_plays=nb_plays,
                                 debug=True,
                                 activation=None,
