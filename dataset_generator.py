@@ -107,7 +107,7 @@ def model_genertor_with_mc():
     mu = 0
     sigma = 0.2
     method = 'sin'
-    points = 1000
+    points = 5000
     with_noise = True
     activation = 'tanh'
     # activation = None
