@@ -18,7 +18,7 @@ LOG = logging.getLogger(__name__)
 def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method='sin', nb_plays=1, batch_size=1, loss='mse', loss_file_name="./tmp/my_model_loss_history.csv", learning_rate=0.001, weights_fname='model.h5'):
 
     # epochs = EPOCHS // batch_size
-    epochs = 5000
+    epochs = 1
     steps_per_epoch = batch_size
 
     start = time.time()
@@ -35,8 +35,14 @@ def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method
 
     # agent.load_weights(weights_fname)
     LOG.debug("Learning rate is {}".format(learning_rate))
-    agent.fit(inputs, outputs, verbose=1, epochs=epochs,
-              steps_per_epoch=steps_per_epoch, loss_file_name=loss_file_name, learning_rate=learning_rate)
+    if loss == 'mse':
+        agent.fit(inputs, outputs, verbose=1, epochs=epochs,
+                steps_per_epoch=steps_per_epoch, loss_file_name=loss_file_name, learning_rate=learning_rate)
+    elif loss == 'mle':
+        pass
+        # agent.fit2(inputs, outputs, verbose=1, epochs=epochs,
+        #            steps_per_epoch=steps_per_epoch, loss_file_name=loss_file_name, learning_rate=learning_rate)
+
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
     LOG.debug("print weights info")
@@ -54,48 +60,92 @@ def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method
 
 
 if __name__ == "__main__":
-    LOG.debug(colors.red("Test multiple plays"))
+    # LOG.debug(colors.red("Test multiple plays"))
+    # inputs, outputs = tdata.DatasetLoader.load_data(constants.DATASET_PATH['models'].format(method='sin',
+    #                                                                                         state=0,
+    #                                                                                         mu=0,
+    #                                                                                         sigma=0,
+    #                                                                                         nb_plays=50,
+    #                                                                                         points=1000,
+    #                                                                                         input_dim=1,
+    #                                                                                         units=50,
+    #                                                                                         activation='tanh'))
 
-    inputs, outputs = tdata.DatasetLoader.load_data(constants.DATASET_PATH['models'].format(method='sin',
-                                                                                            state=0,
-                                                                                            mu=0,
-                                                                                            sigma=0,
-                                                                                            nb_plays=50,
-                                                                                            points=1000,
-                                                                                            input_dim=1,
-                                                                                            units=50,
-                                                                                            activation='tanh'))
+    # predictions, loss = fit(inputs, outputs, units=100, activation='elu', nb_plays=50, learning_rate=0.05,
+    #                         weights_fname=constants.DATASET_PATH['models_saved_weights'].format(
+    #                             method='sin',
+    #                             state=0,
+    #                             mu=0,
+    #                             sigma=0,
+    #                             units=50,
+    #                             activation='tanh',
+    #                             nb_plays=50,
+    #                             __units__=50,
+    #                             __activation__='elu',
+    #                             __nb_plays__=50,
+    #                             __state__=0,
+    #                             points=1000,
+    #                             input_dim=1,
+    #                             loss='mse',
+    #                             ))
 
-    predictions, loss = fit(inputs, outputs, units=100, activation='elu', nb_plays=50, learning_rate=0.05,
-                            weights_fname=constants.DATASET_PATH['models_saved_weights'].format(
+    # prediction_fname = constants.DATASET_PATH['models_predictions'].format(method='sin',
+    #                                                                        state=0,
+    #                                                                        mu=0,
+    #                                                                        sigma=0,
+    #                                                                        nb_plays=50,
+    #                                                                        units=50,
+    #                                                                        activation='tanh',
+    #                                                                        __nb_plays__=50,
+    #                                                                        __units__=50,
+    #                                                                        __activation__='elu',
+    #                                                                        __state__=0,
+    #                                                                        points=1000,
+    #                                                                        input_dim=1,
+    #                                                                        loss='mse')
+    # tdata.DatasetSaver.save_data(inputs, predictions, prediction_fname)
+
+    LOG.debug(colors.red("Test multiple mc with MSE"))
+    inputs, outputs = tdata.DatasetLoader.load_data(constants.DATASET_PATH['models_diff_weights_mc'].format(method='sin',
+                                                                                                            state=0,
+                                                                                                            mu=0,
+                                                                                                            sigma=0.2,
+                                                                                                            nb_plays=50,
+                                                                                                            points=1000,
+                                                                                                            input_dim=1,
+                                                                                                            units=50,
+                                                                                                            activation='tanh'))
+
+    predictions, loss = fit(inputs, outputs, units=100, activation='elu', nb_plays=1, learning_rate=0.05, loss='mse',
+                            weights_fname=constants.DATASET_PATH['models_diff_weights_mc_saved_weights'].format(
                                 method='sin',
                                 state=0,
                                 mu=0,
-                                sigma=0,
+                                sigma=0.2,
                                 units=50,
                                 activation='tanh',
                                 nb_plays=50,
-                                __units__=50,
+                                __units__=100,
                                 __activation__='elu',
-                                __nb_plays__=50,
+                                __nb_plays__=1,
                                 __state__=0,
                                 points=1000,
                                 input_dim=1,
-                                loss='mse',
+                                loss='mse'
                                 ))
 
-    prediction_fname = constants.DATASET_PATH['models_predictions'].format(method='sin',
-                                                                           state=0,
-                                                                           mu=0,
-                                                                           sigma=0,
-                                                                           nb_plays=50,
-                                                                           units=50,
-                                                                           activation='tanh',
-                                                                           __nb_plays__=50,
-                                                                           __units__=50,
-                                                                           __activation__='elu',
-                                                                           __state__=0,
-                                                                           points=1000,
-                                                                           input_dim=1,
-                                                                           loss='mse')
+    prediction_fname = constants.DATASET_PATH['models_diff_weights_mc_predictions'].format(method='sin',
+                                                                                           state=0,
+                                                                                           mu=0,
+                                                                                           sigma=0.2,
+                                                                                           nb_plays=50,
+                                                                                           units=50,
+                                                                                           activation='tanh',
+                                                                                           __nb_plays__=1,
+                                                                                           __units__=100,
+                                                                                           __activation__='elu',
+                                                                                           __state__=0,
+                                                                                           points=1000,
+                                                                                           input_dim=1,
+                                                                                           loss='mse')
     tdata.DatasetSaver.save_data(inputs, predictions, prediction_fname)

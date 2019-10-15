@@ -103,71 +103,48 @@ def model_generator_with_noise():
     tdata.DatasetSaver.save_data(inputs, outputs, fname)
 
 
-def operator_noise_test_generator():
-    states = [2]
+def model_genertor_with_mc():
     mu = 0
-    sigma = 0.1
-    points = 100
-    methods = ["mixed"]
-
-    for method in methods:
-        for weight in weights:
-            for width in widths:
-                inputs = []
-                outputs = []
-                for state in states:
-                    LOG.debug("Processing method: {}, weight: {}, width: {}, state: {}, mu: {}, sigma: {}, points: {}".format(method, weight, width, state, mu, sigma, points))
-
-                    inputs_, outputs_ = tdata.DatasetGenerator.systhesis_operator_generator(points=points,
-                                                                                            weight=weight,
-                                                                                            width=width,
-                                                                                            state=state,
-                                                                                            with_noise=True,
-                                                                                            mu=mu,
-                                                                                            sigma=sigma,
-                                                                                            method=method)
-                    inputs.append(inputs_)
-                    outputs.append(outputs_)
-                fname = constants.FNAME_FORMAT['operators_noise_test'].format(method=method, weight=weight, width=width, mu=mu, sigma=sigma, points=points, state=state)
-                inputs = np.hstack(inputs)
-                outputs = np.hstack(outputs)
-                outputs = outputs.T
-                tdata.DatasetSaver.save_data(inputs, outputs, fname)
-
-
-def model_noise_test_generator():
-    mu = 0
-    sigma = 0.1
-    points = 5000
-    nb_plays = 40
+    sigma = 0.2
+    method = 'sin'
+    points = 1000
+    with_noise = True
+    activation = 'tanh'
+    # activation = None
+    input_dim = 1
     state = 0
+    nb_plays = 50
+    diff_weights = True
+    units = 50
 
-    units = 20
-    methods = ["mixed"]
-    for method in methods:
-        for weight in weights:
-            for width in widths:
-                LOG.debug("generate data for method {}, weight {}, width {}, units {}, nb_plays {}".format(
-                    method, weight, width, units, nb_plays
-                ))
-                fname = constants.FNAME_FORMAT['operators_noise_test'].format(method=method, weight=weight, width=width, points=points, mu=mu, sigma=sigma, state=state)
-                try:
-                    inputs, _ = tdata.DatasetLoader.load_data(fname)
-                except FileNotFoundError:
-                    inputs = None
+    if with_noise is False:
+        sigma = 0
+        mu = 0
 
-                import time
-                start = time.time()
-                inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(nb_plays=nb_plays,
-                                                                                   points=points,
-                                                                                   units=units,
-                                                                                   inputs=inputs,
-                                                                                   batch_size=1)
-                end = time.time()
-                LOG.debug("time cost: {} s".format(end-start))
+    inputs = tdata.DatasetGenerator.systhesis_markov_chain_generator(points, mu, sigma)
 
-                fname = constants.FNAME_FORMAT['models_nb_plays_noise_test'].format(method=method, weight=weight, width=width, nb_plays=nb_plays, units=units, points=points, mu=mu, sigma=sigma, state=state)
-                tdata.DatasetSaver.save_data(inputs, outputs, fname)
+    inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(points=points,
+                                                                       nb_plays=nb_plays,
+                                                                       method=method,
+                                                                       mu=mu,
+                                                                       sigma=sigma,
+                                                                       activation=activation,
+                                                                       with_noise=with_noise,
+                                                                       diff_weights=diff_weights,
+                                                                       input_dim=input_dim,
+                                                                       units=units,
+                                                                       inputs=inputs)
+
+    fname = constants.DATASET_PATH['models_diff_weights_mc'].format(method=method,
+                                                                    state=state,
+                                                                    mu=mu,
+                                                                    sigma=sigma,
+                                                                    nb_plays=nb_plays,
+                                                                    points=points,
+                                                                    input_dim=input_dim,
+                                                                    activation=activation,
+                                                                    units=units)
+    tdata.DatasetSaver.save_data(outputs, inputs, fname)
 
 
 
@@ -335,21 +312,10 @@ if __name__ == "__main__":
 
     argv = parser.parse_args(sys.argv[1:])
 
-    if argv.operator:
-        operator_generator()
-    if argv.play:
-        play_generator()
-    if argv.model:
-        model_generator(argv.units, argv.nb_plays)
-    if argv.GF:
-        GF_generator()
     if argv.operator_noise:
         operator_generator_with_noise()
-        # operator_noise_test_generator()
-    if argv.play_noise:
-        play_generator_with_noise()
     if argv.mc:
-        markov_chain(argv.points, argv.mu, argv.sigma)
+        model_genertor_with_mc()
     if argv.model_noise:
         model_generator_with_noise()
         # model_noise_test_generator()
