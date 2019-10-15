@@ -146,7 +146,9 @@ class DatasetGenerator(object):
         if points % input_dim != 0:
             raise Exception("ERROR: timestep must be integer")
 
-        timestep = points // input_dim
+        # timestep = points // input_dim
+        input_dim = points
+        timestep = 1
 
         if inputs is None:
             LOG.debug("systhesis model outputs by *online-generated* inputs with settings: method: {} and noise: {}".format(colors.red(method), with_noise))
@@ -169,7 +171,8 @@ class DatasetGenerator(object):
                              activation=activation,
                              timestep=timestep,
                              input_dim=input_dim,
-                             diff_weights=diff_weights)
+                             diff_weights=diff_weights,
+                             network_type=constants.NetworkType.PLAY)
 
         outputs = model.predict(_inputs)
         _outputs = outputs.reshape(-1)
@@ -183,6 +186,7 @@ class DatasetGenerator(object):
             B.append(bi)
 
         return np.array(B).reshape(-1).astype(np.float32)
+
 
 class DatasetLoader(object):
     SPLIT_RATIO = 0.6
