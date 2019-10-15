@@ -13,14 +13,12 @@ import colors
 
 sess = utils.get_session()
 LOG = logging.getLogger(__name__)
-epochs = constants.EPOCHS
-EPOCHS = constants.EPOCHS
 
 
 def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method='sin', nb_plays=1, batch_size=1, loss='mse', loss_file_name="./tmp/my_model_loss_history.csv", learning_rate=0.001, weights_fname='model.h5'):
 
     # epochs = EPOCHS // batch_size
-    epochs = 3000
+    epochs = 5000
     steps_per_epoch = batch_size
 
     start = time.time()
@@ -101,14 +99,14 @@ if __name__ == "__main__":
                                                                                                points=1000,
                                                                                                input_dim=1))
 
-    predictions, loss = fit(inputs, outputs, units=100, activation='elu', nb_plays=20, learning_rate=0.05,
+    predictions, loss = fit(inputs, outputs, units=100, activation='elu', nb_plays=20, learning_rate=0.1,
                             weights_fname=constants.DATASET_PATH['operators_saved_weights'].format(
                                 method='sin',
                                 state=0,
                                 mu=0,
                                 sigma=0,
                                 nb_plays=20,
-                                __nb_plays__=20,
+                                __nb_plays__=40,
                                 points=1000,
                                 input_dim=1,
                                 loss='mse',
@@ -119,7 +117,7 @@ if __name__ == "__main__":
                                                                              mu=0,
                                                                              sigma=0,
                                                                              nb_plays=20,
-                                                                             __nb_plays__=20,
+                                                                             __nb_plays__=40,
                                                                              points=1000,
                                                                              input_dim=1,
                                                                              loss='mse')
