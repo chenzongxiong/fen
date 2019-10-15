@@ -18,7 +18,7 @@ LOG = logging.getLogger(__name__)
 def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method='sin', nb_plays=1, batch_size=1, loss='mse', loss_file_name="./tmp/my_model_loss_history.csv", learning_rate=0.001, weights_fname='model.h5'):
 
     # epochs = EPOCHS // batch_size
-    epochs = 1
+    epochs = 5000
     steps_per_epoch = batch_size
 
     start = time.time()
@@ -66,7 +66,7 @@ if __name__ == "__main__":
                                                                                             units=50,
                                                                                             activation='tanh'))
 
-    predictions, loss = fit(inputs, outputs, units=100, activation='elu', nb_plays=20, learning_rate=0.1,
+    predictions, loss = fit(inputs, outputs, units=100, activation='elu', nb_plays=50, learning_rate=0.05,
                             weights_fname=constants.DATASET_PATH['models_saved_weights'].format(
                                 method='sin',
                                 state=0,
@@ -74,10 +74,10 @@ if __name__ == "__main__":
                                 sigma=0,
                                 units=50,
                                 activation='tanh',
-                                nb_plays=20,
+                                nb_plays=50,
                                 __units__=50,
                                 __activation__='elu',
-                                __nb_plays__=1,
+                                __nb_plays__=50,
                                 __state__=0,
                                 points=1000,
                                 input_dim=1,
@@ -88,10 +88,10 @@ if __name__ == "__main__":
                                                                            state=0,
                                                                            mu=0,
                                                                            sigma=0,
-                                                                           nb_plays=20,
+                                                                           nb_plays=50,
                                                                            units=50,
                                                                            activation='tanh',
-                                                                           __nb_plays__=1,
+                                                                           __nb_plays__=50,
                                                                            __units__=50,
                                                                            __activation__='elu',
                                                                            __state__=0,
