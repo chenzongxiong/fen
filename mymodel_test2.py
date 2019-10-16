@@ -18,11 +18,11 @@ LOG = logging.getLogger(__name__)
 def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method='sin', nb_plays=1, batch_size=1, loss='mse', loss_file_name="./tmp/my_model_loss_history.csv", learning_rate=0.001, weights_fname='model.h5'):
 
     # epochs = EPOCHS // batch_size
-    epochs = 1
+    epochs = 10000
     steps_per_epoch = batch_size
 
     start = time.time()
-    input_dim = 1000
+    input_dim = 5000
     # timestep = 100 // input_dim
     # import ipdb; ipdb.set_trace()
     timestep = inputs.shape[0] // input_dim
@@ -111,12 +111,12 @@ if __name__ == "__main__":
                                                                                                             mu=0,
                                                                                                             sigma=0.2,
                                                                                                             nb_plays=50,
-                                                                                                            points=1000,
+                                                                                                            points=5000,
                                                                                                             input_dim=1,
                                                                                                             units=50,
                                                                                                             activation='tanh'))
 
-    predictions, loss = fit(inputs, outputs, units=100, activation='elu', nb_plays=1, learning_rate=0.05, loss='mse',
+    predictions, loss = fit(inputs, outputs, units=100, activation='elu', nb_plays=50, learning_rate=0.01, loss='mse',
                             weights_fname=constants.DATASET_PATH['models_diff_weights_mc_saved_weights'].format(
                                 method='sin',
                                 state=0,
@@ -127,9 +127,9 @@ if __name__ == "__main__":
                                 nb_plays=50,
                                 __units__=100,
                                 __activation__='elu',
-                                __nb_plays__=1,
+                                __nb_plays__=50,
                                 __state__=0,
-                                points=1000,
+                                points=5000,
                                 input_dim=1,
                                 loss='mse'
                                 ))
@@ -141,11 +141,11 @@ if __name__ == "__main__":
                                                                                            nb_plays=50,
                                                                                            units=50,
                                                                                            activation='tanh',
-                                                                                           __nb_plays__=1,
+                                                                                           __nb_plays__=50,
                                                                                            __units__=100,
                                                                                            __activation__='elu',
                                                                                            __state__=0,
-                                                                                           points=1000,
+                                                                                           points=5000,
                                                                                            input_dim=1,
                                                                                            loss='mse')
     tdata.DatasetSaver.save_data(inputs, predictions, prediction_fname)
