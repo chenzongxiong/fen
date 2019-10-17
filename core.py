@@ -1747,8 +1747,8 @@ class MyModel(object):
 
             LOG.debug("================================================================================")
             # save weights every 1000 epochs
-            if i % 1000 == 0 and i != 0:
-                self.save_weights("{}-epochs-{}.h5".format(weights_fname[:-3], i))
+            # if i % 1000 == 0 and i != 0:
+            #     self.save_weights("{}-epochs-{}.h5".format(weights_fname[:-3], i))
 
             self.cost_history.append([i, cost, mse_cost1, mse_cost2, loss_a, loss_b])
 

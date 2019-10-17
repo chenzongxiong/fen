@@ -18,7 +18,7 @@ LOG = logging.getLogger(__name__)
 def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method='sin', nb_plays=1, batch_size=1, loss='mse', loss_file_name="./tmp/my_model_loss_history.csv", learning_rate=0.001, weights_fname='model.h5', mu=0, sigma=1.0):
 
     # epochs = EPOCHS // batch_size
-    epochs = 1
+    epochs = 10000
     steps_per_epoch = batch_size
 
     start = time.time()
@@ -121,7 +121,7 @@ if __name__ == "__main__":
     predictions, loss = fit(inputs, outputs,
                             units=100,
                             activation='elu',
-                            nb_plays=1,
+                            nb_plays=50,
                             learning_rate=0.01,
                             mu=0,
                             sigma=0.2,
@@ -136,8 +136,8 @@ if __name__ == "__main__":
                                 nb_plays=50,
                                 __units__=100,
                                 __activation__='elu',
-                                __nb_plays__=1,
-                                __state__=50,
+                                __nb_plays__=50,
+                                __state__=0,
                                 points=5000,
                                 input_dim=1,
                                 loss='mle'
