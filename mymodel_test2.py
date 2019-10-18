@@ -42,9 +42,6 @@ def fit(inputs, outputs, units=1, activation='tanh', width=1, weight=1.0, method
         agent.fit2(inputs, mu, sigma, outputs, verbose=1, epochs=epochs,
                    steps_per_epoch=steps_per_epoch, loss_file_name=loss_file_name, learning_rate=learning_rate)
 
-        # agent.fit2(inputs, outputs, verbose=1, epochs=epochs,
-        #            steps_per_epoch=steps_per_epoch, loss_file_name=loss_file_name, learning_rate=learning_rate)
-
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
     LOG.debug("print weights info")
@@ -121,7 +118,7 @@ if __name__ == "__main__":
     predictions, loss = fit(inputs, outputs,
                             units=100,
                             activation='elu',
-                            nb_plays=50,
+                            nb_plays=100,
                             learning_rate=0.01,
                             mu=0,
                             sigma=0.2,
@@ -136,7 +133,7 @@ if __name__ == "__main__":
                                 nb_plays=50,
                                 __units__=100,
                                 __activation__='elu',
-                                __nb_plays__=50,
+                                __nb_plays__=100,
                                 __state__=0,
                                 points=5000,
                                 input_dim=1,
@@ -150,7 +147,7 @@ if __name__ == "__main__":
                                                                                            nb_plays=50,
                                                                                            units=50,
                                                                                            activation='tanh',
-                                                                                           __nb_plays__=50,
+                                                                                           __nb_plays__=100,
                                                                                            __units__=100,
                                                                                            __activation__='elu',
                                                                                            __state__=0,
