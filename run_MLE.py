@@ -536,8 +536,8 @@ if __name__ == "__main__":
     if do_prediction is True and do_trend is True:
         raise Exception("both do predictions and do_trend are True")
 
-    # debug
-    fname = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-10000/nb_plays-20/points-1000/input_dim-1/mu-0-sigma-110-points-1000-debug.csv'
+    # Debug Dima hysteresis behaviours
+    fname = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-10000/nb_plays-20/points-1000/input_dim-1/mu-0-sigma-110-points-1000-debug-4.csv'
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
     if do_trend is False:
         # inputs, outputs = inputs[:points], outputs[:points]
