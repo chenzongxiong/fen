@@ -563,7 +563,9 @@ if __name__ == "__main__":
         pass
 
     # inputs, outputs = outputs, inputs
-    inputs, outputs = inputs[:2000], outputs[:2000]
+    # inputs, outputs = inputs[:2000], outputs[:2000]
+
+    inputs, outputs = inputs[:1500*20], outputs[:1500*20]
 
     loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
                                                                      method=method,
@@ -701,7 +703,7 @@ if __name__ == "__main__":
 
         LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
         # import ipdb; ipdb.set_trace()
-        inputs, outputs = inputs[:batch_size], outputs[:batch_size]
+        # inputs, outputs = inputs[:batch_size], outputs[:batch_size]
         predictions, best_epoch = predict(inputs=inputs,
                                            outputs=outputs,
                                            units=__units__,

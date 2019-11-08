@@ -224,10 +224,10 @@ def generate_debug_data():
     inputs, outputs = inputs[:points], outputs[:points]
     min_price, max_price = inputs.min(), inputs.max()
     cycles = 100
-    # import ipdb; ipdb.set_trace()
+    import ipdb; ipdb.set_trace()
 
     points_per_half_cycle = 1000
-    min_price = -1;
+    # min_price = -2;
     eps = (max_price - min_price) / cycles
 
     price_list = []
