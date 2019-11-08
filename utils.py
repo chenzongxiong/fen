@@ -4,7 +4,7 @@ import h5py
 
 import numpy as np
 import matplotlib
-# matplotlib.use('Agg')
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 from matplotlib import colors as mcolors
 from matplotlib.animation import FuncAnimation
@@ -55,7 +55,8 @@ def save_animation(inputs, outputs, fname, xlim=None, ylim=None,
     os.makedirs(os.path.dirname(fname), exist_ok=True)
 
     if xlim is None:
-        xlim = [np.min(inputs) - 1, np.max(inputs) + 1]
+        # xlim = [np.min(inputs) - 1, np.max(inputs) + 1]
+        xlim = [np.min(inputs) - 0.1, np.max(inputs) + 0.1]
     if ylim is None:
         ylim = [np.min(outputs) - 1, np.max(outputs) + 1]
 

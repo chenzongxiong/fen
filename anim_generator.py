@@ -687,7 +687,7 @@ def simulation():
     colors = utils.generate_colors()
     # fname = '/Users/zxchen/Desktop/debug-1.gif'
     fname = './debug-4.gif'
-    utils.save_animation(inputs, outputs, fname, step=40, colors=colors, mode="snake")
+    utils.save_animation(inputs, outputs, fname, step=100, colors=colors, mode="snake")
 
 
 
