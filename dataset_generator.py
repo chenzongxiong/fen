@@ -227,7 +227,7 @@ def generate_debug_data():
     import ipdb; ipdb.set_trace()
 
     points_per_half_cycle = 1000
-    # min_price = -2;
+    min_price = -0.4;
     eps = (max_price - min_price) / cycles
 
     price_list = []
@@ -249,7 +249,7 @@ def generate_debug_data():
     # import matplotlib.pyplot as plt
     # plt.plot(range(points), prices, '.')
     # plt.show()
-    fname = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-10000/nb_plays-20/points-1000/input_dim-1/mu-0-sigma-110-points-1000-debug.csv'
+    fname = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-10000/nb_plays-20/points-1000/input_dim-1/mu-0-sigma-110-points-1000-debug-2.csv'
     noises = np.zeros(points)
     tdata.DatasetSaver.save_data(prices, noises, fname)
 
