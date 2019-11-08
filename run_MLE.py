@@ -407,7 +407,7 @@ if __name__ == "__main__":
     interp = 1
     # do_prediction = False
     do_prediction = argv.predict
-    do_confusion_matrix = True
+    do_confusion_matrix = False
     mc_mode = True
     do_trend = argv.trend
     do_plot = argv.plot
@@ -536,7 +536,8 @@ if __name__ == "__main__":
     if do_prediction is True and do_trend is True:
         raise Exception("both do predictions and do_trend are True")
 
-
+    # debug
+    fname = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-10000/nb_plays-20/points-1000/input_dim-1/mu-0-sigma-110-points-1000-debug.csv'
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
     if do_trend is False:
         # inputs, outputs = inputs[:points], outputs[:points]
@@ -697,6 +698,7 @@ if __name__ == "__main__":
                   weights_name=weights_fname)
         sys.exit(0)
     elif do_prediction is True:
+
         LOG.debug(colors.red("Load weights from {}".format(weights_fname)))
         # import ipdb; ipdb.set_trace()
         inputs, outputs = inputs[:batch_size], outputs[:batch_size]
