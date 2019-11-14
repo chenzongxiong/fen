@@ -537,7 +537,7 @@ if __name__ == "__main__":
         raise Exception("both do predictions and do_trend are True")
 
     # Debug Dima hysteresis behaviours
-    fname = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-10000/nb_plays-20/points-1000/input_dim-1/mu-0-sigma-110-points-1000-debug-4.csv'
+    # fname = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-10000/nb_plays-20/points-1000/input_dim-1/mu-0-sigma-110-points-1000-debug-5.csv'
     inputs, outputs = tdata.DatasetLoader.load_data(fname)
     if do_trend is False:
         # inputs, outputs = inputs[:points], outputs[:points]
@@ -564,8 +564,9 @@ if __name__ == "__main__":
 
     # inputs, outputs = outputs, inputs
     # inputs, outputs = inputs[:2000], outputs[:2000]
-
-    inputs, outputs = inputs[:1500*20], outputs[:1500*20]
+    # It's for debug variables
+    # inputs, outputs = inputs[:1500*20], outputs[:1500*20]
+    # inputs, outputs = inputs[::20], outputs[::20]
 
     loss_history_file = constants.DATASET_PATH[loss_file_key].format(interp=interp,
                                                                      method=method,
@@ -714,7 +715,7 @@ if __name__ == "__main__":
             predicted_fname = "{}-epochs-{}.csv".format(predicted_fname[:-4], best_epoch)
 
     elif do_plot is True:
-        inputs, outputs = inputs[:batch_size*2], outputs[:batch_size*2]
+        inputs, outputs = inputs[:batch_size], outputs[:batch_size]
         plot_graphs_together(price_list=inputs, noise_list=outputs, mu=__mu__, sigma=__sigma__,
                              weights_name=weights_fname,
                              units=__units__,
