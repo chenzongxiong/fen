@@ -2162,11 +2162,12 @@ class MyModel(object):
         # states_list = None
         prices_tensor = tf.reshape(ops.convert_to_tensor(prices, dtype=tf.float32), shape=(1, 1, -1))
 
-        operator_outputs = self.get_op_outputs_parallel(prices)
-
         results = self.predict_parallel(prices)
+        self.reset_states_parallel(states_list=None)
+        operator_outputs = self.get_op_outputs_parallel(prices)
+        self.reset_states_parallel(states_list=None)
         prices = prices[:results.shape[-1]]
-
+        # import ipdb; ipdb.set_trace()
         counts = ((prices[1:]-prices[:-1] >= 0) == (results[1:] - results[:-1] >= 0)).sum()
         sign = None
         if counts / prices.shape[0] >= 0.65:
@@ -2181,7 +2182,7 @@ class MyModel(object):
         # determine correct direction of results
         states_list = None
 
-        # result_list = []
+        _result_list = []
         packed_results = []
         for i in range(length):
              # fig, (ax1, ax2) = plt.subplots(2, sharex='all')
@@ -2195,7 +2196,8 @@ class MyModel(object):
             interpolated_prices = np.linspace(start_price, end_price, batch_size)
             # self.reset_states_parallel(states_list=states_list)
             interpolated_noises = self.predict_parallel(interpolated_prices, states_list=states_list)
-
+            # FOR DEBUG
+            _result_list.append(interpolated_noises[-1])
             # result_list.append(interpolated_noises[0])
 
             fake_start_price, fake_end_price = fake_price_list[0], fake_price_list[-1]
@@ -2306,6 +2308,7 @@ class MyModel(object):
                   price_list, noise_list,
                   fake_B1, fake_B2, fake_B3,
                   _B1, _B2, _B3, color='blue', plot_target_line=True):
+
         fake_l = 10 if len(fake_price_list) == 1 else len(fake_price_list)
         l = 10 if len(price_list) == 1 else len(price_list)
         fake_B1, fake_B2, fake_B3 = np.array([fake_B1]*fake_l), np.array([fake_B2]*fake_l), np.array([fake_B3]*fake_l)
@@ -2331,6 +2334,27 @@ class MyModel(object):
             _B1 = _B1 - _B1
             pass
 
+        # detect bifurcation
+        if price_list[-1] - price_list[0] > 0:
+            # price rises, find maximum value of noise
+            h1 = abs(np.max(noise_list))
+        else:
+            h1 = abs(np.min(noise_list))
+        h2 = np.max(noise_list) - np.min(noise_list)
+        ratio = h1/h2
+
+        if ratio >= 0.1:
+            ax.text(price_list.max(), noise_list.mean(), "bifurcation", color=color,
+                    # horizontalalignment='right',
+                    # verticalalignment='bottom',
+                    transform=ax.transAxes)
+        else:
+            ax.text(price_list.max(), noise_list.mean(), "non-bifurcation", color=color,
+                    # horizontalalignment='right',
+                    # verticalalignment='top',
+                    transform=ax.transAxes)
+
+        # import ipdb; ipdb.set_trace()
         ax.plot(fake_price_list, fake_noise_list, color=color, marker='s', markersize=3, linestyle='--')
         ax.plot(price_list, noise_list, color=color, marker='.', markersize=6, linestyle='-')
         ax.set_xlabel("Prices")
