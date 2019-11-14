@@ -2334,7 +2334,14 @@ class MyModel(object):
             _B1 = _B1 - _B1
             pass
 
-        # detect bifurcation
+        # import ipdb; ipdb.set_trace()
+        ax.plot(fake_price_list, fake_noise_list, color=color, marker='s', markersize=3, linestyle='--')
+        ax.plot(price_list, noise_list, color=color, marker='.', markersize=6, linestyle='-')
+        ax.set_xlabel("Prices")
+        ax.set_ylabel("#Noise")
+
+
+        # detect bifurcation and predict correct noise ?
         if price_list[-1] - price_list[0] > 0:
             # price rises, find maximum value of noise
             h1 = abs(np.max(noise_list))
@@ -2344,21 +2351,28 @@ class MyModel(object):
         ratio = h1/h2
 
         if ratio >= 0.1:
-            ax.text(price_list.max(), noise_list.mean(), "bifurcation", color=color,
-                    # horizontalalignment='right',
-                    # verticalalignment='bottom',
+            ax.text(0.93, 0.4, "bifurcation", color=color,
+                    horizontalalignment='right',
+                    verticalalignment='bottom',
                     transform=ax.transAxes)
         else:
-            ax.text(price_list.max(), noise_list.mean(), "non-bifurcation", color=color,
-                    # horizontalalignment='right',
-                    # verticalalignment='top',
+            ax.text(0.75, 0.8, "non-bifurcation", color=color,
+                    horizontalalignment='right',
+                    verticalalignment='bottom',
                     transform=ax.transAxes)
 
-        # import ipdb; ipdb.set_trace()
-        ax.plot(fake_price_list, fake_noise_list, color=color, marker='s', markersize=3, linestyle='--')
-        ax.plot(price_list, noise_list, color=color, marker='.', markersize=6, linestyle='-')
-        ax.set_xlabel("Prices")
-        ax.set_ylabel("#Noise")
+        flag = (price_list[-1] > price_list[0]) and (noise_list[-1] < noise_list[0])
+        if flag is True:
+            ax.text(0.3, 0.5, 'True', color=color,
+                    horizontalalignment='right',
+                    verticalalignment='bottom',
+                    transform=ax.transAxes)
+        else:
+            ax.text(0.3, 0.5, 'False', color=color,
+                    horizontalalignment='right',
+                    verticalalignment='bottom',
+                    transform=ax.transAxes)
+
 
     def _plot_interpolated(self, ax,
                            fake_interpolated_prices,
