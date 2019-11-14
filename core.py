@@ -2351,27 +2351,22 @@ class MyModel(object):
         ratio = h1/h2
 
         if ratio >= 0.1:
-            ax.text(0.93, 0.4, "bifurcation", color=color,
-                    horizontalalignment='right',
-                    verticalalignment='bottom',
-                    transform=ax.transAxes)
+            ax.text(1.1*price_list.mean(), 0.9*noise_list.mean(), "bifurcation", color=color)
+                    # horizontalalignment='right',
+                    # verticalalignment='bottom',
+                    # transform=ax.transAxes)
         else:
-            ax.text(0.75, 0.8, "non-bifurcation", color=color,
-                    horizontalalignment='right',
-                    verticalalignment='bottom',
-                    transform=ax.transAxes)
-
+            ax.text(0.9*price_list.mean(), 0.9*noise_list.mean(), "non-bifurcation", color=color)
+            # ax.text(0.75, 0.8, "non-bifurcation", color=color,
+            #         horizontalalignment='right',
+            #         verticalalignment='bottom',
+            #         transform=ax.transAxes)
+        # import ipdb; ipdb.set_trace()
         flag = (price_list[-1] > price_list[0]) and (noise_list[-1] < noise_list[0])
-        if flag is True:
-            ax.text(0.3, 0.5, 'True', color=color,
-                    horizontalalignment='right',
-                    verticalalignment='bottom',
-                    transform=ax.transAxes)
+        if flag:
+            ax.text(price_list.mean(), noise_list.mean(), 'True', color=color)
         else:
-            ax.text(0.3, 0.5, 'False', color=color,
-                    horizontalalignment='right',
-                    verticalalignment='bottom',
-                    transform=ax.transAxes)
+            ax.text(price_list.mean(), noise_list.mean(), 'False', color=color)
 
 
     def _plot_interpolated(self, ax,
