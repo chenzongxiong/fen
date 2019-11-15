@@ -2362,7 +2362,7 @@ class MyModel(object):
             #         verticalalignment='bottom',
             #         transform=ax.transAxes)
         # import ipdb; ipdb.set_trace()
-        flag = (price_list[-1] > price_list[0]) ^ (noise_list[-1] < noise_list[0])
+        flag = not (price_list[-1] > price_list[0]) ^ (noise_list[-1] < noise_list[0])
         if flag:
             ax.text(price_list.mean(), noise_list.mean(), 'True', color=color)
         else:
