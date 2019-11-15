@@ -169,7 +169,7 @@ FNAME_FORMAT = dict(
     )
 
 # CPU_COUNTS = os.cpu_count()
-CPU_COUNTS = 10
+CPU_COUNTS = 20
 
 
 class NetworkType:
