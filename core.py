@@ -2302,6 +2302,22 @@ class MyModel(object):
         # else:
         #     import ipdb; ipdb.set_trace()
         #     print("Hello world")
+    def _detect_bifurcation(self, price_list, noise_list):
+        # Detect bifurcation and predict correct noise ?
+        if price_list[-1] - price_list[0] > 0:
+            # price rises, find maximum value of noise
+            h1 = abs(np.max(noise_list))
+        else:
+            # price decreases, find minimum value of noise
+            h1 = abs(np.min(noise_list))
+
+        h2 = np.max(noise_list) - np.min(noise_list)
+        ratio = h1/h2
+
+        flag = not (price_list[-1] > price_list[0]) ^ (noise_list[-1] < noise_list[0])
+
+        return ((ratio >= 0.1), flag)
+
 
     def _plot_sim(self, ax,
                   fake_price_list, fake_noise_list,
@@ -2341,32 +2357,42 @@ class MyModel(object):
         ax.set_ylabel("#Noise")
 
 
-        # Detect bifurcation and predict correct noise ?
-        if price_list[-1] - price_list[0] > 0:
-            # price rises, find maximum value of noise
-            h1 = abs(np.max(noise_list))
-        else:
-            h1 = abs(np.min(noise_list))
-        h2 = np.max(noise_list) - np.min(noise_list)
-        ratio = h1/h2
-
-        if ratio >= 0.1:
+        is_bifurcation, is_correct_direction_of_noise = self._detect_bifurcation(price_list, noise_list)
+        if is_bifurcation:
             ax.text(1.1*price_list.mean(), 0.9*noise_list.mean(), "bifurcation", color=color)
-                    # horizontalalignment='right',
-                    # verticalalignment='bottom',
-                    # transform=ax.transAxes)
         else:
             ax.text(0.9*price_list.mean(), 0.9*noise_list.mean(), "non-bifurcation", color=color)
-            # ax.text(0.75, 0.8, "non-bifurcation", color=color,
-            #         horizontalalignment='right',
-            #         verticalalignment='bottom',
-            #         transform=ax.transAxes)
-        # import ipdb; ipdb.set_trace()
-        flag = not (price_list[-1] > price_list[0]) ^ (noise_list[-1] < noise_list[0])
-        if flag:
+        if is_correct_direction_of_noise:
             ax.text(price_list.mean(), noise_list.mean(), 'True', color=color)
         else:
             ax.text(price_list.mean(), noise_list.mean(), 'False', color=color)
+
+            # Detect bifurcation and predict correct noise ?
+        # if price_list[-1] - price_list[0] > 0:
+        #     # price rises, find maximum value of noise
+        #     h1 = abs(np.max(noise_list))
+        # else:
+        #     h1 = abs(np.min(noise_list))
+        # h2 = np.max(noise_list) - np.min(noise_list)
+        # ratio = h1/h2
+
+        # if ratio >= 0.1:
+        #     ax.text(1.1*price_list.mean(), 0.9*noise_list.mean(), "bifurcation", color=color)
+        #             # horizontalalignment='right',
+        #             # verticalalignment='bottom',
+        #             # transform=ax.transAxes)
+        # else:
+        #     ax.text(0.9*price_list.mean(), 0.9*noise_list.mean(), "non-bifurcation", color=color)
+        #     # ax.text(0.75, 0.8, "non-bifurcation", color=color,
+        #     #         horizontalalignment='right',
+        #     #         verticalalignment='bottom',
+        #     #         transform=ax.transAxes)
+        # # import ipdb; ipdb.set_trace()
+        # flag = not (price_list[-1] > price_list[0]) ^ (noise_list[-1] < noise_list[0])
+        # if flag:
+        #     ax.text(price_list.mean(), noise_list.mean(), 'True', color=color)
+        # else:
+        #     ax.text(price_list.mean(), noise_list.mean(), 'False', color=color)
 
 
     def _plot_interpolated(self, ax,
