@@ -2341,7 +2341,7 @@ class MyModel(object):
         ax.set_ylabel("#Noise")
 
 
-        # detect bifurcation and predict correct noise ?
+        # Detect bifurcation and predict correct noise ?
         if price_list[-1] - price_list[0] > 0:
             # price rises, find maximum value of noise
             h1 = abs(np.max(noise_list))
@@ -2362,7 +2362,7 @@ class MyModel(object):
             #         verticalalignment='bottom',
             #         transform=ax.transAxes)
         # import ipdb; ipdb.set_trace()
-        flag = (price_list[-1] > price_list[0]) and (noise_list[-1] < noise_list[0])
+        flag = (price_list[-1] > price_list[0]) ^ (noise_list[-1] < noise_list[0])
         if flag:
             ax.text(price_list.mean(), noise_list.mean(), 'True', color=color)
         else:
