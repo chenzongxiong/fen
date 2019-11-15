@@ -2156,7 +2156,7 @@ class MyModel(object):
         self._fmt_brief = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'
         self._fmt_truth = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'
         self._fmt_fake = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'
-        length = 50
+        length = 1000
         assert length <= prices.shape[-1] - 1, "Length must be less than prices.shape-1"
         batch_size = self.batch_input_shape[-1]
         # states_list = None
@@ -2184,6 +2184,8 @@ class MyModel(object):
 
         _result_list = []
         packed_results = []
+        bifurcation_list = []
+
         for i in range(length):
              # fig, (ax1, ax2) = plt.subplots(2, sharex='all')
 
@@ -2273,12 +2275,16 @@ class MyModel(object):
 
             fig, ax1 = plt.subplots(1, figsize=(10, 10))
 
-            self._plot_sim(ax1, fake_price_list, fake_noise_list,
-                           price_list, noise_list, fake_B1,
-                           fake_B2, fake_B3, _B1, _B2, _B3)
-            self._plot_interpolated(ax1, fake_interpolated_prices, fake_interpolated_noises,
-                                    interpolated_prices, interpolated_noises, fake_B1,
-                                    fake_B2, fake_B3, _B1, _B2, _B3)
+            is_bifurcation_1, is_correct_direction_of_noise_1 = self._plot_sim(ax1, fake_price_list, fake_noise_list,
+                                                                               price_list, noise_list, fake_B1,
+                                                                               fake_B2, fake_B3, _B1, _B2, _B3)
+            is_bifurcation_2, is_correct_direction_of_noise_2 = self._plot_interpolated(ax1, fake_interpolated_prices, fake_interpolated_noises,
+                                                                                        interpolated_prices, interpolated_noises, fake_B1,
+                                                                                        fake_B2, fake_B3, _B1, _B2, _B3)
+            # is_bifurcation_1, is_correct_direction_of_noise_1 = self._detect_bifurcation(price_list, noise_list)
+            # is_bifurcation_2, is_correct_direction_of_noise_2 = self._detect_bifurcation(interpolated_prices, interpolated_noises)
+            bifurcation_list.append([is_bifurcation_1, is_bifurcation_2, is_correct_direction_of_noise_1, is_correct_direction_of_noise_2])
+            # import ipdb; ipdb.set_trace()
             if mu is None and sigma is None:
                 fname = './frames/{}.png'.format(i)
             else:
@@ -2291,6 +2297,15 @@ class MyModel(object):
             LOG.debug("plot {}".format(fname))
             os.makedirs(os.path.dirname(fname), exist_ok=True)
             fig.savefig(fname, dpi=100)
+
+        fname = './frames-nb_plays-{}-units-{}-batch_size-{}-mu-{}-sigma-{}/ensemble-{}/bifurcation.csv'.format(
+            self._nb_plays, self._units, self._input_dim,
+            mu, sigma,
+            self._ensemble)
+        # import ipdb; ipdb.set_trace()
+        bifurcation_list = np.array(bifurcation_list).astype(int)
+
+        np.savetxt(fname, bifurcation_list, fmt="%s", delimiter=',', header='#ground-truth-bifurcation,#neural-network-bifurcation,#ground-truth-direction,#neural-network-direction')
 
         return packed_results
 
@@ -2314,9 +2329,9 @@ class MyModel(object):
         h2 = np.max(noise_list) - np.min(noise_list)
         ratio = h1/h2
 
-        flag = not (price_list[-1] > price_list[0]) ^ (noise_list[-1] < noise_list[0])
+        flag = not ((price_list[-1] > price_list[0]) ^ (noise_list[-1] < noise_list[0]))
 
-        return ((ratio >= 0.1), flag)
+        return (ratio >= 0.1), flag
 
 
     def _plot_sim(self, ax,
@@ -2367,6 +2382,8 @@ class MyModel(object):
         else:
             ax.text(price_list.mean(), noise_list.mean(), 'False', color=color)
 
+        return is_bifurcation, is_correct_direction_of_noise
+
             # Detect bifurcation and predict correct noise ?
         # if price_list[-1] - price_list[0] > 0:
         #     # price rises, find maximum value of noise
@@ -2404,11 +2421,11 @@ class MyModel(object):
                            _B1, _B2, _B3,
                            color=mcolors.CSS4_COLORS['orange']):
 
-        self._plot_sim(ax,
-                       fake_interpolated_prices, fake_interpolated_noises,
-                       interpolated_prices, interpolated_noises,
-                       fake_interpolated_noises[0], fake_B2, fake_B3,
-                       interpolated_noises[0], _B2, _B3, color, plot_target_line=False)
+        return self._plot_sim(ax,
+                              fake_interpolated_prices, fake_interpolated_noises,
+                              interpolated_prices, interpolated_noises,
+                              fake_interpolated_noises[0], fake_B2, fake_B3,
+                              interpolated_noises[0], _B2, _B3, color, plot_target_line=False)
 
 
 class EnsembleModel(object):
