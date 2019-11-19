@@ -334,7 +334,8 @@ def plot(a, b, trend_list):
     ax3.boxplot(trend_list_)
 
     plt.show()
-    fname = "/Users/baymax_testios/Desktop/1.png"
+    # fname = "/Users/baymax_testios/Desktop/1.png"
+    fname = "./1.png"
     fig.savefig(fname, dpi=400)
 
 
@@ -356,7 +357,147 @@ def ttest_rel(method1, method2):
     pass
 
 
+def rmse_bucket(ground_truth_noise, ground_truth_price, predict_price, price_steps=10, noise_steps=10):
+    diff_price_list = np.abs(ground_truth_price[1:] - ground_truth_price[:-1])
+    diff_noise_list = np.abs(ground_truth_noise[1:] - ground_truth_noise[:-1])
+
+    delta_price_step = (np.max(diff_price_list) - np.min(diff_price_list)) / price_steps
+    delta_noise_step = (np.max(diff_noise_list) - np.min(diff_noise_list)) / noise_steps
+
+    delta_price_list = [delta_price_step * i + np.min(diff_price_list) for i in range(price_steps+1)]
+    delta_noise_list = [delta_noise_step * i + np.min(diff_noise_list) for i in range(noise_steps+1)]
+
+    diff_ground_truth_predict_of_price_list = ground_truth_price - predict_price
+
+    bucket = { (p, n) : [] for p in range(price_steps+1) for n in range(noise_steps+1)}
+    for dp, dn, diff in zip(diff_price_list, diff_noise_list, diff_ground_truth_predict_of_price_list):
+        p_idx = int(round((dp - np.min(diff_price_list)) / delta_price_step))
+        n_idx = int(round((dn - np.min(diff_noise_list)) / delta_noise_step))
+        p_idx1 = p_idx
+        n_idx1 = n_idx
+
+        val = diff * diff
+        # if n_idx > 0 and p_idx > 0:
+        if True:
+            for _n_idx in range(n_idx, -1, -1):
+                for _p_idx in range(p_idx, price_steps+1):
+                    bucket[(_p_idx, _n_idx)].append(val)
+        # elif p_idx == price_steps:
+        #     print("price_steps")
+        #     for _p_idx in range(price_steps, p_idx-1, -1):
+        #         pass
+        #         # bucket[(price, 0)].append(val)
+        # elif n_idx > 0:
+        #     for _n_idx in range(_n_idx):
+        #         bucket[(0, _n_idx)].append(val)
+        # else:
+        #     bucket[(0, 0)].append(val)
+
+        # while n_idx1 >= 0:
+        #     bucket[(p_idx, n_idx1)].append(val)
+        #     n_idx1 -= 1
+        # while p_idx1 <= price_steps:
+        #     bucket[(p_idx1, n_idx)].append(val)
+        #     p_idx1 += 1
+
+    return bucket, delta_price_step, delta_noise_step
+
+
+def rmse_bucket2(bucket):
+    _bucket = {}
+    for k, v in bucket.items():
+        if len(v) != 0:
+            _bucket[k] = (sum(v)/len(v))**(0.5)
+        else:
+            _bucket[k] = 0
+
+    return _bucket
+
+
+def rmse3d():
+
+    from mpl_toolkits.mplot3d import Axes3D
+    import matplotlib.pyplot as plt
+    from matplotlib import gridspec
+    import numpy as np
+    from matplotlib import colors as mcolors
+
+    base_file = "./new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-10000/nb_plays-20/points-1000/input_dim-1/mu-0-sigma-110-points-1000.csv"
+
+    trend_file = "./new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-20/nb_plays-20/points-1000/input_dim-1/predictions-mu-0-sigma-110-points-1000/activation#-elu/state#-0/units#-100/nb_plays#-100/ensemble-11/loss-mle/trends-batch_size-1500.csv"
+    _, ground_truth_noise = tdata.DatasetLoader.load_data(base_file)
+    ground_truth_price, predict_price = tdata.DatasetLoader.load_data(trend_file)
+
+    baseline_price = ground_truth_price[:-1]
+    ground_truth_price = ground_truth_price[1:]
+    predict_price = predict_price[1:]
+    ground_truth_noise = ground_truth_noise[1001:1100]
+
+    price_steps = 10
+    noise_steps = 10
+    assert price_steps == noise_steps, "price_steps and noise_steps must be the same"
+    _baseline_bucket, delta_price_step, delta_noise_step = rmse_bucket(ground_truth_noise, ground_truth_price, baseline_price, price_steps, noise_steps)
+    _predict_bucket, _, _  = rmse_bucket(ground_truth_noise, ground_truth_price, predict_price, price_steps, noise_steps)
+
+    baseline_rmse_bucket = rmse_bucket2(_baseline_bucket)
+    predict_rmse_bucket = rmse_bucket2(_predict_bucket)
+
+    def _helper(ax, _bucket, x, y, zlabel='rmse', color='cyan', func=lambda v: v):
+        _z = np.zeros((price_steps+1, noise_steps+1), dtype=np.float32)
+        for k, v in _bucket.items():
+            if len(v) != 0:
+                # _z[k] = (sum(v)/len(v)) ** (0.5)
+                # _p, _n = k
+                # _z[_p, _n] = func(v)
+                # print(k)
+                _z[k] = func(v)
+
+        z = _z.ravel()
+        # import ipdb; ipdb.set_trace()
+        bottom = np.zeros_like(z)
+        ax.bar3d(x, y, bottom, width, depth, z, shade=True, color=color)
+
+        ax.set_xlabel('delta_price')
+        ax.set_ylabel('delta_noise')
+        ax.set_zlabel(zlabel)
+        return z
+
+    fig = plt.figure(constrained_layout=True)
+
+    spec = gridspec.GridSpec(ncols=2, nrows=2, figure=fig)
+    ax1 = fig.add_subplot(spec[0, 0], projection='3d')
+    ax2 = fig.add_subplot(spec[0, 1], projection='3d')
+    ax3 = fig.add_subplot(spec[1, 0], projection='3d')
+    ax4 = fig.add_subplot(spec[1, 1], projection='3d')
+
+    # delta_price_step = 1
+    # delta_noise_step = 1
+    _x = np.arange(price_steps+1) * delta_price_step
+    _y = np.arange(noise_steps+1) * delta_noise_step
+
+    _xx, _yy = np.meshgrid(_x, _y)
+    # import ipdb; ipdb.set_trace()
+    x, y = _xx.ravel(), _yy.ravel()
+    width = delta_price_step
+    depth = delta_noise_step
+
+    _helper(ax1, _baseline_bucket, x, y, zlabel='BASELINE-RMSE',
+            color=mcolors.CSS4_COLORS['dodgerblue'], func=lambda v: (sum(v)/len(v))**0.5)
+    _helper(ax2, _predict_bucket, x, y, zlabel='PREDICT-RMSE',
+            color=mcolors.CSS4_COLORS['darkorange'], func=lambda v: (sum(v)/len(v))**0.5)
+
+    _helper(ax3, _baseline_bucket, x, y, zlabel='BASELINE-COUNTS',
+             color=mcolors.CSS4_COLORS['dodgerblue'], func=lambda v: len(v))
+    _helper(ax4, _predict_bucket, x, y, zlabel='PREDICT-COUNTS',
+             color=mcolors.CSS4_COLORS['darkorange'], func=lambda v: len(v))
+
+    plt.show()
+    import ipdb; ipdb.set_trace()
+
 if __name__ == "__main__":
+    rmse3d()
+    import ipdb; ipdb.set_trace()
+
     LOG.debug(colors.red("Test multiple plays"))
 
     parser = argparse.ArgumentParser()
