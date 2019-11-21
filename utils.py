@@ -360,7 +360,7 @@ def plot_price_span(guess_price_seq, ax):
 import scipy.stats as stats
 
 def plot_price_distribution(guess_price_seq, ax):
-    ax.hist(guess_price_seq, bins=100)
+    ax.hist(guess_price_seq, bins=1)
 
     mu = guess_price_seq.mean()
     sigma = guess_price_seq.std()
@@ -372,7 +372,7 @@ def plot_price_distribution(guess_price_seq, ax):
 
 
 def plot_noise_distribution(bk_list, ax):
-    ax.hist(bk_list, bins=100)
+    ax.hist(bk_list, bins=1)
     mu = bk_list.mean()
     sigma = bk_list.std()
     x = np.linspace(mu - 3*sigma, mu + 3*sigma, 100)
