@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import math
 
 import time
 import numpy as np
@@ -367,60 +368,48 @@ def rmse_bucket(ground_truth_noise, ground_truth_price, predict_price, price_ste
     delta_price_list = [delta_price_step * i + np.min(diff_price_list) for i in range(price_steps+1)]
     delta_noise_list = [delta_noise_step * i + np.min(diff_noise_list) for i in range(noise_steps+1)]
 
-    diff_ground_truth_predict_of_price_list = ground_truth_price - predict_price
+    diff_ground_truth_predict_of_price_list = ground_truth_price[1:] - predict_price
 
     bucket = { (p, n) : [] for p in range(price_steps+1) for n in range(noise_steps+1)}
+
+    max_val = -1
+    i = 0
     for dp, dn, diff in zip(diff_price_list, diff_noise_list, diff_ground_truth_predict_of_price_list):
-        p_idx = int(round((dp - np.min(diff_price_list)) / delta_price_step))
-        n_idx = int(round((dn - np.min(diff_noise_list)) / delta_noise_step))
+        _p_idx = (dp - np.min(diff_price_list)) / delta_price_step
+        _n_idx = (dn - np.min(diff_noise_list)) / delta_noise_step
+
+        p_idx = math.floor(_p_idx)
+        n_idx = math.ceil(_n_idx)
+
+        # import ipdb; ipdb.set_trace()
+
         p_idx1 = p_idx
         n_idx1 = n_idx
 
         val = diff * diff
-        # if n_idx > 0 and p_idx > 0:
-        if True:
-            for _n_idx in range(n_idx, -1, -1):
-                for _p_idx in range(p_idx, price_steps+1):
-                    bucket[(_p_idx, _n_idx)].append(val)
-        # elif p_idx == price_steps:
-        #     print("price_steps")
-        #     for _p_idx in range(price_steps, p_idx-1, -1):
-        #         pass
-        #         # bucket[(price, 0)].append(val)
-        # elif n_idx > 0:
-        #     for _n_idx in range(_n_idx):
-        #         bucket[(0, _n_idx)].append(val)
-        # else:
-        #     bucket[(0, 0)].append(val)
+        # val = abs(diff)
+        if val > max_val:
+            max_val = val
 
-        # while n_idx1 >= 0:
-        #     bucket[(p_idx, n_idx1)].append(val)
-        #     n_idx1 -= 1
-        # while p_idx1 <= price_steps:
-        #     bucket[(p_idx1, n_idx)].append(val)
-        #     p_idx1 += 1
+        # single constraints >= p, <= n
+        # for _n_idx in range(n_idx, noise_steps+1):
+        #     for _p_idx in range(0, p_idx+1):
+        #         bucket[(_p_idx, _n_idx)].append((val, dp, dn, i, predict_price[i], ground_truth_price[i+1], ground_truth_price[i]))
 
-    return bucket, delta_price_step, delta_noise_step
+        bucket[(p_idx, n_idx)].append((val, dp, dn, i, predict_price[i], ground_truth_price[i+1], ground_truth_price[i]))
+        i += 1
 
-
-def rmse_bucket2(bucket):
-    _bucket = {}
-    for k, v in bucket.items():
-        if len(v) != 0:
-            _bucket[k] = (sum(v)/len(v))**(0.5)
-        else:
-            _bucket[k] = 0
-
-    return _bucket
+    return bucket, delta_price_step, delta_noise_step, delta_price_list, delta_noise_list, max_val
 
 
 def rmse3d():
-
+    # https://stackoverflow.com/questions/23670178/matplotlib-3d-bar-chart-axis-issue
     from mpl_toolkits.mplot3d import Axes3D
     import matplotlib.pyplot as plt
     from matplotlib import gridspec
     import numpy as np
     from matplotlib import colors as mcolors
+    from matplotlib import cm
 
     base_file = "./new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-10000/nb_plays-20/points-1000/input_dim-1/mu-0-sigma-110-points-1000.csv"
 
@@ -428,73 +417,126 @@ def rmse3d():
     _, ground_truth_noise = tdata.DatasetLoader.load_data(base_file)
     ground_truth_price, predict_price = tdata.DatasetLoader.load_data(trend_file)
 
+    ground_truth_price = ground_truth_price[:100]
+    predict_price = predict_price[:100]
+    # ground_truth_noise =
     baseline_price = ground_truth_price[:-1]
-    ground_truth_price = ground_truth_price[1:]
+    # ground_truth_price = ground_truth_price[1:]
     predict_price = predict_price[1:]
-    ground_truth_noise = ground_truth_noise[1001:1100]
+    # ground_truth_noise = ground_truth_noise[1001:1010]
+    ground_truth_noise = ground_truth_noise[1000:1100]
 
-    price_steps = 10
-    noise_steps = 10
+    price_steps = 5
+    noise_steps = 5
+
     assert price_steps == noise_steps, "price_steps and noise_steps must be the same"
-    _baseline_bucket, delta_price_step, delta_noise_step = rmse_bucket(ground_truth_noise, ground_truth_price, baseline_price, price_steps, noise_steps)
-    _predict_bucket, _, _  = rmse_bucket(ground_truth_noise, ground_truth_price, predict_price, price_steps, noise_steps)
+    _baseline_bucket, delta_price_step, delta_noise_step, delta_price_list, delta_noise_list, baseline_max_rmse = rmse_bucket(ground_truth_noise, ground_truth_price, baseline_price, price_steps, noise_steps)
+    _predict_bucket, _, _, _, _, predict_max_rmse  = rmse_bucket(ground_truth_noise, ground_truth_price, predict_price, price_steps, noise_steps)
 
-    baseline_rmse_bucket = rmse_bucket2(_baseline_bucket)
-    predict_rmse_bucket = rmse_bucket2(_predict_bucket)
+    max_rmse = predict_max_rmse if predict_max_rmse > baseline_max_rmse else baseline_max_rmse
+    rmse_steps = 5
+    delta_rmse = max_rmse / rmse_steps
+    delta_rmse_list = [i*delta_rmse for i in range(rmse_steps+1)]
 
     def _helper(ax, _bucket, x, y, zlabel='rmse', color='cyan', func=lambda v: v):
-        _z = np.zeros((price_steps+1, noise_steps+1), dtype=np.float32)
+        _zz = np.zeros((price_steps+1, noise_steps+1), dtype=np.float32)
+
         for k, v in _bucket.items():
             if len(v) != 0:
-                # _z[k] = (sum(v)/len(v)) ** (0.5)
-                # _p, _n = k
-                # _z[_p, _n] = func(v)
-                # print(k)
-                _z[k] = func(v)
+                _p, _n = k
+                # ipdb;ipdb.set_trace()
+                # _p * delta_price_step + np.min(diff_price_list)
+                _v = [vv[0] for vv in v]
+                _pv = [vv[1] for vv in v]
+                _nv = [vv[2] for vv in v]
+                _zz[k] = func(_v)
+                print("{}, ({}, {}), {}, {}, {}, {}".format(k, delta_price_list[_p], delta_noise_list[_n], v, _zz[k],  min(_v), max(_nv)))
 
-        z = _z.ravel()
+        z = _zz.T.ravel()
+        print("zz: ", _zz)
         # import ipdb; ipdb.set_trace()
+
         bottom = np.zeros_like(z)
         ax.bar3d(x, y, bottom, width, depth, z, shade=True, color=color)
 
-        ax.set_xlabel('delta_price')
-        ax.set_ylabel('delta_noise')
+        ax.w_xaxis.set_ticks(_x)
+        xticks = np.array(["{:.3f}".format(p) for p in delta_price_list])
+        ax.w_xaxis.set_ticklabels(xticks)
+
+        ax.w_yaxis.set_ticks(_y + 0.5)
+        yticks = np.array(["{:.1f}".format(n) for n in delta_noise_list])
+        ax.w_yaxis.set_ticklabels(yticks)
+
+        ax.set_xlabel('$\Delta p$')
+        ax.set_ylabel('$\Delta n$')
         ax.set_zlabel(zlabel)
         return z
 
     fig = plt.figure(constrained_layout=True)
 
     spec = gridspec.GridSpec(ncols=2, nrows=2, figure=fig)
-    ax1 = fig.add_subplot(spec[0, 0], projection='3d')
-    ax2 = fig.add_subplot(spec[0, 1], projection='3d')
-    ax3 = fig.add_subplot(spec[1, 0], projection='3d')
-    ax4 = fig.add_subplot(spec[1, 1], projection='3d')
 
-    # delta_price_step = 1
-    # delta_noise_step = 1
-    _x = np.arange(price_steps+1) * delta_price_step
-    _y = np.arange(noise_steps+1) * delta_noise_step
+    ax1 = fig.add_subplot(spec[0, 0], projection='3d')
+    ax2 = fig.add_subplot(spec[0, 1], projection='3d', sharez=ax1)
+
+    ax3 = fig.add_subplot(spec[1, 0], projection='3d')
+    ax4 = fig.add_subplot(spec[1, 1], projection='3d', sharez=ax3)
+
+    _x = np.arange(len(delta_price_list))
+    _y = np.arange(len(delta_noise_list))
 
     _xx, _yy = np.meshgrid(_x, _y)
+    print("_xx: ", _xx)
+    print("_yy: ", _yy)
     # import ipdb; ipdb.set_trace()
     x, y = _xx.ravel(), _yy.ravel()
-    width = delta_price_step
-    depth = delta_noise_step
 
-    _helper(ax1, _baseline_bucket, x, y, zlabel='BASELINE-RMSE',
-            color=mcolors.CSS4_COLORS['dodgerblue'], func=lambda v: (sum(v)/len(v))**0.5)
-    _helper(ax2, _predict_bucket, x, y, zlabel='PREDICT-RMSE',
-            color=mcolors.CSS4_COLORS['darkorange'], func=lambda v: (sum(v)/len(v))**0.5)
+    width = 0.5
+    depth = 0.5
 
+    print("width: ", width, ", depth: ", depth)
+
+    values = np.linspace(0.2, 1., x.shape[0])
+    colors = cm.rainbow(values)
+
+    if baseline_max_rmse > predict_max_rmse:
+        _helper(ax2, _predict_bucket, x, y, zlabel='PREDICT-RMSE',
+                # color=mcolors.CSS4_COLORS['darkorange'],
+                color=colors,
+                func=lambda v: (sum(v)/len(v))**0.5)
+                # func=lambda v: (sum(v)/len(v)))
+        _helper(ax1, _baseline_bucket, x, y, zlabel='BASELINE-RMSE',
+                # color=mcolors.CSS4_COLORS['dodgerblue'],
+                color=colors,
+                func=lambda v: (sum(v)/len(v))**0.5)
+                # func=lambda v: (sum(v)/len(v)))
+    else:
+        _helper(ax1, _baseline_bucket, x, y, zlabel='BASELINE-RMSE',
+                # color=mcolors.CSS4_COLORS['dodgerblue'],
+                color=colors,
+                func=lambda v: (sum(v)/len(v))**0.5)
+                # func=lambda v: (sum(v)/len(v)))
+        _helper(ax2, _predict_bucket, x, y, zlabel='PREDICT-RMSE',
+                # color=mcolors.CSS4_COLORS['darkorange'],
+                color=colors,
+                func=lambda v: (sum(v)/len(v))**0.5)
+                # func=lambda v: (sum(v)/len(v)))
+
+    print("================================================================================")
     _helper(ax3, _baseline_bucket, x, y, zlabel='BASELINE-COUNTS',
-             color=mcolors.CSS4_COLORS['dodgerblue'], func=lambda v: len(v))
+            # color=mcolors.CSS4_COLORS['dodgerblue'],
+            color=colors,
+            func=lambda v: len(v))
     _helper(ax4, _predict_bucket, x, y, zlabel='PREDICT-COUNTS',
-             color=mcolors.CSS4_COLORS['darkorange'], func=lambda v: len(v))
+            # color=mcolors.CSS4_COLORS['darkorange'],
+            color=colors,
+            func=lambda v: len(v))
 
     plt.show()
     import ipdb; ipdb.set_trace()
 
 if __name__ == "__main__":
+    print("Plot RMSE 3D")
     rmse3d()
     import ipdb; ipdb.set_trace()
 
