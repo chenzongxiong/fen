@@ -536,9 +536,9 @@ def rmse3d():
     import ipdb; ipdb.set_trace()
 
 if __name__ == "__main__":
-    print("Plot RMSE 3D")
-    rmse3d()
-    import ipdb; ipdb.set_trace()
+    # print("Plot RMSE 3D")
+    # rmse3d()
+    # import ipdb; ipdb.set_trace()
 
     LOG.debug(colors.red("Test multiple plays"))
 
@@ -832,10 +832,10 @@ if __name__ == "__main__":
     LOG.debug('# train_fname: {}'.format(fname))
     LOG.debug('# predicted_fname: {}'.format(predicted_fname))
     LOG.debug('# weights_fname: {}'.format(weights_fname))
-    LOG.debug('# weights_fname: {}'.format(weights_fname))
+
     LOG.debug('################################################################################')
 
-
+    input("Press Enter to continue...")
 
     # try:
     #     predicted_fname = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-20/nb_plays-20/points-1000/input_dim-1/predictions-mu-0-sigma-110-points-1000/activation#-elu/state#-0/units#-100/nb_plays#-100/ensemble/loss-mle/trends-batch_size-1500.csv'

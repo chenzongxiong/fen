@@ -155,10 +155,11 @@ def do_guess_seq(start,
     while interval < seq:
         k = start + interval
         # bk = np.random.normal(loc=mu, scale=sigma) + predict_noise_seq[-1]
-        # bk = curr_gt_prediction
-        global hacking
-        bk = 110 * hacking
-        hacking = - hacking
+        bk = curr_gt_prediction
+        # always predict noise at [-sigma] and [sigma]
+        # global hacking
+        # bk = 110 * hacking
+        # hacking = - hacking
         if bk > predict_noise_seq[-1]:
             direction = -1
         elif bk < predict_noise_seq[-1]:
@@ -1776,8 +1777,8 @@ class MyModel(object):
               delta=0.001, max_iteration=10000):
 
         start_pos = 1000
-        # end_pos = 1100
-        end_pos = 1010
+        end_pos = 1100
+        # end_pos = 1010
 
         assert start_pos > 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
