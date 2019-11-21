@@ -536,9 +536,9 @@ def rmse3d():
     import ipdb; ipdb.set_trace()
 
 if __name__ == "__main__":
-    print("Plot RMSE 3D")
-    rmse3d()
-    import ipdb; ipdb.set_trace()
+    # print("Plot RMSE 3D")
+    # rmse3d()
+    # import ipdb; ipdb.set_trace()
 
     LOG.debug(colors.red("Test multiple plays"))
 
