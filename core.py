@@ -155,7 +155,9 @@ def do_guess_seq(start,
     while interval < seq:
         k = start + interval
         bk = np.random.normal(loc=mu, scale=sigma) + predict_noise_seq[-1]
-        # bk = curr_gt_prediction
+
+        bk = curr_gt_prediction
+        # always predict noise at [-sigma] and [sigma]
         # global hacking
         # bk = 110 * hacking
         # hacking = - hacking
@@ -1774,14 +1776,18 @@ class MyModel(object):
     def trend(self, prices, B, mu, sigma,
               start_pos=1000, end_pos=1100,
               delta=0.001, max_iteration=10000):
-
         # start_pos = 1000
         # # end_pos = 1100
         # end_pos = 1100
+
+        # start_pos = 1000
+        # end_pos = 1100
+        # end_pos = 1010
+
         start_pos = 10
         end_pos = 110
 
-        assert start_pos > 0, colors.red("start_pos must be larger than 0")
+        assert start_pos >= 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
         assert len(prices.shape) == 1, colors.red("Prices should be a vector")
 
@@ -1794,7 +1800,6 @@ class MyModel(object):
             input_dim = self._batch_input_shape[-1].value
         else:
             raise Exception(colors.red("Unknown **input_dim** error occurs in trend"))
-
 
         prices = np.hstack([prices[1500:2000],  prices[0:1000]])
 
@@ -1810,8 +1815,12 @@ class MyModel(object):
         original_prediction = self.predict_parallel(prices)
         prices = prices[:original_prediction.shape[-1]]
         real_mu, real_sigma = mu, sigma
-        mu = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).mean()
-        sigma = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).std()
+        if start_pos > 0:
+            mu = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).mean()
+            sigma = (original_prediction[1:start_pos] - original_prediction[:start_pos-1]).std()
+        mu = 0
+        sigma = 110
+
         LOG.debug(colors.cyan("emprical mean: {}, emprical standard dervation: {}".format(mu, sigma)))
         ################################################################################
         #                Decide the sign of predicted trends                           #
@@ -1859,7 +1868,7 @@ class MyModel(object):
         operator_outputs = self.pool.results
         end = time.time()
         LOG.debug("Time cost during extract operator_outputs: {}".format(end-start))
-        # import ipdb;ipdb.set_trace()
+
         guess_prices = []
         k = start_pos
         seq = 1
