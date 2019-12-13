@@ -155,6 +155,7 @@ def do_guess_seq(start,
     while interval < seq:
         k = start + interval
         bk = np.random.normal(loc=mu, scale=sigma) + predict_noise_seq[-1]
+
         bk = curr_gt_prediction
         # always predict noise at [-sigma] and [sigma]
         # global hacking
@@ -1776,8 +1777,13 @@ class MyModel(object):
               start_pos=1000, end_pos=1100,
               delta=0.001, max_iteration=10000):
         # start_pos = 1000
+        # # end_pos = 1100
+        # end_pos = 1100
+
+        # start_pos = 1000
         # end_pos = 1100
         # end_pos = 1010
+
         start_pos = 10
         end_pos = 110
 
@@ -1794,8 +1800,6 @@ class MyModel(object):
             input_dim = self._batch_input_shape[-1].value
         else:
             raise Exception(colors.red("Unknown **input_dim** error occurs in trend"))
-
-        # import ipdb; ipdb.set_trace()
 
         prices = np.hstack([prices[1500:2000],  prices[0:1000]])
 
