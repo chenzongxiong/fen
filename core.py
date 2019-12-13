@@ -1775,9 +1775,11 @@ class MyModel(object):
               start_pos=1000, end_pos=1100,
               delta=0.001, max_iteration=10000):
 
-        start_pos = 1000
+        # start_pos = 1000
+        # # end_pos = 1100
         # end_pos = 1100
-        end_pos = 1100
+        start_pos = 10
+        end_pos = 110
 
         assert start_pos > 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")
@@ -1792,6 +1794,9 @@ class MyModel(object):
             input_dim = self._batch_input_shape[-1].value
         else:
             raise Exception(colors.red("Unknown **input_dim** error occurs in trend"))
+
+
+        prices = np.hstack([prices[1500:2000],  prices[0:1000]])
 
         timestep = prices.shape[0] // input_dim
         shape = (1, timestep, input_dim)

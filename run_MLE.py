@@ -872,7 +872,8 @@ if __name__ == "__main__":
                                   ensemble=ensemble)
         # inputs = inputs[batch_size:batch_size+predictions.shape[-1]]
         # inputs = inputs[batch_size:batch_size+predictions.shape[-1]]
-        inputs = inputs[1000:1100]
+        # inputs = inputs[1000:1100]
+        inputs = inputs[1510:1610]
     elif do_visualize_activated_plays is True:
         LOG.debug(colors.red("Load weights from {}, DO VISUALIZE ACTIVATED PLAYS".format(weights_fname)))
         visualize(inputs=inputs[:batch_size],
