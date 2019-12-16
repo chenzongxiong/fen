@@ -702,6 +702,7 @@ class MyDense(Layer):
         self._debug = kwargs.pop("debug", False)
         if '_init_kernel' in kwargs:
             self._init_kernel = kwargs.pop("_init_kernel")
+        # self._init_kernel = 1.0
         self._init_bias = kwargs.pop("_init_bias", 0)
 
         super(MyDense, self).__init__(**kwargs)
@@ -782,7 +783,7 @@ class MySimpleDense(Dense):
         self._init_bias = kwargs.pop("_init_bias", 0)
         if '_init_kernel' in kwargs:
             self._init_kernel = kwargs.pop("_init_kernel")
-
+        # self._init_kernel = 1.0
         kwargs['activation'] = None
         kwargs['kernel_constraint'] = None
         super(MySimpleDense, self).__init__(**kwargs)
@@ -831,6 +832,8 @@ class Play(object):
                  input_dim=1,
                  **kwargs):
 
+        np.random.seed(kwargs.pop("ensemble", 1))
+
         self._weight = weight
         self._width = width
         self._debug = debug
@@ -852,6 +855,9 @@ class Play(object):
         self.use_bias = use_bias
         self._name = name
         self._unittest = kwargs.pop('unittest', False)
+
+    def _make_batch_input_shape(self, inputs=None):
+        self._batch_input_shape = tf.TensorShape([1, self._play_timestep, self._play_input_dim])
 
     def build(self, inputs=None):
         if inputs is None and self._batch_input_shape is None:
@@ -1330,7 +1336,8 @@ class MyModel(object):
                         name="play-{}".format(nb_play),
                         timestep=timestep,
                         input_dim=input_dim,
-                        unittest=self._unittest)
+                        unittest=self._unittest,
+                        ensemble=self._ensemble)
             assert play._need_compile == False, colors.red("Play inside MyModel mustn't be compiled")
             self.plays.append(play)
 
@@ -1507,6 +1514,9 @@ class MyModel(object):
         for play in self.plays:
             LOG.debug("{}, number of layer is: {}".format(play._name, play.number_of_layers))
             LOG.debug("{}, weight: {}".format(play._name, play.weights))
+
+    def _make_batch_input_shape(self, inputs):
+        _ = [play._make_batch_input_shape(inputs) for play in self.plays if not play.built]
 
     def compile(self, inputs, **kwargs):
         mu, sigma = kwargs.pop('mu', None), kwargs.pop('sigma', None)

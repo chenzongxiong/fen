@@ -182,7 +182,7 @@ def model_nb_plays_generator_with_noise(points=100,
     # diff_weights = False
     # # diff_weights = True
 
-    # run_test = False
+    run_test = False
 
     # activation = 'tanh'
 

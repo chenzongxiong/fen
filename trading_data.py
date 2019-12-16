@@ -172,9 +172,12 @@ class DatasetGenerator(object):
                              timestep=timestep,
                              input_dim=input_dim,
                              diff_weights=diff_weights,
-                             network_type=constants.NetworkType.PLAY)
+                             network_type=constants.NetworkType.PLAY,
+                             parallel_prediction=True)
 
-        outputs = model.predict(_inputs)
+        model._make_batch_input_shape(_inputs)
+        outputs = model.predict_parallel(_inputs)
+        # outputs = model.predict(_inputs)
         _outputs = outputs.reshape(-1)
         return _inputs, _outputs
 
