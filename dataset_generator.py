@@ -148,31 +148,43 @@ def model_genertor_with_mc():
 
 
 
-def model_nb_plays_generator_with_noise():
-    mu = 0
-    # sigma = 0.1
-    # sigma = 0.001
-    # sigma = 0.01
-    # sigma = 0.001
-    # sigma = 1.8
-    # sigma = 0.5
-    sigma = 7
+def model_nb_plays_generator_with_noise(points=100,
+                                        nb_plays=1,
+                                        units=1,
+                                        activation='tanh',
+                                        mu=0,
+                                        sigma=1,
+                                        with_noise=False,
+                                        diff_weights=False):
+    # mu = 0
+    # # sigma = 0.1
+    # # sigma = 0.001
+    # # sigma = 0.01
+    # # sigma = 0.001
+    # # sigma = 1.8
+    # # sigma = 0.5
+    # sigma = 7
 
-    points = 1000
-    units = 50
-    nb_plays = 50
+    # points = 100
+    # # points = 1000
+    # # points = 10000
+    # # points = 100000
 
+    # # units = 50
+    # # nb_plays = 50
+    # units = 1
+    # nb_plays = 1
     method = 'sin'
-    # method = 'mixed'
-    # method = 'noise'
-    with_noise = True
+    # # method = 'mixed'
+    # # method = 'noise'
+    # # with_noise = True
+    # with_noise = False
     # diff_weights = False
-    diff_weights = True
+    # # diff_weights = True
 
-    run_test = False
+    # run_test = False
 
-    activation = 'tanh'
-    # activation = None
+    # activation = 'tanh'
 
     input_dim = 1
     state = 0
@@ -255,7 +267,7 @@ def generate_debug_data():
 
 
 if __name__ == "__main__":
-    generate_debug_data()
+    # generate_debug_data()
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--operator", dest="operator",
@@ -292,7 +304,10 @@ if __name__ == "__main__":
                         required=False,
                         action="store_true",
                         help="generate plays' dataset")
-
+    parser.add_argument('--activation', dest='activation',
+                        required=False,
+                        default=None,
+                        help='acitvation of non-linear layer')
     parser.add_argument("--mc", dest="mc",
                         required=False,
                         action="store_true")
@@ -307,6 +322,9 @@ if __name__ == "__main__":
                         required=False,
                         type=int)
 
+    parser.add_argument('--diff-weights', dest='diff_weights',
+                        required=False,
+                        action="store_true")
 
     parser.add_argument("--model-noise", dest="model_noise",
                         required=False,
@@ -320,6 +338,13 @@ if __name__ == "__main__":
     if argv.mc:
         model_genertor_with_mc()
     if argv.model_noise:
-        model_generator_with_noise()
+        # model_generator_with_noise()
         # model_noise_test_generator()
-        # model_nb_plays_generator_with_noise()
+        model_nb_plays_generator_with_noise(argv.points,
+                                            argv.nb_plays,
+                                            argv.units,
+                                            argv.activation,
+                                            argv.mu,
+                                            argv.sigma,
+                                            with_noise=False,
+                                            diff_weights=argv.diff_weights)
