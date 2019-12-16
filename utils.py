@@ -244,9 +244,9 @@ def slide_window_average(arr, window_size=5, step=1):
 
 
 def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **kwargs):
-    fname1 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'.format(i)
-    fname2 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'.format(i)
-    fname3 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'.format(i)
+    # fname1 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'.format(i+1500)
+    fname2 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'.format(i+1500-1)
+    # fname3 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'.format(i+1500)
     fname4 = './new-dataset/lstm/price_vs_price/units-1500/capacity-256/predictions.csv'
     # import ipdb; ipdb.set_trace()
     # _data = np.loadtxt(fname1, delimiter=',')
@@ -298,9 +298,9 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
 
 
 def plot_simulation_info(i, ax):
-    fname1 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'.format(i)
-    fname2 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'.format(i)
-    fname3 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'.format(i)
+    fname1 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'.format(1500+i)
+    fname2 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'.format(1500+i)
+    fname3 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'.format(1500+i)
 
     _data = np.loadtxt(fname1, delimiter=',')
     true_data = np.loadtxt(fname2, delimiter=',')
@@ -364,12 +364,12 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None, **kwargs
 
 def plot_price_span(guess_price_seq, gt_data, lstm_data, ax):
     x = range(guess_price_seq.shape[0])
-    ax.plot(x, guess_price_seq, marker='.', linewidth=1)
+    ax.plot(x, guess_price_seq, marker='.', linewidth=1, label='hnn guess')
     # groud truth
     ax.plot(x, [gt_data]*guess_price_seq.shape[0], marker='+', linewidth=1, color='blue', label='ground truth')
     # HNN
     avg_guess_price = guess_price_seq.mean()
-    ax.plot(x, [avg_guess_price]*guess_price_seq.shape[0], marker='x', linewidth=1, color='orange', label='hnn')
+    ax.plot(x, [avg_guess_price]*guess_price_seq.shape[0], marker='x', linewidth=1, color='orange', label='hnn avg')
     # LSTM
     ax.plot(x, [lstm_data]*guess_price_seq.shape[0], marker='*', linewidth=1, color='green', label='lstm')
     ax.legend(loc='upper right', shadow=True, fontsize='x-large')
