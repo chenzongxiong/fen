@@ -1785,8 +1785,8 @@ class MyModel(object):
         # end_pos = 1010
 
         start_pos = 10
-        end_pos = 15
-        # end_pos = 110
+        # end_pos = 15
+        end_pos = 110
 
         assert start_pos >= 0, colors.red("start_pos must be larger than 0")
         assert start_pos < end_pos, colors.red("start_pos must be less than end_pos")

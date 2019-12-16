@@ -254,7 +254,7 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
     gt_data = gt_data[-1, 0]
     # fake_data = np.loadtxt(fname3, delimiter=',')
     lstm_data = np.loadtxt(fname4, delimiter=',')
-    lstm_data = lstm_data[10+i-1, 1]
+    lstm_data = lstm_data[i-1, 1]
 
     mu = kwargs.pop('mu', 0)
     sigma = kwargs.pop('sigma', 1)
