@@ -285,4 +285,7 @@ DATASET_PATH = dict(
 
 
     ################################################################################
+    lstm_prediction=_prefix+'/lstm/method={method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/units#-{__units__}/predictions.csv',
+    lstm_loss=_prefix+'/lstm/method={method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/units#-{__units__}/loss.csv',
+    lstm_weights=_prefix+'/lstm/method={method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/units#-{__units__}/model-weights.h5',
 )
