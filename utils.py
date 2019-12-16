@@ -287,7 +287,6 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
         os.makedirs(os.path.dirname(fname), exist_ok=True)
         fig1.savefig(fname, dpi=100)
 
-
     if mu is None and sigma is None:
         fname = './frames/{}.png'.format(i)
     else:
@@ -347,17 +346,22 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None, **kwargs
         curr_price = np.array([info[5]] * l)
         _predicted_price = np.array([predicted_price] * l)
         vertical_line = np.linspace(noise.min(), noise.max(), l)
-        if index == 0:
-            ax.plot(prices, prev_original_prediction, color='red', label='start position', linewidth=1)
-            ax.plot(prices, curr_original_prediction, color='black', label='target position', linewidth=1)
-            # ax.plot(_predicted_price, vertical_line, color='black', label='predicted price', linewidth=1, linestyle='solid')
+        if index == len(hysteresis_info) - 1:
+            ax.plot(prices, prev_original_prediction, color='red', label='start noise', linewidth=1)
+            ax.plot(prices, curr_original_prediction, color='black', label='target noise', linewidth=1)
+
+            ax.plot(_predicted_price, vertical_line, color='orange', label='predicted price', linewidth=1, linestyle='solid')
+
             ax.plot(prices, noise, color=colors[index % len(colors)], marker='o', markersize=4, label='steps finding root', linewidth=1)
         else:
             ax.plot(prices, prev_original_prediction, color='red', label=None, linewidth=1)
             ax.plot(prices, curr_original_prediction, color='black', label=None, linewidth=1)
-            # ax.plot(_predicted_price, vertical_line, color='black', label=None, linewidth=1, linestyle='solid')
+
+            ax.plot(_predicted_price, vertical_line, color='orange', label=None, linewidth=1, linestyle='solid')
+
             ax.plot(prices, noise, color=colors[index % len(colors)], marker='o', markersize=4, label=None, linewidth=1)
 
+    ax.legend(loc='upper right', shadow=True, fontsize='large')
     ax.set_xlabel("prices")
     ax.set_ylabel("noise")
 
