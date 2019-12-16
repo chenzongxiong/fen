@@ -156,7 +156,7 @@ def do_guess_seq(start,
         k = start + interval
         bk = np.random.normal(loc=mu, scale=sigma) + predict_noise_seq[-1]
 
-        bk = curr_gt_prediction
+        # bk = curr_gt_prediction
         # always predict noise at [-sigma] and [sigma]
         # global hacking
         # bk = 110 * hacking
