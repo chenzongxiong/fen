@@ -244,6 +244,18 @@ def slide_window_average(arr, window_size=5, step=1):
 
 
 def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **kwargs):
+    fname1 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-brief.csv'.format(i)
+    fname2 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-true-detail.csv'.format(i)
+    fname3 = '../simulation/training-dataset/mu-0-sigma-110.0-points-2000/{}-fake-detail.csv'.format(i)
+    fname4 = './new-dataset/lstm/price_vs_price/units-1500/capacity-256/predictions.csv'
+    # import ipdb; ipdb.set_trace()
+    # _data = np.loadtxt(fname1, delimiter=',')
+    gt_data = np.loadtxt(fname2, delimiter=',')
+    gt_data = gt_data[-1, 0]
+    # fake_data = np.loadtxt(fname3, delimiter=',')
+    lstm_data = np.loadtxt(fname4, delimiter=',')
+    lstm_data = lstm_data[10+i-1, 1]
+
     mu = kwargs.pop('mu', 0)
     sigma = kwargs.pop('sigma', 1)
     ensemble = kwargs.pop('ensemble', 0)
@@ -263,7 +275,7 @@ def plot_internal_transaction(hysteresis_info, i=None, predicted_price=None, **k
         fig1, (ax3, ax4, ax5) = plt.subplots(3, sharex=False, figsize=(10, 10))
         guess_price_seq = guess_price_seq.reshape(-1)
         bk_list = bk_list.reshape(-1)
-        plot_price_span(guess_price_seq, ax3)
+        plot_price_span(guess_price_seq, gt_data, lstm_data, ax3)
         plot_price_distribution(guess_price_seq, ax4)
         plot_noise_distribution(bk_list, ax5)
 
@@ -350,9 +362,17 @@ def plot_hysteresis_info(hysteresis_info, i=None, predicted_price=None, **kwargs
     ax.set_ylabel("noise")
 
 
-def plot_price_span(guess_price_seq, ax):
+def plot_price_span(guess_price_seq, gt_data, lstm_data, ax):
     x = range(guess_price_seq.shape[0])
     ax.plot(x, guess_price_seq, marker='.', linewidth=1)
+    # groud truth
+    ax.plot(x, [gt_data]*guess_price_seq.shape[0], marker='+', linewidth=1, color='blue', label='ground truth')
+    # HNN
+    avg_guess_price = guess_price_seq.mean()
+    ax.plot(x, [avg_guess_price]*guess_price_seq.shape[0], marker='x', linewidth=1, color='orange', label='hnn')
+    # LSTM
+    ax.plot(x, [lstm_data]*guess_price_seq.shape[0], marker='*', linewidth=1, color='green', label='lstm')
+    ax.legend(loc='upper right', shadow=True, fontsize='x-large')
     ax.set_xlabel('')
     ax.set_ylabel('prices')
 
@@ -360,7 +380,7 @@ def plot_price_span(guess_price_seq, ax):
 import scipy.stats as stats
 
 def plot_price_distribution(guess_price_seq, ax):
-    ax.hist(guess_price_seq, bins=1)
+    ax.hist(guess_price_seq, bins=20)
 
     mu = guess_price_seq.mean()
     sigma = guess_price_seq.std()
@@ -372,7 +392,7 @@ def plot_price_distribution(guess_price_seq, ax):
 
 
 def plot_noise_distribution(bk_list, ax):
-    ax.hist(bk_list, bins=1)
+    ax.hist(bk_list, bins=20)
     mu = bk_list.mean()
     sigma = bk_list.std()
     x = np.linspace(mu - 3*sigma, mu + 3*sigma, 100)
