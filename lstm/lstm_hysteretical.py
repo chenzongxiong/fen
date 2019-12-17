@@ -18,14 +18,14 @@ import colors
 LOG = logging.getLogger(__name__)
 
 # input vs. output
-def lstm(input_fname, units, epochs=1000, weights_fname=None, force_train=False):
+def lstm(input_fname, units, epochs=1000, weights_fname=None, force_train=False, learning_rate=0.001):
 
     _train_inputs, _train_outputs = tdata.DatasetLoader.load_train_data(input_fname)
     _test_inputs, _test_outputs = tdata.DatasetLoader.load_test_data(input_fname)
 
     train_inputs = _train_inputs.reshape(-1, 1, 1)
     train_outputs = _train_outputs.reshape(-1, 1, 1)
-    learning_rate = 0.005
+    # learning_rate = 0.001
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999, amsgrad=False)
     loss = 'mse'
     # early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor="loss", patience=500)
@@ -85,6 +85,9 @@ if __name__ == "__main__":
     parser.add_argument("--sigma", dest="sigma",
                         required=False,
                         type=float)
+    parser.add_argument("--lr", dest="lr",
+                        required=False, default=0.001,
+                        type=float)
     parser.add_argument("--points", dest="points",
                         required=False,
                         type=int)
@@ -100,7 +103,7 @@ if __name__ == "__main__":
     parser.add_argument('--diff-weights', dest='diff_weights',
                         required=False,
                         action="store_true")
-    parser.add_argument('--force-train', dest='force_train',
+    parser.add_argument('--force_train', dest='force_train',
                         required=False,
                         action="store_true")
 
@@ -120,6 +123,7 @@ if __name__ == "__main__":
     points = argv.points
     epochs = argv.epochs
     force_train = argv.force_train
+    lr = argv.lr
     state = 0
     method = 'sin'
     input_dim = 1
@@ -138,6 +142,7 @@ if __name__ == "__main__":
     LOG.debug(colors.cyan("activation: {}".format(activation)))
     LOG.debug(colors.cyan("points: {}".format(points)))
     LOG.debug(colors.cyan("epochs: {}".format(epochs)))
+    LOG.debug(colors.cyan("lr: {}".format(lr)))
     LOG.debug(colors.cyan("Write  data to file {}".format(input_fname)))
     LOG.debug("================================================================================")
 
@@ -146,7 +151,10 @@ if __name__ == "__main__":
     weights_fname = constants.DATASET_PATH['lstm_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
 
 
-    test_inputs, predictions, rmse, diff_tick = lstm(input_fname, units=__units__, epochs=epochs, weights_fname=weights_fname, force_train=force_train)
+    test_inputs, predictions, rmse, diff_tick = lstm(input_fname, units=__units__,
+                                                     epochs=epochs, weights_fname=weights_fname,
+                                                     force_train=force_train,
+                                                     learning_rate=lr)
 
     tdata.DatasetSaver.save_data(test_inputs, predictions, prediction_fname)
     tdata.DatasetSaver.save_loss({"rmse": float(rmse), "diff_tick": float(diff_tick)}, loss_fname)

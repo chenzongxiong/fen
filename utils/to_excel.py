@@ -41,27 +41,22 @@ if __name__ == "__main__":
     # LOG.debug(colors.cyan("Write  data to file {}".format(input_fname)))
     # LOG.debug("================================================================================")
     __units__LIST = [1, 8, 16, 32, 64, 128, 256]
-    nb_plays_LIST = [1, 50]
-    lr = 0.005
+    nb_plays_LIST = [1, 50, 100, 500]
+    lr = 0.001
     epochs = 1000
 
-    # rmse_list = []
-    # time_cost_list = []
-    # units_list = []
-    # lstm_units_list = []
-    # epochs_list = []
-    # adam_learning_rate_list = []
     overview = []
     split_ratio = 0.6
 
-    lossframe = pd.DataFrame({})
-
-    excel_fname = 'pandas_multiple.xlsx'
+    excel_fname = './new-dataset/lstm/method-sin/lstm-all.xlsx'
 
     writer = pd.ExcelWriter(excel_fname, engine='xlsxwriter')
 
     for nb_plays in nb_plays_LIST:
+        lossframe = pd.DataFrame({})
         units = nb_plays
+        if nb_plays == 500:
+            units = 100
 
         input_fname = constants.DATASET_PATH[file_key].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
         base = pd.read_csv(input_fname, header=None, names=['inputs', 'outputs'], skiprows=int(0.6*points))
@@ -72,7 +67,7 @@ if __name__ == "__main__":
 
             prediction_fname = constants.DATASET_PATH['lstm_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
             loss_fname = constants.DATASET_PATH['lstm_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
-            loss_file_fname = constants.DATASET_PATH['lstm_loss_file'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
+            loss_file_fname = constants.DATASET_PATH['lstm_loss_file'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, learning_rate=lr)
 
             predict_column = 'nb_plays-{}-units-{}-predictions'.format(nb_plays, __units__)
             prediction = pd.read_csv(prediction_fname, header=None, names=['inputs', predict_column])
@@ -82,7 +77,6 @@ if __name__ == "__main__":
             dataframe = dataframe.assign(**kwargs)
             kwargs = {"nb_plays-{}-units-{}-loss".format(nb_plays, __units__): loss_list['loss']}
             lossframe = lossframe.assign(**kwargs)
-
 
             with open(loss_fname) as f:
                 loss = json.loads(f.read())
