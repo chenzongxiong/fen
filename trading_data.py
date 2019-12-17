@@ -35,7 +35,7 @@ class DatasetGenerator(object):
         # inputs3 = 1.5 * np.sin(0.6 * np.linspace(-10*np.pi, 10*np.pi, points))
 
         inputs = (inputs1 + inputs2 + inputs3).astype(np.float32)
-        inputs = (inputs1).astype(np.float32)
+        # inputs = (inputs1).astype(np.float32)
         LOG.debug("Generate the input sequence according to formula {}".format(colors.red("[x = sin(t) + 0.3 sin(1.3 t)  + 1.2 sin (1.6 t)]")))
         if with_noise is True:
             # import ipdb; ipdb.set_trace()

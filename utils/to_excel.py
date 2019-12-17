@@ -26,7 +26,6 @@ if __name__ == "__main__":
 
     file_key = 'models'
 
-    input_fname = constants.DATASET_PATH[file_key].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
     # LOG.debug("====================INFO====================")
     # LOG.debug(colors.cyan("units: {}".format(units)))
     # LOG.debug(colors.cyan("__units__: {}".format(__units__)))
@@ -41,17 +40,60 @@ if __name__ == "__main__":
     # LOG.debug(colors.cyan("epochs: {}".format(epochs)))
     # LOG.debug(colors.cyan("Write  data to file {}".format(input_fname)))
     # LOG.debug("================================================================================")
-    prediction_fname = constants.DATASET_PATH['lstm_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
-    loss_fname = constants.DATASET_PATH['lstm_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
+    __units__LIST = [1, 8, 16, 32, 64, 128, 256]
+    nb_plays_LIST = [1, 50]
+    lr = 0.005
+    epochs = 1000
 
-    base = pd.read_csv(input_fname, header=None, names=['inputs', 'outputs'])
-    prediction = pd.read_csv(prediction_fname, header=None, names=['inputs', 'predictions'])
-    with open(loss_fname) as f:
-        loss = json.loads(f.read())
+    # rmse_list = []
+    # time_cost_list = []
+    # units_list = []
+    # lstm_units_list = []
+    # epochs_list = []
+    # adam_learning_rate_list = []
+    overview = []
+    split_ratio = 0.6
 
-    import ipdb; ipdb.set_trace()
+    lossframe = pd.DataFrame({})
+
+    excel_fname = 'pandas_multiple.xlsx'
+
+    writer = pd.ExcelWriter(excel_fname, engine='xlsxwriter')
+
+    for nb_plays in nb_plays_LIST:
+        units = nb_plays
+
+        input_fname = constants.DATASET_PATH[file_key].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
+        base = pd.read_csv(input_fname, header=None, names=['inputs', 'outputs'], skiprows=int(0.6*points))
+
+        dataframe = base.copy(deep=False)
+
+        for __units__ in __units__LIST:
+
+            prediction_fname = constants.DATASET_PATH['lstm_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
+            loss_fname = constants.DATASET_PATH['lstm_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
+            loss_file_fname = constants.DATASET_PATH['lstm_loss_file'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
+
+            predict_column = 'nb_plays-{}-units-{}-predictions'.format(nb_plays, __units__)
+            prediction = pd.read_csv(prediction_fname, header=None, names=['inputs', predict_column])
+            loss_list = pd.read_csv(loss_file_fname, header=None, names=['loss'])
+
+            kwargs = {predict_column: prediction[predict_column]}
+            dataframe = dataframe.assign(**kwargs)
+            kwargs = {"nb_plays-{}-units-{}-loss".format(nb_plays, __units__): loss_list['loss']}
+            lossframe = lossframe.assign(**kwargs)
 
 
+            with open(loss_fname) as f:
+                loss = json.loads(f.read())
 
+            overview.append([units, __units__, lr, epochs, loss['rmse'], loss['diff_tick']])
 
-    # weights_fname = constants.DATASET_PATH['lstm_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
+        dataframe.to_excel(writer, sheet_name="nb_plays-{}-units-{}-pred".format(nb_plays, '1-256', index=False))
+        lossframe.to_excel(writer, sheet_name="nb_plays-{}-units-{}-loss".format(nb_plays, '1-256', index=False))
+
+    overview = pd.DataFrame(overview,
+                            columns=['nb_plays/units', 'lstm_units', 'adam_learning_rate', 'epochs', 'rmse', 'time_cost_(s)'])
+
+    overview.to_excel(writer, sheet_name='overview', index=False)
+    writer.close()
