@@ -1437,12 +1437,12 @@ class MyModel(object):
             for j in range(steps_per_epoch):
                 cost, predicted_mu, predicted_sigma = train_function(ins)
             self.cost_history.append([i, cost])
-            LOG.debug("Epoch: {}, Loss: {}, predicted_mu: {}, predicted_sigma: {}, truth_mu: {}, truth_sigma: {}".format(i,
-                                                                                                                         cost,
-                                                                                                                         predicted_mu,
-                                                                                                                         predicted_sigma,
-                                                                                                                         __mu__,
-                                                                                                                         __sigma__))
+            LOG.debug("Epoch: {}, Loss: {:.7f}, predicted_mu: {:.7f}, predicted_sigma: {:.7f}, truth_mu: {:.7f}, truth_sigma: {:.7f}".format(i,
+                                                                                                                                             float(cost),
+                                                                                                                                             float(predicted_mu),
+                                                                                                                                             float(predicted_sigma),
+                                                                                                                                             float(__mu__),
+                                                                                                                                             float(__sigma__)))
 
         cost_history = np.array(self.cost_history)
         tdata.DatasetSaver.save_data(cost_history[:, 0], cost_history[:, 1], loss_file_name)
