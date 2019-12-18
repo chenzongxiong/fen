@@ -2,6 +2,9 @@ import sys
 import json
 sys.path.append('.')
 sys.path.append('..')
+
+import argparse
+
 import pandas as pd
 import constants
 import log as logging
@@ -11,6 +14,15 @@ import log as logging
 LOG = logging.getLogger(__name__)
 
 if __name__ == "__main__":
+
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--diff-weights', dest='diff_weights',
+                        required=False,
+                        action="store_true")
+    argv = parser.parse_args(sys.argv[1:])
+
 
     method = 'sin'
     state = 0
@@ -23,8 +35,6 @@ if __name__ == "__main__":
     sigma = 0
     points = 1000
     __units__ = 1
-
-    file_key = 'models'
 
     # LOG.debug("====================INFO====================")
     # LOG.debug(colors.cyan("units: {}".format(units)))
@@ -40,6 +50,7 @@ if __name__ == "__main__":
     # LOG.debug(colors.cyan("epochs: {}".format(epochs)))
     # LOG.debug(colors.cyan("Write  data to file {}".format(input_fname)))
     # LOG.debug("================================================================================")
+    input(colors.red("RUN script ./lstm_loss_history_collector.sh #diff_weights before run this script"))
     __units__LIST = [1, 8, 16, 32, 64, 128, 256]
     nb_plays_LIST = [1, 50, 100, 500]
     lr = 0.001
@@ -47,8 +58,10 @@ if __name__ == "__main__":
 
     overview = []
     split_ratio = 0.6
-
-    excel_fname = './new-dataset/lstm/method-sin/lstm-all.xlsx'
+    if argv.diff_weights:
+        excel_fname = './new-dataset/lstm/diff_weights/method-sin/lstm-all.xlsx'
+    else:
+        excel_fname = './new-dataset/lstm/method-sin/lstm-all.xlsx'
 
     writer = pd.ExcelWriter(excel_fname, engine='xlsxwriter')
 
@@ -58,16 +71,25 @@ if __name__ == "__main__":
         if nb_plays == 500:
             units = 100
 
-        input_fname = constants.DATASET_PATH[file_key].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
+
+        if argv.diff_weights:
+            input_fname = constants.DATASET_PATH['models_diff_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
+        else:
+            input_fname = constants.DATASET_PATH['models'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
+
         base = pd.read_csv(input_fname, header=None, names=['inputs', 'outputs'], skiprows=int(0.6*points))
 
         dataframe = base.copy(deep=False)
 
         for __units__ in __units__LIST:
-
-            prediction_fname = constants.DATASET_PATH['lstm_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
-            loss_fname = constants.DATASET_PATH['lstm_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
-            loss_file_fname = constants.DATASET_PATH['lstm_loss_file'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, learning_rate=lr)
+            if argv.diff_weights:
+                prediction_fname = constants.DATASET_PATH['lstm_diff_weights_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
+                loss_fname = constants.DATASET_PATH['lstm_diff_weights_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
+                loss_file_fname = constants.DATASET_PATH['lstm_diff_weights_loss_file'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, learning_rate=lr)
+            else:
+                prediction_fname = constants.DATASET_PATH['lstm_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
+                loss_fname = constants.DATASET_PATH['lstm_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
+                loss_file_fname = constants.DATASET_PATH['lstm_loss_file'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, learning_rate=lr)
 
             predict_column = 'nb_plays-{}-units-{}-predictions'.format(nb_plays, __units__)
             prediction = pd.read_csv(prediction_fname, header=None, names=['inputs', predict_column])

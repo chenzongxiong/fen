@@ -258,7 +258,6 @@ if __name__ == "__main__":
         weights_name=weights_fname,
         epochs=epochs)
 
-
     test_inputs, predictions = predict(inputs=test_inputs,
                                   outputs=test_outputs,
                                   units=__units__,

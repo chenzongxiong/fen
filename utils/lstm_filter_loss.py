@@ -1,0 +1,133 @@
+import sys
+sys.path.append('.')
+sys.path.append('..')
+
+import argparse
+
+import numpy as np
+import trading_data as tdata
+import log as logging
+import colors
+
+LOG = logging.getLogger(__name__)
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--activation', dest='activation',
+                        required=False,
+                        default=None,
+                        help='acitvation of non-linear layer')
+    parser.add_argument("--mu", dest="mu",
+                        required=False,
+                        type=float)
+    parser.add_argument("--sigma", dest="sigma",
+                        required=False,
+                        type=float)
+    parser.add_argument("--lr", dest="lr",
+                        required=False, default=0.001,
+                        type=float)
+    parser.add_argument("--points", dest="points",
+                        required=False,
+                        type=int)
+    parser.add_argument("--nb_plays", dest="nb_plays",
+                        required=False,
+                        type=int)
+    parser.add_argument("--units", dest="units",
+                        required=False,
+                        type=int)
+    parser.add_argument("--__units__", dest="__units__",
+                        required=False,
+                        type=int)
+    parser.add_argument('--diff-weights', dest='diff_weights',
+                        required=False,
+                        action="store_true")
+
+    argv = parser.parse_args(sys.argv[1:])
+
+
+    lr = 0.001
+    mu = int(argv.mu)
+    sigma = int(argv.sigma)
+    points = argv.points
+
+    activation = argv.activation
+    nb_plays  = argv.nb_plays
+    units = argv.units
+    __units__ = argv.__units__
+    if argv.diff_weights:
+        fname="./log/lstm-diff-weights-activation-{activation}-lr-{lr}-mu-{mu}-sigma-{sigma}-nb_play-{nb_plays}-units-{units}-__units__-{__units__}-points-{points}.log".format(
+            activation=activation,
+            lr=lr,
+            mu=mu,
+            sigma=sigma,
+            nb_plays=nb_plays,
+            units=units,
+            __units__=__units__,
+            points=points
+        )
+
+        log_fname="./new-dataset/lstm/diff_weights/method-{method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/units#-{__units__}/mse-loss-lr-{lr}.csv".format(
+            method='sin',
+            activation=activation,
+            state=0,
+            input_dim=1,
+            mu=mu,
+            sigma=sigma,
+            units=units,
+            nb_plays=nb_plays,
+            points=points,
+            __units__=__units__,
+            lr=lr
+            )
+    else:
+        fname="./log/lstm-activation-{activation}-lr-{lr}-mu-{mu}-sigma-{sigma}-nb_play-{nb_plays}-units-{units}-__units__-{__units__}-points-{points}.log".format(
+            activation=activation,
+            lr=lr,
+            mu=mu,
+            sigma=sigma,
+            nb_plays=nb_plays,
+            units=units,
+            __units__=__units__,
+            points=points
+        )
+
+        log_fname="./new-dataset/lstm/method-{method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/units#-{__units__}/mse-loss-lr-{lr}.csv".format(
+            method='sin',
+            activation=activation,
+            state=0,
+            input_dim=1,
+            mu=mu,
+            sigma=sigma,
+            units=units,
+            nb_plays=nb_plays,
+            points=points,
+            __units__=__units__,
+            lr=lr
+            )
+
+
+    LOG.debug(colors.cyan("extract loss from fname: {}".format(fname)))
+    LOG.debug(colors.cyan("to loss history: {}".format(log_fname)))
+
+    loss_history = []
+    fp = open(fname, 'r')
+
+    split_ratio = 0.6
+    validation_ratio = 0.05
+    interesting_part = "{}/{}".format(int(split_ratio*points*(1-validation_ratio)),
+                                      int(split_ratio*points*(1-validation_ratio)))
+
+    for line in fp:
+        if interesting_part in line:
+            seg = line.split()
+            try:
+                loss_history.append(float(seg[7]))
+            except IndexError:
+                print("ERROR: lines: {}".format(line))
+
+    loss_history = np.array(loss_history)
+    tdata.DatasetSaver.save_data(np.arange(loss_history.shape[0], dtype=np.int32), loss_history, log_fname)
+    fp.close()
