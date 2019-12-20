@@ -294,6 +294,4 @@ DATASET_PATH = dict(
     lstm_diff_weights_loss=_prefix+'/lstm/diff_weights/method-{method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/units#-{__units__}/loss.csv',
     lstm_diff_weights_loss_file=_prefix+'/lstm/diff_weights/method-{method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/units#-{__units__}/mse-loss-lr-{learning_rate}.csv',
     lstm_diff_weights_weights=_prefix+'/lstm/diff_weights/method-{method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/units#-{__units__}/model-weights.h5',
-
-
 )

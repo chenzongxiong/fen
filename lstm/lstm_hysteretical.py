@@ -109,11 +109,6 @@ if __name__ == "__main__":
 
     argv = parser.parse_args(sys.argv[1:])
 
-    if argv.diff_weights is True:
-        file_key = 'models_diff_weights'
-    else:
-        file_key = 'models'
-
     activation = argv.activation
     nb_plays = argv.nb_plays
     units = argv.units

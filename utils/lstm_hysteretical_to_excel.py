@@ -33,9 +33,8 @@ if __name__ == "__main__":
     nb_plays = 1
     units = 1
     mu = 0
-    sigma = 0
+    sigma = 2
     points = 1000
-    __units__ = 1
 
     # LOG.debug("====================INFO====================")
     # LOG.debug(colors.cyan("units: {}".format(units)))
@@ -60,9 +59,9 @@ if __name__ == "__main__":
     overview = []
     split_ratio = 0.6
     if argv.diff_weights:
-        excel_fname = './new-dataset/lstm/diff_weights/method-sin/lstm-all.xlsx'
+        excel_fname = './new-dataset/lstm/diff_weights/method-sin/lstm-all-sigma-2.xlsx'
     else:
-        excel_fname = './new-dataset/lstm/method-sin/lstm-all.xlsx'
+        excel_fname = './new-dataset/lstm/method-sin/lstm-all-sigma-2.xlsx'
 
     writer = pd.ExcelWriter(excel_fname, engine='xlsxwriter')
 
