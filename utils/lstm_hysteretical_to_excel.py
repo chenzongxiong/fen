@@ -9,6 +9,7 @@ import pandas as pd
 import constants
 import log as logging
 
+import colors
 
 
 LOG = logging.getLogger(__name__)
@@ -103,7 +104,8 @@ if __name__ == "__main__":
             with open(loss_fname) as f:
                 loss = json.loads(f.read())
 
-            overview.append([units, __units__, lr, epochs, loss['rmse'], loss['diff_tick']])
+            rmse = ((base['outputs'] - prediction[predict_column]).values ** 2).mean() ** 0.5
+            overview.append([nb_plays, __units__, lr, epochs, rmse, loss['diff_tick']])
 
         dataframe.to_excel(writer, sheet_name="nb_plays-{}-units-{}-pred".format(nb_plays, '1-256', index=False))
         lossframe.to_excel(writer, sheet_name="nb_plays-{}-units-{}-loss".format(nb_plays, '1-256', index=False))

@@ -104,11 +104,12 @@ if __name__ == "__main__":
 
                 kwargs = {predict_column: prediction[predict_column]}
                 dataframe = dataframe.assign(**kwargs)
-                loss = ((prediction[predict_column]  - base['outputs']).values ** 2).mean()**0.5
-                kwargs = {"nb_plays-{}-units-{}-__activation__-__nb_plays__-{}-__units__-{}-loss".format(nb_plays, units, __activation__, __nb_plays__, __units__): loss}
+                kwargs = {"nb_plays-{}-units-{}-__activation__-__nb_plays__-{}-__units__-{}-loss".format(nb_plays, units, __activation__, __nb_plays__, __units__): loss_list['loss']}
                 lossframe = lossframe.assign(**kwargs)
 
-                overview.append([activation, __activation__, units, __nb_plays__, __units__, lr, epochs, loss_list['loss'].values[-1]])
+                loss = ((prediction[predict_column]  - base['outputs']).values ** 2).mean()**0.5
+                # import ipdb; ipdb.set_trace()
+                overview.append([activation, __activation__, units, __nb_plays__, __units__, lr, epochs, loss])
 
         dataframe.to_excel(writer, sheet_name="nb_plays-{}-pred".format(nb_plays, index=False))
         lossframe.to_excel(writer, sheet_name="nb_plays-{}-loss".format(nb_plays, index=False))

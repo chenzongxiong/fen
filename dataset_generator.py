@@ -156,41 +156,15 @@ def model_nb_plays_generator_with_noise(points=100,
                                         sigma=1,
                                         with_noise=False,
                                         diff_weights=False):
-    # mu = 0
-    # # sigma = 0.1
-    # # sigma = 0.001
-    # # sigma = 0.01
-    # # sigma = 0.001
-    # # sigma = 1.8
-    # # sigma = 0.5
     # sigma = 7
 
-    # points = 100
-    # # points = 1000
-    # # points = 10000
-    # # points = 100000
-
-    # # units = 50
-    # # nb_plays = 50
-    # units = 1
-    # nb_plays = 1
     method = 'sin'
-    # # method = 'mixed'
-    # # method = 'noise'
-    # # with_noise = True
-    # with_noise = False
-    # diff_weights = False
-    # # diff_weights = True
 
     run_test = False
-
-    # activation = 'tanh'
 
     input_dim = 1
     state = 0
 
-    if method == 'noise':
-        with_noise = True
     if with_noise is False:
         mu = 0
         sigma = 0
@@ -331,6 +305,11 @@ if __name__ == "__main__":
                         action="store_true",
                         help="generate plays' dataset")
 
+    parser.add_argument("--with-noise", dest="with_noise",
+                        required=False,
+                        action="store_true",
+                        help="generate plays' dataset")
+
     argv = parser.parse_args(sys.argv[1:])
 
     if argv.operator_noise:
@@ -344,7 +323,7 @@ if __name__ == "__main__":
                                             argv.nb_plays,
                                             argv.units,
                                             argv.activation,
-                                            argv.mu,
-                                            argv.sigma,
-                                            with_noise=False,
+                                            int(argv.mu),
+                                            int(argv.sigma),
+                                            with_noise=argv.with_noise,
                                             diff_weights=argv.diff_weights)
