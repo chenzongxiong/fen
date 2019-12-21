@@ -22,6 +22,11 @@ if __name__ == "__main__":
     parser.add_argument('--diff-weights', dest='diff_weights',
                         required=False,
                         action="store_true")
+    # diff weights: sigma = 8,
+    # sigma = 2
+    parser.add_argument('--sigma', dest='sigma',
+                        required=True)
+
     argv = parser.parse_args(sys.argv[1:])
 
 
@@ -33,7 +38,7 @@ if __name__ == "__main__":
     nb_plays = 1
     units = 1
     mu = 0
-    sigma = 2
+    sigma = int(argv.sigma)
     points = 1000
 
     # LOG.debug("====================INFO====================")
@@ -52,16 +57,16 @@ if __name__ == "__main__":
     # LOG.debug("================================================================================")
     input(colors.red("RUN script ./lstm_loss_history_collector.sh #diff_weights before run this script"))
     __units__LIST = [1, 8, 16, 32, 64, 128, 256]
-    nb_plays_LIST = [1, 50, 100, 500]
+    nb_plays_LIST = [50, 100, 500]
     lr = 0.001
     epochs = 1000
 
     overview = []
     split_ratio = 0.6
     if argv.diff_weights:
-        excel_fname = './new-dataset/lstm/diff_weights/method-sin/lstm-all-sigma-2.xlsx'
+        excel_fname = './new-dataset/lstm/diff_weights/method-sin/lstm-all-sigma-{}.xlsx'.format(sigma)
     else:
-        excel_fname = './new-dataset/lstm/method-sin/lstm-all-sigma-2.xlsx'
+        excel_fname = './new-dataset/lstm/method-sin/lstm-all-sigma-{}.xlsx'.format(sigma)
 
     writer = pd.ExcelWriter(excel_fname, engine='xlsxwriter')
 
@@ -104,13 +109,15 @@ if __name__ == "__main__":
                 loss = json.loads(f.read())
 
             rmse = ((base['outputs'] - prediction[predict_column]).values ** 2).mean() ** 0.5
-            overview.append([nb_plays, __units__, lr, epochs, rmse, loss['diff_tick']])
+            # https://stackoverflow.com/questions/38080035/how-to-calculate-the-number-of-parameters-of-an-lstm-network
+            number_of_parameters = 4 * ((1 + 1) * __units__ + __units__*__units__)
+            overview.append([nb_plays, __units__, lr, epochs, rmse, loss['diff_tick'], number_of_parameters])
 
         dataframe.to_excel(writer, sheet_name="nb_plays-{}-units-{}-pred".format(nb_plays, '1-256', index=False))
         lossframe.to_excel(writer, sheet_name="nb_plays-{}-units-{}-loss".format(nb_plays, '1-256', index=False))
 
     overview = pd.DataFrame(overview,
-                            columns=['nb_plays/units', 'lstm_units', 'adam_learning_rate', 'epochs', 'rmse', 'time_cost_(s)'])
+                            columns=['nb_plays/units', 'lstm_units', 'adam_learning_rate', 'epochs', 'rmse', 'time_cost_(s)', 'nb_paramters'])
 
     overview.to_excel(writer, sheet_name='overview', index=False)
     writer.close()

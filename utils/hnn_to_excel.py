@@ -35,10 +35,10 @@ if __name__ == "__main__":
     points = 1000
 
     __activation__LIST = ['tanh', 'elu']
-    __units__LIST = [1, 2, 8]
-    __nb_plays__LIST = [1, 2, 8]
+    __units__LIST = [[1, 2, 8], [50, 100, 200], [50, 100, 200], []]
+    __nb_plays__LIST = [[1, 2, 8], [50, 100, 200], [50, 100, 200], []]
 
-    nb_plays_LIST = [1]
+    nb_plays_LIST = [1, 50, 100, 500]
     lr = 0.05
     epochs = 1000
 
@@ -51,8 +51,7 @@ if __name__ == "__main__":
 
     writer = pd.ExcelWriter(excel_fname, engine='xlsxwriter')
 
-
-    for nb_plays in nb_plays_LIST:
+    for idx, nb_plays in enumerate(nb_plays_LIST):
         lossframe = pd.DataFrame({})
         units = nb_plays
         if nb_plays == 500:
@@ -68,7 +67,7 @@ if __name__ == "__main__":
         dataframe = base.copy(deep=False)
 
         for __activation__ in __activation__LIST:
-            for (__nb_plays__, __units__) in zip(__nb_plays__LIST, __units__LIST):
+            for (__nb_plays__, __units__) in zip(__nb_plays__LIST[idx], __units__LIST[idx]):
 
                 if argv.diff_weights:
                     print("Loading from diff weights...")
@@ -108,15 +107,15 @@ if __name__ == "__main__":
                 lossframe = lossframe.assign(**kwargs)
 
                 loss = ((prediction[predict_column]  - base['outputs']).values ** 2).mean()**0.5
-                # import ipdb; ipdb.set_trace()
-                overview.append([activation, __activation__, units, __nb_plays__, __units__, lr, epochs, loss])
+                number_of_parameters = __nb_plays__ * (2*__units__ + __units__+1)
+                overview.append([activation, __activation__, units, __nb_plays__, __units__, lr, epochs, loss, number_of_parameters])
 
         dataframe.to_excel(writer, sheet_name="nb_plays-{}-pred".format(nb_plays, index=False))
         lossframe.to_excel(writer, sheet_name="nb_plays-{}-loss".format(nb_plays, index=False))
 
 
     overview = pd.DataFrame(overview,
-                            columns=['activation', '__activation__', 'nb_plays/units', '__nb_plays__', '__units__', 'adam_learning_rate', 'epochs', 'mse'])
+                            columns=['activation', '__activation__', 'nb_plays/units', '__nb_plays__', '__units__', 'adam_learning_rate', 'epochs', 'rmse', 'nb_paramters'])
 
     overview.to_excel(writer, sheet_name='overview', index=False)
     writer.close()
