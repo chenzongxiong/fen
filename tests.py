@@ -571,6 +571,18 @@ class TestCases(unittest.TestCase):
     #     end = time.time()
     #     print("cost time 3: {}s ".format(end-start))
 
+    def test_tensordot(self):
+        a = tf.constant([1, 2, 3, 4], shape=(1, 2, 2))
+        b = tf.constant([2, 3], shape=(2, 1))
+        c = tf.tensordot(a, b, axes=[[2], [0]])
+        print(c.shape)
+        print(self.session.run(c))
+        d = tf.constant([1, 2, 1, 2], shape=[2, 2])
+        e = tf.constant([1, 2, 2, 3], shape=[2, 2])
+        f = d * e
+        g = 1 - d
+        print(self.session.run([f, g]))
+
 
 if __name__ == '__main__':
     unittest.main()

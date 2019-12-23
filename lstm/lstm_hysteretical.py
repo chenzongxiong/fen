@@ -14,8 +14,10 @@ import log as logging
 import trading_data as tdata
 import constants
 import colors
+import utils
 
 LOG = logging.getLogger(__name__)
+session = utils.get_session()
 
 # input vs. output
 def lstm(input_fname, units, epochs=1000, weights_fname=None, force_train=False, learning_rate=0.001):
@@ -69,6 +71,135 @@ def lstm(input_fname, units, epochs=1000, weights_fname=None, force_train=False,
     return _test_inputs, pred_outputs, rmse, end-start
 
 
+def mle_loss(model, mu, sigma):
+    def _loss(y_true, y_pred):
+        # Extract weights from layers
+        lstm_kernel = model.layers[1].cell.kernel
+        lstm_recurrent_kernel = model.layers[1].cell.recurrent_kernel
+        units = model.layers[1].cell.units
+        h_tm1 = model.layers[1].states[0]  # previous memory state
+        c_tm1 = model.layers[1].states[1]  # previous carry state
+
+        dense_kernel = model.layers[2].kernel
+
+        inputs = model.layers[0].output[0, :, :]
+
+        z = tf.keras.backend.dot(inputs, lstm_kernel)
+        z += tf.keras.backend.dot(h_tm1, lstm_recurrent_kernel)
+        if model.layers[1].cell.use_bias:
+            z = tf.keras.backend.bias_add(z, model.layers[1].cell.bias)
+
+        w_i = lstm_kernel[:, :units]
+        w_f = lstm_kernel[:, units:2*units]
+        w_c = lstm_kernel[:, 2*units:3*units]
+        w_o = lstm_kernel[:, 3*units:]
+
+        z0 = z[:, :units]
+        z1 = z[:, units:2 * units]
+        z2 = z[:, 2 * units:3 * units]
+        z3 = z[:, 3 * units:]
+
+        i = model.layers[1].cell.recurrent_activation(z0)
+        f = model.layers[1].cell.recurrent_activation(z1)
+        c = f * c_tm1 + i * model.layers[1].cell.activation(z2)
+        o = model.layers[1].cell.recurrent_activation(z3)
+
+        # _dot = tf.keras.backend.dot
+        _tanh = tf.keras.activations.tanh
+
+        do = _tanh(c) * o * (1-o) * w_o
+        di = i * (1-i) * w_i * _tanh(z2)
+        df = c_tm1 * f * (1-f) * w_f
+        dc = i * (1-_tanh(z2) * _tanh(z2)) * c_tm1 * (1 - c_tm1) * w_c
+
+        dh = do + o*(1-_tanh(c)*_tanh(c))*(df + di + dc)
+
+        db = tf.keras.backend.sum(tf.keras.backend.dot(dh, dense_kernel), axis=1, keepdims=True)
+
+
+        ## calcuate loss
+        # mu = 0
+        # sigma = 1
+
+        _diff = y_pred[:, 1:, :] - y_pred[:, :-1, :][0, :, :]
+        diff = tf.reshape(_diff, shape=(-1,))
+        _normalized_db = tf.clip_by_value(tf.abs(db), clip_value_min=1e-18, clip_value_max=1e18)
+        normalized_db = tf.reshape(_normalized_db, shape=(-1,))[1:]
+
+        loss1 = tf.keras.backend.square((diff - mu)/sigma) / 2.0
+        loss2 = -tf.keras.backend.log(normalized_db)
+
+        loss = loss1 + loss2
+
+        return loss
+        # return tf.keras.backend.mean(tf.keras.backend.square(y_true - y_pred))
+
+    return _loss
+
+
+def lstm_mle(input_fname, units, epochs=1000, weights_fname=None, force_train=False, learning_rate=0.001):
+
+    LOG.debug(colors.cyan("Using MLE to train LSTM network..."))
+
+    _train_inputs, _train_outputs = tdata.DatasetLoader.load_train_data(input_fname)
+    _test_inputs, _test_outputs = tdata.DatasetLoader.load_test_data(input_fname)
+
+    train_inputs = _train_inputs.reshape(1, -1, 1)
+    train_outputs = _train_outputs.reshape(1, -1, 1)
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999, amsgrad=False)
+    # early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor="loss", patience=500)
+    start = time.time()
+
+    x = tf.keras.layers.Input(shape=(600, 1), batch_size=1)
+
+    z, h_tm1, c_tm1 = tf.keras.layers.LSTM(int(units),
+                                           input_shape=(_train_inputs.shape[0], 1),
+                                           unroll=False,
+                                           return_sequences=True,
+                                           return_state=True,
+                                           use_bias=True,
+                                           stateful=True,
+                                           batch_size=1,
+                                           implementation=2)(x)
+    y = tf.keras.layers.Dense(1)(z)
+
+    model = tf.keras.models.Model(inputs=x, outputs=y)
+
+    # model.compile(loss='mse', optimizer=optimizer, metrics=['mse'])
+    mu = 0
+    sigma = 1
+    model.compile(loss=mle_loss(model, mu, sigma), optimizer=optimizer, metrics=['mse'])
+    model.summary()
+
+    if force_train or not os.path.isfile(weights_fname) :
+        model.fit(train_inputs, train_outputs, epochs=epochs, verbose=1,
+                  # callbacks=[early_stopping_callback],
+                  # validation_split=0.05,  # need to fix bug of sample
+                  batch_size=1,
+                  shuffle=False)
+        os.makedirs(os.path.dirname(weights_fname), exist_ok=True)
+        model.save_weights(weights_fname)
+    else:
+        model.load_weights(weights_fname)
+
+    end = time.time()
+
+    LOG.debug(colors.red("time cost: {}s".format(end- start)))
+
+    test_inputs = np.hstack([_test_inputs, np.zeros(_train_inputs.shape[0]-_test_inputs.shape[0])])
+    test_inputs = test_inputs.reshape(1, -1, 1)
+    test_outputs = _test_outputs.reshape(-1)
+
+    predictions = model.predict(test_inputs)
+    pred_outputs = predictions.reshape(-1)
+    pred_outputs = pred_outputs[:_test_inputs.shape[0]]
+    rmse = np.sqrt(np.mean((pred_outputs - test_outputs) ** 2))
+
+    LOG.debug(colors.red("LSTM rmse: {}".format(rmse)))
+
+    return _test_inputs, pred_outputs, rmse, end-start
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -107,6 +238,11 @@ if __name__ == "__main__":
                         required=False,
                         action="store_true")
 
+    parser.add_argument('--loss', dest='loss',
+                        required=False,
+                        default='mse',
+                        type=str),
+
     argv = parser.parse_args(sys.argv[1:])
 
     activation = argv.activation
@@ -119,22 +255,22 @@ if __name__ == "__main__":
     epochs = argv.epochs
     force_train = argv.force_train
     lr = argv.lr
+    loss = argv.loss
     state = 0
     method = 'sin'
     input_dim = 1
 
 
-
     if argv.diff_weights is True:
-        input_fname = constants.DATASET_PATH['models_diff_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
-        prediction_fname = constants.DATASET_PATH['lstm_diff_weights_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
-        loss_fname = constants.DATASET_PATH['lstm_diff_weights_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
-        weights_fname = constants.DATASET_PATH['lstm_diff_weights_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
+        input_fname = constants.DATASET_PATH['models_diff_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, loss=loss)
+        prediction_fname = constants.DATASET_PATH['lstm_diff_weights_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss)
+        loss_fname = constants.DATASET_PATH['lstm_diff_weights_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss)
+        weights_fname = constants.DATASET_PATH['lstm_diff_weights_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss)
     else:
-        input_fname = constants.DATASET_PATH['models'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
-        prediction_fname = constants.DATASET_PATH['lstm_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
-        loss_fname = constants.DATASET_PATH['lstm_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
-        weights_fname = constants.DATASET_PATH['lstm_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
+        input_fname = constants.DATASET_PATH['models'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, loss=loss)
+        prediction_fname = constants.DATASET_PATH['lstm_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss)
+        loss_fname = constants.DATASET_PATH['lstm_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss)
+        weights_fname = constants.DATASET_PATH['lstm_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss)
 
 
 
@@ -154,14 +290,21 @@ if __name__ == "__main__":
     LOG.debug(colors.cyan("input file {}".format(input_fname)))
     LOG.debug(colors.cyan("prediction file {}".format(prediction_fname)))
     LOG.debug(colors.cyan("loss file {}".format(loss_fname)))
-
+    LOG.debug(colors.cyan("loss function: {}".format(loss)))
     LOG.debug("================================================================================")
 
-
-    test_inputs, predictions, rmse, diff_tick = lstm(input_fname, units=__units__,
-                                                     epochs=epochs, weights_fname=weights_fname,
-                                                     force_train=force_train,
-                                                     learning_rate=lr)
+    if loss == 'mse':
+        test_inputs, predictions, rmse, diff_tick = lstm(input_fname, units=__units__,
+                                                         epochs=epochs, weights_fname=weights_fname,
+                                                         force_train=force_train,
+                                                         learning_rate=lr)
+    elif loss == 'mle':
+        test_inputs, predictions, rmse, diff_tick = lstm_mle(input_fname, units=__units__,
+                                                             epochs=epochs, weights_fname=weights_fname,
+                                                             force_train=force_train,
+                                                             learning_rate=lr)
+    else:
+        raise Exception("Unknown loss function")
 
     tdata.DatasetSaver.save_data(test_inputs, predictions, prediction_fname)
     tdata.DatasetSaver.save_loss({"rmse": float(rmse), "diff_tick": float(diff_tick)}, loss_fname)
