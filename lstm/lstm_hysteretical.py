@@ -137,12 +137,15 @@ def mle_loss(model, mu, sigma):
     return _loss
 
 
-def lstm_mle(input_fname, units, epochs=1000, weights_fname=None, force_train=False, learning_rate=0.001):
+def lstm_mle(input_fname, units, epochs=1000, weights_fname=None, force_train=False, learning_rate=0.001, mu=0, sigma=1):
 
     LOG.debug(colors.cyan("Using MLE to train LSTM network..."))
-
-    _train_inputs, _train_outputs = tdata.DatasetLoader.load_train_data(input_fname)
-    _test_inputs, _test_outputs = tdata.DatasetLoader.load_test_data(input_fname)
+    _inputs, _outputs = tdata.DatasetLoader.load_data(input_fname)
+    inputs, outputs = _inputs[:1000], _outputs[:1000]
+    # _train_inputs, _train_outputs = tdata.DatasetLoader.load_train_data(input_fname)
+    # _test_inputs, _test_outputs = tdata.DatasetLoader.load_test_data(input_fname)
+    _train_inputs, _train_outputs = inputs[:600], outputs[:600]
+    _test_inputs, _test_outputs = inputs[600:], outputs[600:]
 
     train_inputs = _train_inputs.reshape(1, -1, 1)
     train_outputs = _train_outputs.reshape(1, -1, 1)
@@ -150,7 +153,7 @@ def lstm_mle(input_fname, units, epochs=1000, weights_fname=None, force_train=Fa
     # early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor="loss", patience=500)
     start = time.time()
 
-    x = tf.keras.layers.Input(shape=(600, 1), batch_size=1)
+    x = tf.keras.layers.Input(shape=(_train_inputs.shape[0], 1), batch_size=1)
 
     z, h_tm1, c_tm1 = tf.keras.layers.LSTM(int(units),
                                            input_shape=(_train_inputs.shape[0], 1),
@@ -166,8 +169,8 @@ def lstm_mle(input_fname, units, epochs=1000, weights_fname=None, force_train=Fa
     model = tf.keras.models.Model(inputs=x, outputs=y)
 
     # model.compile(loss='mse', optimizer=optimizer, metrics=['mse'])
-    mu = 0
-    sigma = 1
+    # mu = 0
+    # sigma = 1
     model.compile(loss=mle_loss(model, mu, sigma), optimizer=optimizer, metrics=['mse'])
     model.summary()
 
@@ -237,6 +240,9 @@ if __name__ == "__main__":
     parser.add_argument('--force_train', dest='force_train',
                         required=False,
                         action="store_true")
+    parser.add_argument('--markov-chain', dest='mc',
+                        required=False,
+                        action="store_true")
 
     parser.add_argument('--loss', dest='loss',
                         required=False,
@@ -259,9 +265,14 @@ if __name__ == "__main__":
     state = 0
     method = 'sin'
     input_dim = 1
+    markov_chain = argv.mc
+    if markov_chain is True:
+        input_fname = constants.DATASET_PATH['models_diff_weights_mc_stock_model'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, loss=loss)
+        prediction_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss)
+        loss_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss)
+        weights_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss)
 
-
-    if argv.diff_weights is True:
+    elif argv.diff_weights is True:
         input_fname = constants.DATASET_PATH['models_diff_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, loss=loss)
         prediction_fname = constants.DATASET_PATH['lstm_diff_weights_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss)
         loss_fname = constants.DATASET_PATH['lstm_diff_weights_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss)
@@ -302,7 +313,9 @@ if __name__ == "__main__":
         test_inputs, predictions, rmse, diff_tick = lstm_mle(input_fname, units=__units__,
                                                              epochs=epochs, weights_fname=weights_fname,
                                                              force_train=force_train,
-                                                             learning_rate=lr)
+                                                             learning_rate=lr,
+                                                             mu=mu,
+                                                             sigma=sigma)
     else:
         raise Exception("Unknown loss function")
 
