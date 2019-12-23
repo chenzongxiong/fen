@@ -83,11 +83,12 @@ def predict(inputs,
                       timestep=timestep,
                       units=units,
                       activation=activation,
-                      nb_plays=nb_plays)
+                      nb_plays=nb_plays,
+                      parallel_prediction=True)
 
     mymodel.load_weights(weights_fname)
 
-    predictions = mymodel.predict(inputs)
+    predictions = mymodel.predict_parallel(inputs)
 
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
@@ -175,7 +176,7 @@ if __name__ == "__main__":
     input_fname_key = 'models_diff_weights' if argv.diff_weights else 'models'
     predict_fname_key = 'models_diff_weights_predictions' if argv.diff_weights else 'models_predictions'
     loss_history_fname_key = 'models_diff_weights_loss_history' if argv.diff_weights else 'models_loss_history'
-    weight_fname_key = 'mdoels_diff_weights_saved_weights' if argv.diff_weights else 'models_saved_weights'
+    weight_fname_key = 'models_diff_weights_saved_weights' if argv.diff_weights else 'models_saved_weights'
     input_fname = constants.DATASET_PATH[input_fname_key].format(method=method,
                                                                  activation=activation,
                                                                  state=state,
