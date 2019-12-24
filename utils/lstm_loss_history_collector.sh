@@ -1,6 +1,7 @@
-diff_weights=0
-sigma=2
-for nb_plays in 1 50 100 500
+diff_weights=1
+sigma=110
+markov_chain=1
+for nb_plays in 20
 do
     units=$nb_plays
     if [[ $nb_plays == 500 ]]; then
@@ -8,10 +9,12 @@ do
     fi
     for __units__ in 1 8 16 32 64 128 256
     do
-        if [[ $diff_weights == 1 ]]; then
-            python utils/lstm_filter_loss.py --units ${units} --nb_plays ${nb_plays} --points 1000 --sigma ${sigma} --mu 0 --lr 0.001 --__units__ ${__units__} --activation tanh --diff-weights &
+        if [[ $markov_chain == 1 ]]; then
+            python utils/lstm_filter_loss.py --units ${units} --nb_plays ${nb_plays} --points 1000 --sigma ${sigma} --mu 0 --lr 0.003 --__units__ ${__units__} --activation None --diff-weights --markov-chain
+        elif [[ $diff_weights == 1 ]]; then
+            python utils/lstm_filter_loss.py --units ${units} --nb_plays ${nb_plays} --points 1000 --sigma ${sigma} --mu 0 --lr 0.003 --__units__ ${__units__} --activation tanh --diff-weights &
         else
-            python utils/lstm_filter_loss.py --units ${units} --nb_plays ${nb_plays} --points 1000 --sigma ${sigma} --mu 0 --lr 0.001 --__units__ ${__units__} --activation tanh &
+            python utils/lstm_filter_loss.py --units ${units} --nb_plays ${nb_plays} --points 1000 --sigma ${sigma} --mu 0 --lr 0.003 --__units__ ${__units__} --activation tanh &
         fi
     done
 done

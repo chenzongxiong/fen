@@ -44,20 +44,48 @@ if __name__ == "__main__":
     parser.add_argument('--diff-weights', dest='diff_weights',
                         required=False,
                         action="store_true")
+    parser.add_argument('--markov-chain', dest='mc',
+                        required=False,
+                        action="store_true")
 
     argv = parser.parse_args(sys.argv[1:])
 
-
-    lr = 0.001
+    lr = argv.lr
     mu = int(argv.mu)
     sigma = int(argv.sigma)
     points = argv.points
+    markov_chain = argv.mc
 
     activation = argv.activation
-    nb_plays  = argv.nb_plays
+    nb_plays = argv.nb_plays
     units = argv.units
     __units__ = argv.__units__
-    if argv.diff_weights:
+    if markov_chain is True:
+        fname="./log/lstm-mle-lr-{lr}-activation-{activation}-nb_plays-{nb_plays}-units-{units}-points-{points}-mu-{mu}-sigma-{sigma}-__units__-{__units__}.log".format(
+            activation=activation,
+            lr=lr,
+            mu=mu,
+            sigma=sigma,
+            nb_plays=nb_plays,
+            units=1,
+            __units__=__units__,
+            points=points
+        )
+        log_fname="./new-dataset/lstm/diff_weights/method-{method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/markov_chain/units#-{__units__}/loss-{loss}/mle-loss-lr-{lr}.csv".format(
+            method='sin',
+            activation=activation,
+            state=0,
+            input_dim=1,
+            mu=mu,
+            sigma=sigma,
+            units=1,
+            nb_plays=nb_plays,
+            points=points,
+            __units__=__units__,
+            lr=lr,
+            loss='mle'
+            )
+    elif argv.diff_weights:
         fname="./log/lstm-diff-weights-activation-{activation}-lr-{lr}-mu-{mu}-sigma-{sigma}-nb_play-{nb_plays}-units-{units}-__units__-{__units__}-points-{points}.log".format(
             activation=activation,
             lr=lr,
@@ -108,7 +136,6 @@ if __name__ == "__main__":
             lr=lr
             )
 
-
     LOG.debug(colors.cyan("extract loss from fname: {}".format(fname)))
     LOG.debug(colors.cyan("to loss history: {}".format(log_fname)))
 
@@ -117,8 +144,11 @@ if __name__ == "__main__":
 
     split_ratio = 0.6
     validation_ratio = 0.05
-    interesting_part = "{}/{}".format(int(split_ratio*points*(1-validation_ratio)),
-                                      int(split_ratio*points*(1-validation_ratio)))
+    if markov_chain:
+        interesting_part = 'mean_squared_error'
+    else:
+        interesting_part = "{}/{}".format(int(split_ratio*points*(1-validation_ratio)),
+                                          int(split_ratio*points*(1-validation_ratio)))
 
     for line in fp:
         if interesting_part in line:

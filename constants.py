@@ -297,7 +297,7 @@ DATASET_PATH = dict(
 
     lstm_diff_weights_mc_stock_model_prediction=_prefix+'/lstm/diff_weights/method-{method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/markov_chain/units#-{__units__}/loss-{loss}/predictions.csv',
     lstm_diff_weights_mc_stock_model_loss=_prefix+'/lstm/diff_weights/method-{method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/markov_chain/units#-{__units__}/loss-{loss}/loss.csv',
-    lstm_diff_weights_mc_stock_model_loss_file=_prefix+'/lstm/diff_weights/method-{method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/markov_chain/units#-{__units__}/loss-{loss}/mse-loss-lr-{learning_rate}.csv',
+    lstm_diff_weights_mc_stock_model_loss_file=_prefix+'/lstm/diff_weights/method-{method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/markov_chain/units#-{__units__}/loss-{loss}/mle-loss-lr-{learning_rate}.csv',
     lstm_diff_weights_mc_stock_model_weights=_prefix+'/lstm/diff_weights/method-{method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/markov_chain/units#-{__units__}/loss-{loss}/model-weights.h5',
 
 
