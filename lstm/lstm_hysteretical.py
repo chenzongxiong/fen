@@ -165,15 +165,15 @@ def mle_loss(model, mu, sigma, activation='tanh'):
         _activation = model.layers[1].cell.activation
         _elu = tf.keras.activations.elu
 
-        clipped_z2 = tf.clip_by_value(z2, clip_value_max=0)
-        clipped_c = tf.clip_by_value(c, clip_value_max=0)
+        clipped_z2 = tf.clip_by_value(z2, clip_value_min=-100, clip_value_max=0)
+        clipped_c = tf.clip_by_value(c, clip_value_min=-100, clip_value_max=0)
 
         d_o = _activation(c) * o * (1-o) * w_o
         d_i = i * (1-i) * w_i * _activation(z2)
         d_f = c_tm1 * f * (1-f) * w_f
-        d_c = i * _elu(clipped_z2) * c_tm1 * (1 - c_tm1) * w_c
+        d_c = i * tf.keras.backend.exp(clipped_z2) * c_tm1 * (1 - c_tm1) * w_c
 
-        d_h = d_o + o*_elu(clipped_c)*(d_f + d_i + d_c)
+        d_h = d_o + o*tf.keras.backend.exp(clipped_c)*(d_f + d_i + d_c)
 
         d_b = tf.keras.backend.sum(tf.keras.backend.dot(d_h, dense_kernel), axis=1, keepdims=True)
 
@@ -186,9 +186,11 @@ def mle_loss(model, mu, sigma, activation='tanh'):
         loss2 = -tf.keras.backend.log(normalized_db)
 
         loss = loss1 + loss2
-        import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
 
         return tf.math.reduce_sum(loss)
+
+
     if activation == 'tanh':
         LOG.debug(colors.cyan("Using tanh activation"))
         return tanh_loss
@@ -204,11 +206,11 @@ def lstm_mle(input_fname, units, epochs=1000, weights_fname=None, force_train=Fa
 
     LOG.debug(colors.cyan("Using MLE to train LSTM network..."))
     _inputs, _outputs = tdata.DatasetLoader.load_data(input_fname)
-    inputs, outputs = _inputs[:1000], _outputs[:1000]
+    inputs, outputs = _inputs[:2000], _outputs[:2000]
     # _train_inputs, _train_outputs = tdata.DatasetLoader.load_train_data(input_fname)
     # _test_inputs, _test_outputs = tdata.DatasetLoader.load_test_data(input_fname)
-    _train_inputs, _train_outputs = inputs[:600], outputs[:600]
-    _test_inputs, _test_outputs = inputs[600:], outputs[600:]
+    _train_inputs, _train_outputs = inputs[:1500], outputs[:1500]
+    _test_inputs, _test_outputs = inputs[1500:], outputs[1500:]
 
     train_inputs = _train_inputs.reshape(1, -1, 1)
     train_outputs = _train_outputs.reshape(1, -1, 1)
@@ -337,7 +339,7 @@ if __name__ == "__main__":
     input_dim = 1
     markov_chain = argv.mc
     if markov_chain is True:
-        input_fname = constants.DATASET_PATH['models_diff_weights_mc_stock_model'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, loss=loss, __activation__=__activation__)
+        input_fname = constants.DATASET_PATH['models_diff_weights_mc_stock_model'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=1000, input_dim=input_dim, loss=loss, __activation__=__activation__)
         prediction_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss, __activation__=__activation__)
         loss_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss, __activation__=__activation__)
         weights_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss, __activation__=__activation__)

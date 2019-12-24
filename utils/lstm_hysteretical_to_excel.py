@@ -42,7 +42,7 @@ if __name__ == "__main__":
     units = 1
     mu = 0
     sigma = int(argv.sigma)
-    points = 1000
+    points = 2000
 
     # LOG.debug("====================INFO====================")
     # LOG.debug(colors.cyan("units: {}".format(units)))
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         activation = 'tanh'
 
     if argv.markov_chain:
-        lr = 0.003
+        lr = 0.005
     else:
         lr = 0.001
 
@@ -79,8 +79,10 @@ if __name__ == "__main__":
 
     overview = []
     split_ratio = 0.6
+
+    __activation__ = 'tanh'
     if argv.markov_chain:
-        excel_fname = './new-dataset/lstm/diff_weights/method-sin/mc-lstm-all-sigma-{}.xlsx'.format(sigma)
+        excel_fname = './new-dataset/lstm/diff_weights/method-sin/mc-lstm-all-sigma-{}-__activation__-{}.xlsx'.format(sigma, __activation__)
     elif argv.diff_weights:
         excel_fname = './new-dataset/lstm/diff_weights/method-sin/lstm-all-sigma-{}.xlsx'.format(sigma)
     else:
@@ -98,13 +100,15 @@ if __name__ == "__main__":
 
         if argv.markov_chain:
             units = 1
-            input_fname = constants.DATASET_PATH['models_diff_weights_mc_stock_model'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, loss='mle')
+            input_fname = constants.DATASET_PATH['models_diff_weights_mc_stock_model'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=1000, input_dim=input_dim, loss='mle', __activation__=__activation__)
         elif argv.diff_weights:
             input_fname = constants.DATASET_PATH['models_diff_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
         else:
             input_fname = constants.DATASET_PATH['models'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
-
-        base = pd.read_csv(input_fname, header=None, names=['inputs', 'outputs'], skiprows=int(0.6*points), nrows=int(0.4*points))
+        if argv.markov_chain:
+            base = pd.read_csv(input_fname, header=None, names=['inputs', 'outputs'], skiprows=1500, nrows=500)
+        else:
+            base = pd.read_csv(input_fname, header=None, names=['inputs', 'outputs'], skiprows=int(0.6*points), nrows=int(0.4*points))
 
         dataframe = base.copy(deep=False)
 
@@ -123,9 +127,9 @@ if __name__ == "__main__":
 
         for __units__ in __units__LIST:
             if argv.markov_chain:
-                prediction_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss='mle')
-                loss_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss='mle')
-                loss_file_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_loss_file'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, learning_rate=lr, loss='mle')
+                prediction_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss='mle', __activation__=__activation__)
+                loss_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss='mle', __activation__=__activation__)
+                loss_file_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_loss_file'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, learning_rate=lr, loss='mle', __activation__=__activation__)
             elif argv.diff_weights:
                 prediction_fname = constants.DATASET_PATH['lstm_diff_weights_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)
                 loss_fname = constants.DATASET_PATH['lstm_diff_weights_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__)

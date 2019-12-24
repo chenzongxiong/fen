@@ -1322,7 +1322,7 @@ class MyModel(object):
                 weight = 1.0
 
             # weight = 10 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
-            # weight = 0.02 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
+            weight = 0.02 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
             LOG.debug("MyModel {} generates {} with Weight: {}".format(self._ensemble, colors.red("Play #{}".format(nb_play+1)), weight))
             # if debug is True:
             #     weight = 1.0
@@ -1632,11 +1632,11 @@ class MyModel(object):
             self.loss = self.loss_by_hand
 
             # 10-14
-            # self.reg_lambda = 0.001
-            # self.reg_mu = 0.001
+            self.reg_lambda = 0.001
+            self.reg_mu = 0.001
             # 15-19
-            self.reg_lambda = 0.0001
-            self.reg_mu = 0.0001
+            # self.reg_lambda = 0.0001
+            # self.reg_mu = 0.0001
 
             regularizers1 = [self.reg_lambda * tf.math.reduce_sum(tf.math.square(play.nonlinear_layer.kernel)) for play in self.plays]
             regularizers2 = [self.reg_mu * tf.math.reduce_sum(tf.math.square(play.linear_layer.kernel)) for play in self.plays]

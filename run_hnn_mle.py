@@ -34,8 +34,8 @@ def fit(inputs,
         ensemble=1):
 
     # epochs = 20000
-    epochs = 10000
-
+    # epochs = 10000
+    epochs = 1
     start = time.time()
     input_dim = batch_size
 
@@ -604,7 +604,7 @@ if __name__ == "__main__":
     mu = 0
     sigma = 110
 
-    points = 1000
+    points = 2000
     input_dim = 1
     ############################## ground truth #############################
     nb_plays = 20
@@ -704,6 +704,7 @@ if __name__ == "__main__":
         loss_file_key = 'models_diff_weights_mc_loss_history'
         predictions_file_key = 'models_diff_weights_mc_predictions'
 
+
     fname = constants.DATASET_PATH[input_file_key].format(interp=interp,
                                                           method=method,
                                                           activation=activation,
@@ -712,8 +713,9 @@ if __name__ == "__main__":
                                                           sigma=sigma,
                                                           units=units,
                                                           nb_plays=nb_plays,
-                                                          points=points,
+                                                          points=1000,
                                                           input_dim=input_dim)
+
     LOG.debug("Load data from file: {}".format(colors.cyan(fname)))
     if do_prediction is True and do_trend is True:
         raise Exception("both do predictions and do_trend are True")
@@ -910,9 +912,9 @@ if __name__ == "__main__":
         sys.exit(0)
     else:
         LOG.debug("START to FIT via {}".format(colors.red(loss_name.upper())))
-        _inputs, _outputs = inputs[:batch_size], outputs[:batch_size]
-        train_inputs, train_outputs = _inputs[:600], outputs[:600]
-        test_inputs, test_outputs = _inputs[600:1000], outputs[600:1000]
+        _inputs, _outputs = inputs[:2000], outputs[:2000]
+        train_inputs, train_outputs = _inputs[:1500], outputs[:1500]
+        test_inputs, test_outputs = _inputs[1500:], outputs[1500:]
 
         fit(inputs=train_inputs,
             outputs=train_outputs,

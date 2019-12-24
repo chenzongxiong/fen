@@ -41,6 +41,9 @@ if __name__ == "__main__":
     parser.add_argument("--__units__", dest="__units__",
                         required=False,
                         type=int)
+    parser.add_argument("--__activation__", dest="__activation__",
+                        required=False,
+                        type=str)
     parser.add_argument('--diff-weights', dest='diff_weights',
                         required=False,
                         action="store_true")
@@ -60,8 +63,11 @@ if __name__ == "__main__":
     nb_plays = argv.nb_plays
     units = argv.units
     __units__ = argv.__units__
+    __activation__ = argv.__activation__
+
     if markov_chain is True:
-        fname="./log/lstm-mle-lr-{lr}-activation-{activation}-nb_plays-{nb_plays}-units-{units}-points-{points}-mu-{mu}-sigma-{sigma}-__units__-{__units__}.log".format(
+        # log/lstm-mle-lr-0.005-activation-None-nb_plays-20-units-1-points-1000-mu-0-sigma-110-__activation__-tanh-__units__-256.log
+        fname="./log/lstm-mle-lr-{lr}-activation-{activation}-nb_plays-{nb_plays}-units-{units}-points-{points}-mu-{mu}-sigma-{sigma}-__activation__-{__activation__}-__units__-{__units__}.log".format(
             activation=activation,
             lr=lr,
             mu=mu,
@@ -69,9 +75,12 @@ if __name__ == "__main__":
             nb_plays=nb_plays,
             units=1,
             __units__=__units__,
+            __activation__=__activation__,
             points=points
         )
-        log_fname="./new-dataset/lstm/diff_weights/method-{method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/markov_chain/units#-{__units__}/loss-{loss}/mle-loss-lr-{lr}.csv".format(
+        # ./new-dataset/lstm/diff_weights/method-sin/activation-None/state-0/input_dim-1/mu-0/sigma-110/units-1/nb_plays-20/points-2000/markov_chain/units\#-1/activation\#-tanh/loss-mle/
+
+        log_fname="./new-dataset/lstm/diff_weights/method-{method}/activation-{activation}/state-{state}/input_dim-{input_dim}/mu-{mu}/sigma-{sigma}/units-{units}/nb_plays-{nb_plays}/points-{points}/markov_chain/units#-{__units__}/activation#-{__activation__}/loss-{loss}/mle-loss-lr-{lr}.csv".format(
             method='sin',
             activation=activation,
             state=0,
@@ -80,8 +89,9 @@ if __name__ == "__main__":
             sigma=sigma,
             units=1,
             nb_plays=nb_plays,
-            points=points,
+            points=2000,
             __units__=__units__,
+            __activation__=__activation__,
             lr=lr,
             loss='mle'
             )
