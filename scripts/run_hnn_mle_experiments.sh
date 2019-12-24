@@ -1,0 +1,4 @@
+python run_MLE.py --__nb_plays__ 25 --__units__ 25 --__activation__ elu --batch_size 1000 --ensemble 1 &> log/hnn-activation-None-lr-0.07-mu-0-sigma-110-nb_play-20-units-10000-__nb_plays__-25-__units__-25-__activation__-elu-points-1000.log
+python run_MLE.py --__nb_plays__ 50 --__units__ 50 --__activation__ elu --batch_size 1000 --ensemble 1 &> log/hnn-activation-None-lr-0.07-mu-0-sigma-110-nb_play-20-units-10000-__nb_plays__-50-__units__-50-__activation__-elu-points-1000.log
+python run_MLE.py --__nb_plays__ 50 --__units__ 100 --__activation__ elu --batch_size 1000 --ensemble 1 &> log/hnn-activation-None-lr-0.07-mu-0-sigma-110-nb_play-20-units-10000-__nb_plays__-50-__units__-100-__activation__-elu-points-1000.log
+python run_MLE.py --__nb_plays__ 100 --__units__ 100 --__activation__ elu --batch_size 1000 --ensemble 1 &> log/hnn-activation-None-lr-0.07-mu-0-sigma-110-nb_play-20-units-10000-__nb_plays__-100-__units__-100-__activation__-elu-points-1000.log

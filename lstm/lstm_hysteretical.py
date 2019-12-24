@@ -71,8 +71,9 @@ def lstm(input_fname, units, epochs=1000, weights_fname=None, force_train=False,
     return _test_inputs, pred_outputs, rmse, end-start
 
 
-def mle_loss(model, mu, sigma):
-    def _loss(y_true, y_pred):
+def mle_loss(model, mu, sigma, activation='tanh'):
+    # TODO: add elu activation
+    def tanh_loss(y_true, y_pred):
         # Extract weights from layers
         lstm_kernel = model.layers[1].cell.kernel
         lstm_recurrent_kernel = model.layers[1].cell.recurrent_kernel
@@ -94,28 +95,25 @@ def mle_loss(model, mu, sigma):
         w_c = lstm_kernel[:, 2*units:3*units]
         w_o = lstm_kernel[:, 3*units:]
 
-        z0 = z[:, :units]
-        z1 = z[:, units:2 * units]
-        z2 = z[:, 2 * units:3 * units]
-        z3 = z[:, 3 * units:]
+        z0 = z[:, :units]               # w_i x + w_ri h_tm1 + b_i
+        z1 = z[:, units:2 * units]      # w_f x + w_rf h_tm1 + b_f
+        z2 = z[:, 2 * units:3 * units]  # w_c x + w_rc h_tm1 + b_c
+        z3 = z[:, 3 * units:]           # w_o x + w_ro h_tm1 + b_o
 
         i = model.layers[1].cell.recurrent_activation(z0)
         f = model.layers[1].cell.recurrent_activation(z1)
         c = f * c_tm1 + i * model.layers[1].cell.activation(z2)
         o = model.layers[1].cell.recurrent_activation(z3)
 
-        # _dot = tf.keras.backend.dot
         _tanh = tf.keras.activations.tanh
 
-        do = _tanh(c) * o * (1-o) * w_o
-        di = i * (1-i) * w_i * _tanh(z2)
-        df = c_tm1 * f * (1-f) * w_f
-        dc = i * (1-_tanh(z2) * _tanh(z2)) * c_tm1 * (1 - c_tm1) * w_c
+        d_o = _tanh(c) * o * (1-o) * w_o
+        d_i = i * (1-i) * w_i * _tanh(z2)
+        d_f = c_tm1 * f * (1-f) * w_f
+        d_c = i * (1-_tanh(z2) * _tanh(z2)) * c_tm1 * (1 - c_tm1) * w_c
+        d_h = d_o + o*(1-_tanh(c)*_tanh(c))*(d_f + d_i + d_c)
 
-        dh = do + o*(1-_tanh(c)*_tanh(c))*(df + di + dc)
-
-        db = tf.keras.backend.sum(tf.keras.backend.dot(dh, dense_kernel), axis=1, keepdims=True)
-
+        d_b = tf.keras.backend.sum(tf.keras.backend.dot(d_h, dense_kernel), axis=1, keepdims=True)
 
         ## calcuate loss
         # mu = 0
@@ -123,21 +121,86 @@ def mle_loss(model, mu, sigma):
 
         _diff = y_pred[:, 1:, :] - y_pred[:, :-1, :][0, :, :]
         diff = tf.reshape(_diff, shape=(-1,))
-        _normalized_db = tf.clip_by_value(tf.abs(db), clip_value_min=1e-18, clip_value_max=1e18)
+        _normalized_db = tf.clip_by_value(tf.abs(d_b), clip_value_min=1e-18, clip_value_max=1e18)
         normalized_db = tf.reshape(_normalized_db, shape=(-1,))[1:]
 
         loss1 = tf.keras.backend.square((diff - mu)/sigma) / 2.0
         loss2 = -tf.keras.backend.log(normalized_db)
 
         loss = loss1 + loss2
+        return tf.math.reduce_sum(loss)
 
-        return loss
-        # return tf.keras.backend.mean(tf.keras.backend.square(y_true - y_pred))
+    def elu_loss(y_true, y_pred):
+        # Extract weights from layers
+        lstm_kernel = model.layers[1].cell.kernel
+        lstm_recurrent_kernel = model.layers[1].cell.recurrent_kernel
+        units = model.layers[1].cell.units
+        h_tm1 = model.layers[1].states[0]  # previous memory state
+        c_tm1 = model.layers[1].states[1]  # previous carry state
 
-    return _loss
+        dense_kernel = model.layers[2].kernel
+
+        inputs = model.layers[0].output[0, :, :]
+
+        z = tf.keras.backend.dot(inputs, lstm_kernel)
+        z += tf.keras.backend.dot(h_tm1, lstm_recurrent_kernel)
+        if model.layers[1].cell.use_bias:
+            z = tf.keras.backend.bias_add(z, model.layers[1].cell.bias)
+
+        w_i = lstm_kernel[:, :units]
+        w_f = lstm_kernel[:, units:2*units]
+        w_c = lstm_kernel[:, 2*units:3*units]
+        w_o = lstm_kernel[:, 3*units:]
+
+        z0 = z[:, :units]               # w_i x + w_ri h_tm1 + b_i
+        z1 = z[:, units:2 * units]      # w_f x + w_rf h_tm1 + b_f
+        z2 = z[:, 2 * units:3 * units]  # w_c x + w_rc h_tm1 + b_c
+        z3 = z[:, 3 * units:]           # w_o x + w_ro h_tm1 + b_o
+
+        i = model.layers[1].cell.recurrent_activation(z0)
+        f = model.layers[1].cell.recurrent_activation(z1)
+        c = f * c_tm1 + i * model.layers[1].cell.activation(z2)
+        o = model.layers[1].cell.recurrent_activation(z3)
+
+        _activation = model.layers[1].cell.activation
+        _elu = tf.keras.activations.elu
+
+        clipped_z2 = tf.clip_by_value(z2, clip_value_max=0)
+        clipped_c = tf.clip_by_value(c, clip_value_max=0)
+
+        d_o = _activation(c) * o * (1-o) * w_o
+        d_i = i * (1-i) * w_i * _activation(z2)
+        d_f = c_tm1 * f * (1-f) * w_f
+        d_c = i * _elu(clipped_z2) * c_tm1 * (1 - c_tm1) * w_c
+
+        d_h = d_o + o*_elu(clipped_c)*(d_f + d_i + d_c)
+
+        d_b = tf.keras.backend.sum(tf.keras.backend.dot(d_h, dense_kernel), axis=1, keepdims=True)
+
+        _diff = y_pred[:, 1:, :] - y_pred[:, :-1, :][0, :, :]
+        diff = tf.reshape(_diff, shape=(-1,))
+        _normalized_db = tf.clip_by_value(tf.abs(d_b), clip_value_min=1e-18, clip_value_max=1e18)
+        normalized_db = tf.reshape(_normalized_db, shape=(-1,))[1:]
+
+        loss1 = tf.keras.backend.square((diff - mu)/sigma) / 2.0
+        loss2 = -tf.keras.backend.log(normalized_db)
+
+        loss = loss1 + loss2
+        import ipdb; ipdb.set_trace()
+
+        return tf.math.reduce_sum(loss)
+    if activation == 'tanh':
+        LOG.debug(colors.cyan("Using tanh activation"))
+        return tanh_loss
+    elif activation == 'elu':
+        LOG.debug(colors.cyan("Using elu activation"))
+        return elu_loss
+    else:
+        raise Exception("unknown loss function")
 
 
-def lstm_mle(input_fname, units, epochs=1000, weights_fname=None, force_train=False, learning_rate=0.001, mu=0, sigma=1):
+
+def lstm_mle(input_fname, units, epochs=1000, weights_fname=None, force_train=False, learning_rate=0.001, mu=0, sigma=1, activation='tanh'):
 
     LOG.debug(colors.cyan("Using MLE to train LSTM network..."))
     _inputs, _outputs = tdata.DatasetLoader.load_data(input_fname)
@@ -163,6 +226,7 @@ def lstm_mle(input_fname, units, epochs=1000, weights_fname=None, force_train=Fa
                                            use_bias=True,
                                            stateful=True,
                                            batch_size=1,
+                                           activation=activation,
                                            implementation=2)(x)
     y = tf.keras.layers.Dense(1)(z)
 
@@ -171,7 +235,7 @@ def lstm_mle(input_fname, units, epochs=1000, weights_fname=None, force_train=Fa
     # model.compile(loss='mse', optimizer=optimizer, metrics=['mse'])
     # mu = 0
     # sigma = 1
-    model.compile(loss=mle_loss(model, mu, sigma), optimizer=optimizer, metrics=['mse'])
+    model.compile(loss=mle_loss(model, mu, sigma, activation), optimizer=optimizer, metrics=['mse'])
     model.summary()
 
     if force_train or not os.path.isfile(weights_fname) :
@@ -249,12 +313,18 @@ if __name__ == "__main__":
                         default='mse',
                         type=str),
 
+    parser.add_argument('--__activation__', dest='__activation__',
+                        required=False,
+                        default='tanh',
+                        type=str),
+
     argv = parser.parse_args(sys.argv[1:])
 
     activation = argv.activation
     nb_plays = argv.nb_plays
     units = argv.units
     __units__ = argv.__units__  # 16, 32, 64, 128
+    __activation__ = argv.__activation__  # 16, 32, 64, 128
     mu = int(argv.mu)
     sigma = int(argv.sigma)
     points = argv.points
@@ -267,10 +337,10 @@ if __name__ == "__main__":
     input_dim = 1
     markov_chain = argv.mc
     if markov_chain is True:
-        input_fname = constants.DATASET_PATH['models_diff_weights_mc_stock_model'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, loss=loss)
-        prediction_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss)
-        loss_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss)
-        weights_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss)
+        input_fname = constants.DATASET_PATH['models_diff_weights_mc_stock_model'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, loss=loss, __activation__=__activation__)
+        prediction_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_prediction'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss, __activation__=__activation__)
+        loss_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_loss'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss, __activation__=__activation__)
+        weights_fname = constants.DATASET_PATH['lstm_diff_weights_mc_stock_model_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, __units__=__units__, loss=loss, __activation__=__activation__)
 
     elif argv.diff_weights is True:
         input_fname = constants.DATASET_PATH['models_diff_weights'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim, loss=loss)
@@ -315,7 +385,8 @@ if __name__ == "__main__":
                                                              force_train=force_train,
                                                              learning_rate=lr,
                                                              mu=mu,
-                                                             sigma=sigma)
+                                                             sigma=sigma,
+                                                             activation=__activation__)
     else:
         raise Exception("Unknown loss function")
 

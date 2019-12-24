@@ -1112,7 +1112,7 @@ class Play(object):
         if not hasattr(self, '_batch_input_shape'):
             raise Exception("_batch_input_shape must be added before pickling")
 
-        state={
+        state = {
             "_weight": self._weight,
             "_width": self._width,
             "_debug": self._debug,
@@ -1135,13 +1135,15 @@ class Play(object):
         return state
 
     def __setstate__(self, d):
-        LOG.debug("PID: {}, unpickle {}".format(os.getpid(), d))
+        LOG.debug("PID: {}, unpickle {}".format(os.getpid(), colors.cyan(d)))
         self.__dict__ = d
         if self._built is False:
             self.build()
         if self._preload_weights is False and self._weights_fname is not None:
             self._preload_weights = True
             self.load_weights(self._weights_fname)
+            LOG.debug(colors.cyan("Set weights to play in sub-process"))
+
         LOG.debug("PID: {}, self: {}, self.model: {}".format(os.getpid(), self, self.model))
 
     def __hash__(self):
@@ -1192,6 +1194,7 @@ class Task(object):
             self.play = Play()
             self.play.__setstate__(play_state)
             cache[play_state['_name']] = self.play
+            LOG.debug("Init play in sub-process")
         else:
             LOG.debug("Reuse play inside Cache.")
 
@@ -2083,7 +2086,7 @@ class MyModel(object):
 
         self._batch_input_shape = tf.TensorShape(shape)
 
-        if extra.get('parallelism', False) is True:
+        if getattr(self, 'parallel_prediction'):
             for play in self.plays:
                 play._batch_input_shape = tf.TensorShape(shape)
                 play._preload_weights = False

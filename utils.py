@@ -120,6 +120,7 @@ def get_tf_summary_writer(fpath):
 
 _SESSION = None
 
+
 def get_session(debug=False, interactive=False):
     # https://github.com/tensorflow/tensorflow/issues/5448
     # import multiprocessing as mp
@@ -406,13 +407,15 @@ def plot_noise_distribution(bk_list, ax):
     ax.set_ylabel('occurrence')
 
 
-
 _CACHE = None
+
+
 def get_cache():
     global _CACHE
     if _CACHE is None:
         _CACHE = dict()
     return _CACHE
+
 
 def sentinel_marker():
     return 'SENTINEL'
