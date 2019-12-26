@@ -31,23 +31,43 @@ if __name__ == "__main__":
     activation = 'tanh'
     nb_plays = 1
     mu = 0
-    sigma = 0
+    sigma = 8
     points = 1000
 
     __activation__LIST = ['tanh', 'elu']
-    __units__LIST = [[1, 2, 8], [50, 100, 200], [50, 100, 200], []]
-    __nb_plays__LIST = [[1, 2, 8], [50, 100, 200], [50, 100, 200], []]
 
-    nb_plays_LIST = [1, 50, 100, 500]
+    __units__LIST_units1_nb_plays1 = []
+    __nb_plays__LIST_units1_nb_plays1 = []
+
+    __units__LIST_units50_nb_plays50 = [10, 10, 25, 50, 50]
+    __nb_plays__LIST_units50_nb_plays50 = [10, 25, 25, 50, 100]
+
+    __units__LIST_units100_nb_plays100 = [25, 25, 50, 50, 100, 25, 100]
+    __nb_plays__LIST_units100_nb_plays100 = [25, 50, 50, 100, 100, 200, 200]
+
+    __units__LIST_units100_nb_plays500 = [25, 25, 50, 50, 100, 100, 100, 200]
+    __nb_plays__LIST_units100_nb_plays500 = [25, 50, 50, 100, 100, 200, 500, 500]
+
+    __units__LIST = [__units__LIST_units50_nb_plays50,
+                     __units__LIST_units100_nb_plays100,
+                     __units__LIST_units100_nb_plays500]
+    __nb_plays__LIST = [__nb_plays__LIST_units50_nb_plays50,
+                        __nb_plays__LIST_units100_nb_plays100,
+                        __nb_plays__LIST_units100_nb_plays500]
+    if argv.diff_weights:
+        nb_plays_LIST = [50, 100, 500]
+    else:
+        nb_plays_LIST = [1, 50, 100, 500]
+
     lr = 0.05
     epochs = 1000
 
     overview = []
     split_ratio = 0.6
     if argv.diff_weights:
-        excel_fname = './new-dataset/models/diff_weights/method-sin/hnn-all.xlsx'
+        excel_fname = './new-dataset/models/diff_weights/method-sin/hnn-all-sigma-{}.xlsx'.format(sigma)
     else:
-        excel_fname = './new-dataset/models/method-sin/hnn-all.xlsx'
+        excel_fname = './new-dataset/models/method-sin/hnn-all-sigma-{}.xlsx'.format(sigma)
 
     writer = pd.ExcelWriter(excel_fname, engine='xlsxwriter')
 
