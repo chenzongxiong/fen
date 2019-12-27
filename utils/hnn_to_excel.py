@@ -36,14 +36,14 @@ if __name__ == "__main__":
         mu = 0
         sigma = 110
         points = 1000
-        batch_size = 1500
+        batch_size = 2000
         __activation__LIST = ['elu']
 
         # __nb_plays__LIST_units10000_nb_plays20 = [25, 50, 50]
         # __units__LIST_units10000_nb_plays20 = [25, 50, 100]
 
-        __nb_plays__LIST_units10000_nb_plays20 = [100]
-        __units__LIST_units10000_nb_plays20 = [100]
+        __nb_plays__LIST_units10000_nb_plays20 = [25]
+        __units__LIST_units10000_nb_plays20 = [25]
 
         __units__LIST = [__units__LIST_units10000_nb_plays20]
         __nb_plays__LIST = [__nb_plays__LIST_units10000_nb_plays20]
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     overview = []
     split_ratio = 0.6
     if argv.markov_chain:
-        excel_fname = './new-dataset/models/diff_weights/method-sin/hnn-mc-mle-sigma-{}.xlsx'.format(sigma)
+        excel_fname = './new-dataset/models/diff_weights/method-sin/hnn-mc-mle-sigma-{}-x.xlsx'.format(sigma)
     elif argv.diff_weights:
         excel_fname = './new-dataset/models/diff_weights/method-sin/hnn-all-sigma-{}.xlsx'.format(sigma)
     else:
@@ -126,10 +126,12 @@ if __name__ == "__main__":
         diff_frame = diff_frame.assign(outputs=(_base_output[1:] - _base_output[:-1] - _base_mu) / _base_sigma)
 
         for __activation__ in __activation__LIST:
-            # for (__nb_plays__, __units__) in zip(__nb_plays__LIST[idx], __units__LIST[idx]):
-            for ensemble in ensemble_LIST:
-                __nb_plays__ = 100
-                __units__ = 100
+            for (__nb_plays__, __units__) in zip(__nb_plays__LIST[idx], __units__LIST[idx]):
+                ensemble = 1
+            # for ensemble in ensemble_LIST:
+                # __nb_plays__ = 100
+                # __units__ = 100
+
                 if argv.markov_chain:
 
                     LOG.debug(colors.cyan("Loading from markov chain..."))
