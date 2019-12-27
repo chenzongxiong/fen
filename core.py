@@ -1322,7 +1322,8 @@ class MyModel(object):
                 weight = 1.0
 
             # weight = 10 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
-            weight = 0.02 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
+            # weight = 0.02 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
+            weight = 2 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
             LOG.debug("MyModel {} generates {} with Weight: {}".format(self._ensemble, colors.red("Play #{}".format(nb_play+1)), weight))
             # if debug is True:
             #     weight = 1.0
