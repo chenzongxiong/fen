@@ -35,11 +35,15 @@ if __name__ == "__main__":
         nb_plays = 1
         mu = 0
         sigma = 110
-        points = 2000
+        points = 1000
+        batch_size = 1500
         __activation__LIST = ['elu']
 
-        __nb_plays__LIST_units10000_nb_plays20 = [25, 50, 50]
-        __units__LIST_units10000_nb_plays20 = [25, 50, 100]
+        # __nb_plays__LIST_units10000_nb_plays20 = [25, 50, 50]
+        # __units__LIST_units10000_nb_plays20 = [25, 50, 100]
+
+        __nb_plays__LIST_units10000_nb_plays20 = [100]
+        __units__LIST_units10000_nb_plays20 = [100]
 
         __units__LIST = [__units__LIST_units10000_nb_plays20]
         __nb_plays__LIST = [__nb_plays__LIST_units10000_nb_plays20]
@@ -79,6 +83,8 @@ if __name__ == "__main__":
     lr = 0.05
     epochs = 10000
     NUM_ROWS_TO_READ = 500
+    ensemble_LIST = [1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+
     overview = []
     split_ratio = 0.6
     if argv.markov_chain:
@@ -92,6 +98,7 @@ if __name__ == "__main__":
 
     for idx, nb_plays in enumerate(nb_plays_LIST):
         diff_frame = pd.DataFrame({})
+        normalizedframe = pd.DataFrame({})
         lossframe = pd.DataFrame({})
         units = nb_plays
         if nb_plays == 500:
@@ -115,11 +122,16 @@ if __name__ == "__main__":
         _base_mu = _base_diff.mean()
         _base_sigma = _base_diff.std()
 
+        normalizedframe = base.copy(deep=False)
         diff_frame = diff_frame.assign(outputs=(_base_output[1:] - _base_output[:-1] - _base_mu) / _base_sigma)
 
         for __activation__ in __activation__LIST:
-            for (__nb_plays__, __units__) in zip(__nb_plays__LIST[idx], __units__LIST[idx]):
+            # for (__nb_plays__, __units__) in zip(__nb_plays__LIST[idx], __units__LIST[idx]):
+            for ensemble in ensemble_LIST:
+                __nb_plays__ = 100
+                __units__ = 100
                 if argv.markov_chain:
+
                     LOG.debug(colors.cyan("Loading from markov chain..."))
                     prediction_fname = constants.DATASET_PATH['models_diff_weights_mc_stock_model_predictions'].format(method=method,
                                                                                                                        activation=activation,
@@ -134,9 +146,9 @@ if __name__ == "__main__":
                                                                                                                        __state__=0,
                                                                                                                        __units__=__units__,
                                                                                                                        __nb_plays__=__nb_plays__,
-                                                                                                                       ensemble=1,
+                                                                                                                       ensemble=ensemble,
                                                                                                                        loss='mle',
-                                                                                                                       batch_size=2000)
+                                                                                                                       batch_size=batch_size)
 
                     loss_file_fname = constants.DATASET_PATH['models_diff_weights_mc_stock_model_loss_history'].format(method=method,
                                                                                                                        activation=activation,
@@ -151,9 +163,9 @@ if __name__ == "__main__":
                                                                                                                        __state__=0,
                                                                                                                        __units__=__units__,
                                                                                                                        __nb_plays__=__nb_plays__,
-                                                                                                                       ensemble=1,
+                                                                                                                       ensemble=ensemble,
                                                                                                                        loss='mle',
-                                                                                                                       batch_size=2000)
+                                                                                                                       batch_size=batch_size)
 
                 elif argv.diff_weights:
                     LOG.debug(colors.cyan("Loading from diff weights..."))
@@ -182,14 +194,16 @@ if __name__ == "__main__":
                 LOG.debug(colors.cyan("input file: {}".format(input_fname)))
                 LOG.debug(colors.cyan("predict file: {}".format(prediction_fname)))
                 LOG.debug(colors.cyan("loss file: {}".format(loss_file_fname)))
-                predict_column = 'nb_plays-{}-units-{}-__activation__-{}-__nb_plays__-{}-__units__-{}-predictions'.format(nb_plays, units, __activation__, __nb_plays__, __units__)
+                predict_column = 'nb_plays-{}-units-{}-__activation__-{}-__nb_plays__-{}-__units__-{}-ensemble-{}=predictions'.format(nb_plays, units, __activation__, __nb_plays__, __units__, ensemble)
                 prediction = pd.read_csv(prediction_fname, header=None, names=['inputs', predict_column], nrows=NUM_ROWS_TO_READ)
-                loss_list = pd.read_csv(loss_file_fname, header=None, names=['loss'])
-
+                if argv.markov_chain:
+                    loss_list = pd.read_csv(loss_file_fname, header=None, names=['epoch', 'loss', 'mse_cost1', 'mse_cost2', 'loss_a', 'loss_b'])
+                else:
+                    loss_list = pd.read_csv(loss_file_fname, header=None, names=['loss'])
 
                 kwargs = {predict_column: prediction[predict_column]}
                 dataframe = dataframe.assign(**kwargs)
-                kwargs = {"nb_plays-{}-units-{}-__activation__-{}-__nb_plays__-{}-__units__-{}-loss".format(nb_plays, units, __activation__, __nb_plays__, __units__): loss_list['loss']}
+                kwargs = {"nb_plays-{}-units-{}-__activation__-{}-__nb_plays__-{}-__units__-{}-ensemble-{}-loss".format(nb_plays, units, __activation__, __nb_plays__, __units__, ensemble): loss_list['loss']}
                 lossframe = lossframe.assign(**kwargs)
 
                 loss = ((prediction[predict_column]  - base['outputs']).values ** 2).mean()**0.5
@@ -200,19 +214,35 @@ if __name__ == "__main__":
                 _predict_mu = _predict_diff.mean()
                 _predict_sigma = _predict_diff.std()
                 diff_rmse = ((_predict_diff - _base_diff) ** 2).mean() ** 0.5
-                overview.append([activation, __activation__, units, __nb_plays__, __units__, lr, epochs, loss, number_of_parameters, _base_mu, _predict_mu, _base_sigma, _predict_sigma, diff_rmse])
+                if argv.markov_chain:
+                    overview.append([activation, __activation__, units, __nb_plays__, __units__, lr, epochs, loss, number_of_parameters, _base_mu, _predict_mu, _base_sigma, _predict_sigma, diff_rmse, ensemble, loss_list['loss'].values[-1]])
+                else:
+                    overview.append([activation, __activation__, units, __nb_plays__, __units__, lr, epochs, loss, number_of_parameters, _base_mu, _predict_mu, _base_sigma, _predict_sigma, diff_rmse])
 
-                kwargs = {'nb_plays-{}-units-{}-__activation__-{}-__nb_plays__-{}-__units__-{}-diff'.format(nb_plays, units, __activation__, __nb_plays__, __units__): (_predict_output[1:] - _predict_output[:-1] - _predict_mu) / _predict_sigma}
+                if _predict_mu * _base_mu >= 0:
+                    normalized_data = (prediction[predict_column].values - _predict_mu) / _predict_sigma
+                else:
+                    normalized_data = - (prediction[predict_column].values - _predict_mu) / _predict_sigma
+                kwargs = {predict_column: normalized_data}
+                normalizedframe = normalizedframe.assign(**kwargs)
+
+                kwargs = {'nb_plays-{}-units-{}-__activation__-{}-__nb_plays__-{}-__units__-{}-ensemble-{}-diff'.format(nb_plays, units, __activation__, __nb_plays__, __units__, ensemble): (_predict_output[1:] - _predict_output[:-1] - _predict_mu) / _predict_sigma}
                 diff_frame = diff_frame.assign(**kwargs)
 
 
         dataframe.to_excel(writer, sheet_name="nb_plays-{}-pred".format(nb_plays, index=False))
+        normalizedframe.to_excel(writer, sheet_name="nb_plays-{}-n-pred".format(nb_plays, index=False))
         diff_frame.to_excel(writer, sheet_name="nb_plays-{}-diff".format(nb_plays, index=False))
         lossframe.to_excel(writer, sheet_name="nb_plays-{}-loss".format(nb_plays, index=False))
 
 
-    overview = pd.DataFrame(overview,
-                            columns=['activation', '__activation__', 'nb_plays/units', '__nb_plays__', '__units__', 'adam_learning_rate', 'epochs', 'rmse', 'nb_paramters', 'base_mu', 'predict_mu', 'base_sigma', 'predict_sigma', 'diff_rmse'])
+    if argv.markov_chain:
+        overview = pd.DataFrame(overview,
+                                columns=['activation', '__activation__', 'nb_plays/units', '__nb_plays__', '__units__', 'adam_learning_rate', 'epochs', 'rmse', 'nb_paramters', 'base_mu', 'predict_mu', 'base_sigma', 'predict_sigma', 'diff_rmse', 'ensemble', 'min-loss'])
+
+    else:
+        overview = pd.DataFrame(overview,
+                                columns=['activation', '__activation__', 'nb_plays/units', '__nb_plays__', '__units__', 'adam_learning_rate', 'epochs', 'rmse', 'nb_paramters', 'base_mu', 'predict_mu', 'base_sigma', 'predict_sigma', 'diff_rmse'])
 
     overview.to_excel(writer, sheet_name='overview', index=False)
     writer.close()

@@ -31,7 +31,8 @@ def fit(inputs,
         weights_name='model.h5',
         loss_name='mse',
         batch_size=10,
-        ensemble=1):
+        ensemble=1,
+        force_train=False):
 
     # epochs = 20000
     # epochs = 10000
@@ -57,15 +58,8 @@ def fit(inputs,
 
     preload_weights = False
 
-    if loss_name == 'mse':
-        mymodel.fit(inputs,
-                    outputs,
-                    verbose=1,
-                    epochs=epochs,
-                    steps_per_epoch=steps_per_epoch,
-                    loss_file_name=loss_file_name,
-                    learning_rate=learning_rate)
-    elif loss_name == 'mle':
+    if force_train or \
+      not os.path.isfile("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays)):
         mymodel.fit2(inputs=inputs,
                      mu=mu,
                      sigma=sigma,
@@ -76,14 +70,13 @@ def fit(inputs,
                      loss_file_name=loss_file_name,
                      preload_weights=preload_weights,
                      weights_fname=weights_fname)
-
+        end = time.time()
+        LOG.debug("time cost: {}s".format(end-start))
+        LOG.debug("saving weights info")
+        mymodel.save_weights(weights_fname)
+        LOG.debug("finished saving weights")
     else:
-        raise Exception("loss {} not support".format(loss_name))
-    end = time.time()
-    LOG.debug("time cost: {}s".format(end-start))
-    LOG.debug("saving weights info")
-    mymodel.save_weights(weights_fname)
-    LOG.debug("finished saving weights")
+        LOG.debug("already trained, ignore. If you still want to re-train , you can pass flag `force_train`")
 
 
 def predict(inputs,
@@ -92,33 +85,6 @@ def predict(inputs,
             activation='tanh',
             nb_plays=1,
             weights_name='model.h5'):
-    # best_epoch = None
-    # try:
-    #     with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
-    #         line = f.read()
-    # except FileNotFoundError:
-    #     epochs = []
-    #     base = '/'.join(weights_fname.split('/')[:-1])
-    #     for _dir in os.listdir(base):
-    #         if os.path.isdir('{}/{}'.format(base, _dir)):
-    #             try:
-    #                 epochs.append(int(_dir.split('-')[-1]))
-    #             except ValueError:
-    #                 pass
-
-    #     if not epochs:
-    #         raise Exception("no trained parameters found")
-
-    #     best_epoch = max(epochs)
-
-    #     LOG.debug("Best epoch is {}".format(best_epoch))
-    #     dirname = '{}-epochs-{}/{}plays'.format(weights_fname[:-3], best_epoch, nb_plays)
-    #     if not os.path.isdir(dirname):
-    #         # sanity checking
-    #         raise Exception("Bugs inside *save_wegihts* or *fit2*")
-    #     with open("{}/input_shape.txt".format(dirname), 'r') as f:
-    #         line = f.read()
-
     with open("{}/{}plays/input_shape.txt".format(weights_name[:-3], nb_plays), 'r') as f:
         line = f.read()
 
@@ -572,6 +538,8 @@ if __name__ == "__main__":
     parser.add_argument('--ensemble', dest='ensemble',
                         default=2,  # start from 1
                         type=int)
+    parser.add_argument('--force-train', dest='force_train',
+                        default=False, action='store_true')
 
     argv = parser.parse_args(sys.argv[1:])
     # Hyper Parameters
@@ -604,7 +572,7 @@ if __name__ == "__main__":
     mu = 0
     sigma = 110
 
-    points = 2000
+    points = 1000
     input_dim = 1
     ############################## ground truth #############################
     nb_plays = 20
@@ -928,7 +896,8 @@ if __name__ == "__main__":
             weights_name=weights_fname,
             loss_name=loss_name,
             batch_size=batch_size,
-            ensemble=ensemble)
+            ensemble=ensemble,
+            force_train=argv.force_train)
 
         inputs, predictions = predict(inputs=test_inputs,
                                       outputs=test_outputs,

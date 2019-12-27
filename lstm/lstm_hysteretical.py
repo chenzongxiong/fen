@@ -45,7 +45,7 @@ def lstm(input_fname, units, epochs=1000, weights_fname=None, force_train=False,
 
     model.compile(loss=loss, optimizer=optimizer, metrics=[loss])
     model.summary()
-    if force_train or not os.path.isfile(weights_fname) :
+    if force_train or not os.path.isfile(weights_fname):
         model.fit(train_inputs, train_outputs, epochs=epochs, verbose=1,
                   # callbacks=[early_stopping_callback],
                   validation_split=0.05,
