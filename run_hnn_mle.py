@@ -35,7 +35,7 @@ def fit(inputs,
 
     # epochs = 20000
     # epochs = 10000
-    epochs = 1
+    epochs = 10000
     start = time.time()
     input_dim = batch_size
 
@@ -836,7 +836,7 @@ if __name__ == "__main__":
 
     LOG.debug('################################################################################')
 
-    input(colors.red("Press Enter to continue..."))
+    # input(colors.red("Press Enter to continue..."))
 
     # try:
     #     predicted_fname = 'new-dataset/models/diff_weights/method-sin/activation-None/state-0/markov_chain/mu-0/sigma-110/units-20/nb_plays-20/points-1000/input_dim-1/predictions-mu-0-sigma-110-points-1000/activation#-elu/state#-0/units#-100/nb_plays#-100/ensemble/loss-mle/trends-batch_size-1500.csv'
@@ -913,8 +913,8 @@ if __name__ == "__main__":
     else:
         LOG.debug("START to FIT via {}".format(colors.red(loss_name.upper())))
         _inputs, _outputs = inputs[:2000], outputs[:2000]
-        train_inputs, train_outputs = _inputs[:1500], outputs[:1500]
-        test_inputs, test_outputs = _inputs[1500:], outputs[1500:]
+        train_inputs, train_outputs = _inputs[:1500], _outputs[:1500]
+        test_inputs, test_outputs = _inputs[1500:], _outputs[1500:]
 
         fit(inputs=train_inputs,
             outputs=train_outputs,

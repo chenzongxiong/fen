@@ -172,8 +172,6 @@ if __name__ == "__main__":
 
     # # Hyper Parameters
 
-
-
     input_fname_key = 'models_diff_weights' if argv.diff_weights else 'models'
     predict_fname_key = 'models_diff_weights_predictions' if argv.diff_weights else 'models_predictions'
     loss_history_fname_key = 'models_diff_weights_loss_history' if argv.diff_weights else 'models_loss_history'
@@ -219,19 +217,19 @@ if __name__ == "__main__":
                                                                     loss=loss_name)
 
     weights_fname = constants.DATASET_PATH[weight_fname_key].format(method=method,
-                                                                   activation=activation,
-                                                                   state=state,
-                                                                   mu=mu,
-                                                                   sigma=sigma,
-                                                                   units=units,
-                                                                   nb_plays=nb_plays,
-                                                                   points=points,
-                                                                   input_dim=input_dim,
-                                                                   __activation__=__activation__,
-                                                                   __state__=__state__,
-                                                                   __units__=__units__,
-                                                                   __nb_plays__=__nb_plays__,
-                                                                   loss=loss_name)
+                                                                    activation=activation,
+                                                                    state=state,
+                                                                    mu=mu,
+                                                                    sigma=sigma,
+                                                                    units=units,
+                                                                    nb_plays=nb_plays,
+                                                                    points=points,
+                                                                    input_dim=input_dim,
+                                                                    __activation__=__activation__,
+                                                                    __state__=__state__,
+                                                                    __units__=__units__,
+                                                                    __nb_plays__=__nb_plays__,
+                                                                    loss=loss_name)
 
     LOG.debug("==================== INFO ====================")
     LOG.debug(colors.red("Test multiple plays"))
@@ -245,10 +243,8 @@ if __name__ == "__main__":
     LOG.debug(colors.cyan("force_train: {}".format(force_train)))
     LOG.debug("==============================================")
 
-
     train_inputs, train_outputs = tdata.DatasetLoader.load_train_data(input_fname)
     test_inputs, test_outputs = tdata.DatasetLoader.load_test_data(input_fname)
-
 
     fit(inputs=train_inputs,
         outputs=train_outputs,
@@ -261,10 +257,10 @@ if __name__ == "__main__":
         epochs=epochs)
 
     test_inputs, predictions = predict(inputs=test_inputs,
-                                  outputs=test_outputs,
-                                  units=__units__,
-                                  activation=__activation__,
-                                  nb_plays=__nb_plays__,
-                                  weights_name=weights_fname)
+                                       outputs=test_outputs,
+                                       units=__units__,
+                                       activation=__activation__,
+                                       nb_plays=__nb_plays__,
+                                       weights_name=weights_fname)
 
     tdata.DatasetSaver.save_data(test_inputs, predictions, predict_fname)
