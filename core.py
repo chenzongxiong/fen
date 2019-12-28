@@ -1294,6 +1294,7 @@ class MyModel(Layer):
                  ensemble=1,
                  learnable_mu=False,
                  learnable_sigma=False,
+                 parallel_prediction=False,
                  **kwargs):
         super(Layer, self).__init__(**kwargs)
         self._unittest = kwargs.pop('unittest', False)
@@ -1351,7 +1352,8 @@ class MyModel(Layer):
         # self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate, decay=0.1)
         self.optimizer = tf.keras.optimizers.Adam(lr=learning_rate)
         # self.optimizer = tf.keras.optimizers.SGD(lr=learning_rate)
-        if kwargs.pop("parallel_prediction", False):
+        # if kwargs.pop("parallel_prediction", False):
+        if parallel_prediction:
             self.parallel_prediction = True
             self.pool = WorkerPool(constants.CPU_COUNTS)
             self.pool.start()
