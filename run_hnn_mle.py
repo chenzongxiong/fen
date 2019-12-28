@@ -32,7 +32,8 @@ def fit(inputs,
         loss_name='mse',
         batch_size=10,
         ensemble=1,
-        force_train=False):
+        force_train=False,
+        learnable_mu=False):
 
     # epochs = 20000
     # epochs = 10000
@@ -52,7 +53,8 @@ def fit(inputs,
                       activation=activation,
                       nb_plays=nb_plays,
                       learning_rate=learning_rate,
-                      ensemble=ensemble)
+                      ensemble=ensemble,
+                      learnable_mu=learnable_mu)
 
     LOG.debug("Learning rate is {}".format(learning_rate))
 
@@ -541,6 +543,9 @@ if __name__ == "__main__":
     parser.add_argument('--force-train', dest='force_train',
                         default=False, action='store_true')
 
+    parser.add_argument('--learnable-mu', dest='learnable_mu',
+                        default=False, action='store_true')
+
     argv = parser.parse_args(sys.argv[1:])
     # Hyper Parameters
     # learning_rate = 0.003
@@ -594,7 +599,7 @@ if __name__ == "__main__":
     # __activation__ = 'tanh'
     # __mu__ = 2.60
     __mu__ = 0
-    __sigma__ = 110
+    __sigma__ = 1
     # __mu__ = argv.__mu__
     # __sigma__ = argv.__sigma__
 
@@ -842,7 +847,7 @@ if __name__ == "__main__":
         # inputs = inputs[batch_size:batch_size+predictions.shape[-1]]
         # inputs = inputs[batch_size:batch_size+predictions.shape[-1]]
         # inputs = inputs[1000:1100]
-        import ipdb; ipdb.set_trace
+        import ipdb; ipdb.set_trace()
         inputs = inputs[1510:1610]
         # inputs = inputs[1510:1515]
     elif do_visualize_activated_plays is True:
@@ -897,7 +902,8 @@ if __name__ == "__main__":
             loss_name=loss_name,
             batch_size=batch_size,
             ensemble=ensemble,
-            force_train=argv.force_train)
+            force_train=argv.force_train,
+            learnable_mu=argv.learnable_mu)
 
         inputs, predictions = predict(inputs=test_inputs,
                                       outputs=test_outputs,

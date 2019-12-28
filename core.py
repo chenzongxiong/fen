@@ -1276,7 +1276,7 @@ class WorkerPool(object):
         return _results
 
 
-class MyModel(object):
+class MyModel(Layer):
     def __init__(self,
                  nb_plays=1,
                  units=1,
@@ -1292,7 +1292,10 @@ class MyModel(object):
                  network_type=constants.NetworkType.PLAY,
                  learning_rate=0.001,
                  ensemble=1,
+                 learnable_mu=False,
+                 learnable_sigma=False,
                  **kwargs):
+        super(Layer, self).__init__(**kwargs)
         self._unittest = kwargs.pop('unittest', False)
         if self._unittest is False:
             assert timestep == 1, colors.red('timestep must be 1')
@@ -1353,6 +1356,9 @@ class MyModel(object):
             self.pool = WorkerPool(constants.CPU_COUNTS)
             self.pool.start()
 
+        self._learnable_mu = learnable_mu
+        self._learnable_sigma = learnable_sigma
+
     def fit(self,
             inputs,
             outputs,
@@ -1387,7 +1393,6 @@ class MyModel(object):
         model_outputs = []
         feed_inputs = [utils.get_cache()['play_input_layer'].input]
         feed_targets = []
-
 
         for idx, play in enumerate(self.plays):
             # feed_inputs.append(play.input)
@@ -1624,7 +1629,29 @@ class MyModel(object):
             # TODO: make loss customize from outside
             # TODO: learn mu/sigma/weights
             # NOTE: current version is fixing mu/sigma and learn weights
-            self.loss_a = tf.keras.backend.square((self.diff - mu)/sigma) / 2
+            # self._learnable_mu = True
+            if self._learnable_mu:
+                LOG.debug(colors.red("Using Learnable Mu Version"))
+                # import ipdb;ipdb.set_trace()
+                # from tensorflow.python.ops import variables as tf_variables
+                # from tensorflow.keras.engine import base_layer_utils
+                # self.mu = base_layer_utils.make_variable(name='mymodel/mu:0',
+                #                                          initializer=tf.keras.initializers.Constant(value=0.0, dtype=tf.float32),
+                #                                          trainable=True,
+                #                                          dtype=tf.float32)
+                # self.mu = tf.VariableV1(0.0, dtype=tf.float32, name='mymodel/mu')
+                self._set_dtype_and_policy(dtype=tf.float32)
+
+                self.mu = self.add_weight(
+                    "mu",
+                    dtype=tf.float32,
+                    initializer=tf.keras.initializers.Constant(value=10.0, dtype=tf.float32),
+                    trainable=True)
+                self.loss_a = tf.keras.backend.square((self.diff - self.mu)/sigma) / 2
+                self.params_list.append(self.mu)
+
+            else:
+                self.loss_a = tf.keras.backend.square((self.diff - mu)/sigma) / 2
             self.loss_b = - tf.keras.backend.log(normalized_J_by_hand)
             # self.loss_by_hand = tf.keras.backend.mean(self.loss_a + self.loss_b)
             # self.loss_by_hand = tf.keras.backend.sum(self.loss_a + self.loss_b)
@@ -1661,13 +1688,14 @@ class MyModel(object):
                 # updates += self.update_inputs
             training_inputs = self.feed_inputs + self.feed_targets
 
-            self.updates = updates
-            self.training_inputs = training_inputs
+            # self.updates = updates
+            # self.training_inputs = training_inputs
             if kwargs.get('test_stateful', False):
                 outputs = [play.operator_layer.output for play in self.plays]
+            elif self._learnable_mu:
+                outputs = [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred, tf.keras.backend.mean(self.loss_a), tf.keras.backend.mean(self.loss_b), self.mu] + [play.operator_layer.output for play in self.plays]
             else:
                 outputs = [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred, tf.keras.backend.mean(self.loss_a), tf.keras.backend.mean(self.loss_b)] + [play.operator_layer.output for play in self.plays]
-
             self.train_function = tf.keras.backend.function(training_inputs,
                                                             outputs,
                                                             updates=updates)
@@ -1704,7 +1732,6 @@ class MyModel(object):
 
         # kwargs['validate_inputs'] = validate_inputs
         # kwargs['validate_outputs'] = validate_outputs
-
         self.compile(training_inputs, mu=mu, sigma=sigma, outputs=training_outputs, **kwargs)
         # ins = self._x + self._y
         # ins = self._x
@@ -1742,14 +1769,20 @@ class MyModel(object):
             assert len(results) == self._nb_plays
             return results
 
-        logger_string_epoch = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}, loss_a: {:.7f}, loss_b: {:.7f}"
+        if self._learnable_mu:
+            logger_string_epoch = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}, loss_a: {:.7f}, loss_b: {:.7f}, learned_mu: {:.7f}"
+        else:
+            logger_string_epoch = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}, loss_a: {:.7f}, loss_b: {:.7f}"
         logger_string_step = "Steps: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}, loss_a: {:.7f}, loss_b: {:.7f}"
 
         for i in range(epochs):
             self.reset_states()
             for j in range(steps_per_epoch):
                 ins = inputs[j*input_dim:(j+1)*input_dim]
-                cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, loss_a, loss_b, *operator_outputs = self.train_function([ins.reshape(1, 1, -1)])
+                if self._learnable_mu:
+                    cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, loss_a, loss_b, learned_mu, *operator_outputs = self.train_function([ins.reshape(1, 1, -1)])
+                else:
+                    cost, mse_cost1, mse_cost2, diff_res, sigma_res, mu_res, y_pred, loss_a, loss_b, *operator_outputs = self.train_function([ins.reshape(1, 1, -1)])
                 states_list = [o.reshape(-1)[-1] for o in operator_outputs]
                 self.reset_states(states_list=states_list)
 
@@ -1759,7 +1792,10 @@ class MyModel(object):
                     prev_cost = cost
                     patience_list = []
                 loss_by_hand, loss_by_tf = 0, 0
-            LOG.debug(logger_string_epoch.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf), loss_a, loss_b))
+            if self._learnable_mu:
+                LOG.debug(logger_string_epoch.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf), loss_a, loss_b, float(learned_mu)))
+            else:
+                LOG.debug(logger_string_epoch.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf), loss_a, loss_b))
 
             LOG.debug("================================================================================")
             # save weights every 1000 epochs
