@@ -73,10 +73,11 @@ def predict(inputs,
     input_dim = shape[2]
     timestep = shape[1]
 
-    if input_dim * timestep > inputs.shape[0]:
+    if input_dim * timestep > inputs[1].shape[0]:
         # we need to append extra value to make test_inputs and test_outpus to have the same size
         # keep test_ouputs unchange
-        inputs = np.hstack([inputs, np.zeros(input_dim*timestep-test_inputs.shape[0])])
+        inputs[0] = inputs[0]
+        inputs[1] = np.hstack([inputs[1], np.zeros(input_dim*timestep-inputs[1].shape[0])])
 
     start = time.time()
     mymodel = MyModel(input_dim=input_dim,
@@ -87,18 +88,19 @@ def predict(inputs,
                       parallel_prediction=True)
 
     mymodel.load_weights(weights_fname)
-
-    predictions = mymodel.predict_parallel(inputs)
+    op_outputs = mymodel.get_op_outputs_parallel(inputs[0])
+    states_list = [o[-1] for o in op_outputs]
+    predictions = mymodel.predict_parallel(inputs[1], states_list=states_list)
 
     end = time.time()
     LOG.debug("time cost: {}s".format(end-start))
 
-    predictions = predictions[:outputs.shape[0]]
-    loss = ((predictions - outputs) ** 2).mean()
+    predictions = predictions[:outputs[1].shape[0]]
+    loss = ((predictions - outputs[1]) ** 2).mean()
     loss = float(loss)
     LOG.debug("loss: {}".format(loss))
 
-    return inputs[:outputs.shape[0]], predictions
+    return inputs[1][:outputs[1].shape[0]], predictions
 
 
 if __name__ == "__main__":
@@ -256,8 +258,15 @@ if __name__ == "__main__":
         weights_name=weights_fname,
         epochs=epochs)
 
-    test_inputs, predictions = predict(inputs=test_inputs,
-                                       outputs=test_outputs,
+    # test_inputs, predictions = predict(inputs=test_inputs,
+    #                                    outputs=test_outputs,
+    #                                    units=__units__,
+    #                                    activation=__activation__,
+    #                                    nb_plays=__nb_plays__,
+    #                                    weights_name=weights_fname)
+
+    test_inputs, predictions = predict(inputs=[train_inputs, test_inputs],
+                                       outputs=[train_outputs, test_outputs],
                                        units=__units__,
                                        activation=__activation__,
                                        nb_plays=__nb_plays__,

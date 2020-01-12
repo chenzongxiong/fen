@@ -147,7 +147,6 @@ def model_genertor_with_mc():
     tdata.DatasetSaver.save_data(outputs, inputs, fname)
 
 
-
 def model_nb_plays_generator_with_noise(points=100,
                                         nb_plays=1,
                                         units=1,
@@ -181,23 +180,48 @@ def model_nb_plays_generator_with_noise(points=100,
     inputs = None
 
     start = time.time()
-    inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(inputs=inputs,
-                                                                       nb_plays=nb_plays,
-                                                                       points=points,
-                                                                       units=units,
-                                                                       mu=mu,
-                                                                       sigma=sigma,
-                                                                       input_dim=input_dim,
-                                                                       activation=activation,
-                                                                       with_noise=with_noise,
-                                                                       method=method,
-                                                                       diff_weights=diff_weights)
+    individual = True
+    if individual is False:
+        inputs, outputs = tdata.DatasetGenerator.systhesis_model_generator(inputs=inputs,
+                                                                           nb_plays=nb_plays,
+                                                                           points=points,
+                                                                           units=units,
+                                                                           mu=mu,
+                                                                           sigma=sigma,
+                                                                           input_dim=input_dim,
+                                                                           activation=activation,
+                                                                           with_noise=with_noise,
+                                                                           method=method,
+                                                                           diff_weights=diff_weights,
+                                                                           individual=False)
+    else:
+        inputs, outputs, individual_outputs = tdata.DatasetGenerator.systhesis_model_generator(inputs=inputs,
+                                                                                               nb_plays=nb_plays,
+                                                                                               points=points,
+                                                                                               units=units,
+                                                                                               mu=mu,
+                                                                                               sigma=sigma,
+                                                                                               input_dim=input_dim,
+                                                                                               activation=activation,
+                                                                                               with_noise=with_noise,
+                                                                                               method=method,
+                                                                                               diff_weights=diff_weights,
+                                                                                               individual=True)
+        outputs = np.hstack([individual_outputs, outputs.reshape(-1, 1)])
+
+    # import ipdb; ipdb.set_trace()
     end = time.time()
     LOG.debug("time cost: {} s".format(end-start))
-    # if diff_weights is True:
-    fname = constants.DATASET_PATH[file_key].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
-    # else:
-    #     fname = constants.DATASET_PATH['models'].format(method=method, activation=activation, state=state, mu=mu, sigma=sigma, units=units, nb_plays=nb_plays, points=points, input_dim=input_dim)
+
+    fname = constants.DATASET_PATH[file_key].format(method=method,
+                                                    activation=activation,
+                                                    state=state,
+                                                    mu=mu,
+                                                    sigma=sigma,
+                                                    units=units,
+                                                    nb_plays=nb_plays,
+                                                    points=points,
+                                                    input_dim=input_dim)
 
     LOG.debug(colors.cyan("Write  data to file {}".format(fname)))
     tdata.DatasetSaver.save_data(inputs, outputs, fname)

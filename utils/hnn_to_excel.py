@@ -23,6 +23,8 @@ if __name__ == "__main__":
     parser.add_argument('--markov-chain', dest='markov_chain',
                         required=False,
                         action='store_true')
+    parser.add_argument('--sigma', dest='sigma',
+                        required=True)
 
     argv = parser.parse_args(sys.argv[1:])
 
@@ -53,9 +55,11 @@ if __name__ == "__main__":
         activation = 'tanh'
         nb_plays = 1
         mu = 0
-        sigma = 8
+        sigma = argv.sigma
         points = 1000
         __activation__LIST = ['tanh', 'elu']
+        __activation__LIST = ['elu']
+
         __units__LIST_units1_nb_plays1 = []
         __nb_plays__LIST_units1_nb_plays1 = []
 
@@ -68,13 +72,20 @@ if __name__ == "__main__":
         __units__LIST_units100_nb_plays500 = [25, 25, 50, 50, 100, 100, 100, 200]
         __nb_plays__LIST_units100_nb_plays500 = [25, 50, 50, 100, 100, 200, 500, 500]
 
+        # __units__LIST = [__units__LIST_units50_nb_plays50,
+        #                 __units__LIST_units100_nb_plays100,
+        #                 __units__LIST_units100_nb_plays500]
+        # __nb_plays__LIST = [__nb_plays__LIST_units50_nb_plays50,
+        #                     __nb_plays__LIST_units100_nb_plays100,
+        #                     __nb_plays__LIST_units100_nb_plays500]
+        # nb_plays_LIST = [50, 100, 500]
+
         __units__LIST = [__units__LIST_units50_nb_plays50,
-                        __units__LIST_units100_nb_plays100,
-                        __units__LIST_units100_nb_plays500]
+                         __units__LIST_units100_nb_plays100]
         __nb_plays__LIST = [__nb_plays__LIST_units50_nb_plays50,
-                            __nb_plays__LIST_units100_nb_plays100,
-                            __nb_plays__LIST_units100_nb_plays500]
-        nb_plays_LIST = [50, 100, 500]
+                            __nb_plays__LIST_units100_nb_plays100]
+        nb_plays_LIST = [50, 100]
+
     else:
         pass
 
@@ -88,9 +99,9 @@ if __name__ == "__main__":
     overview = []
     split_ratio = 0.6
     if argv.markov_chain:
-        excel_fname = './new-dataset/models/diff_weights/method-sin/hnn-mc-mle-sigma-{}-x.xlsx'.format(sigma)
+        excel_fname = './new-dataset/models/diff_weights/method-sin/hnn-mc-mle-sigma-{}.xlsx'.format(sigma)
     elif argv.diff_weights:
-        excel_fname = './new-dataset/models/diff_weights/method-sin/hnn-all-sigma-{}.xlsx'.format(sigma)
+        excel_fname = './new-dataset/models/diff_weights/method-sin/hnn-mse-sigma-{}.xlsx'.format(sigma)
     else:
         excel_fname = './new-dataset/models/method-sin/hnn-all-sigma-{}.xlsx'.format(sigma)
 

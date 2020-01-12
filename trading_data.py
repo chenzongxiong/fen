@@ -137,7 +137,8 @@ class DatasetGenerator(object):
                                   activation=None,
                                   with_noise=True,
                                   method=None,
-                                  diff_weights=False):
+                                  diff_weights=False,
+                                  individual=False):
 
         if inputs is not None:
             points = inputs.shape[-1]
@@ -175,9 +176,11 @@ class DatasetGenerator(object):
                              parallel_prediction=True)
 
         model._make_batch_input_shape(_inputs)
-        outputs = model.predict_parallel(_inputs)
-        # outputs = model.predict(_inputs)
+
+        outputs, individual_outputs = model.predict_parallel(_inputs, individual=True)
         _outputs = outputs.reshape(-1)
+        if individual is True:
+            return _inputs, _outputs, individual_outputs
         return _inputs, _outputs
 
     @staticmethod

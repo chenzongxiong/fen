@@ -51,6 +51,7 @@ tf.keras.backend.set_epsilon(1e-9)
 
 hacking = 1
 
+
 def do_guess_helper(step, direction, start_price, nb_plays, activation, sign, prev_states, weights, delta=0.001):
     '''
     Parameters:
@@ -350,11 +351,28 @@ def phi(x, width=1.0):
         return float(0)
 
 
-def Phi(x, width=1.0):
+def Phi(x, width=1.0, weight=1.0):
     '''
     Phi(x) = x - width/2 , if x > width/2
            = x + width/2 , if x < - width/2
            = 0         , otherwise
+    '''
+    assert x.shape[0].value == 1 and x.shape[1].value == 1, "x must be a scalar"
+
+    ZEROS = tf.zeros(x.shape, dtype=tf.float32, name='zeros')
+    # _width = tf.constant([[width/2.0]], dtype=tf.float32)
+    _width = tf.constant([[width/2.0]], dtype=tf.float32)
+    r1 = tf.cond(tf.reduce_all(tf.less(x, -_width)), lambda: weight*(x + _width), lambda: ZEROS)
+    r2 = tf.cond(tf.reduce_all(tf.greater(x, _width)), lambda: weight*(x - _width), lambda: r1)
+    return r2
+
+
+def LeakyPhi(x, width=1.0, alpha=0.001):
+    '''
+    TODO:
+    LeakyPhi(x) = x - width/2 , if x > width/2
+                = x + width/2 , if x < - width/2
+                = alpha         , otherwise
     '''
     assert x.shape[0].value == 1 and x.shape[1].value == 1, "x must be a scalar"
 
@@ -530,6 +548,7 @@ class PhiCell(Layer):
 
         self.hysteretic_func = hysteretic_func
         self.input_dim = input_dim
+        self._timestep = 0
 
     def build(self, input_shape):
         if self.debug:
@@ -548,6 +567,15 @@ class PhiCell(Layer):
                 dtype=tf.float32,
                 trainable=True)
 
+        # self._state = self.add_weight(
+        #     "state",
+        #     shape=(1, 1),
+        #     initializer=self.kernel_initializer,
+        #     regularizer=self.kernel_regularizer,
+        #     constraint=self.kernel_constraint,
+        #     dtype=tf.float32,
+        #     trainable=True)
+
         self.built = True
 
     def call(self, inputs, states):
@@ -559,7 +587,9 @@ class PhiCell(Layer):
         state: `state` is randomly initialized, the shape of is [1 * 1]
         """
         self._inputs = ops.convert_to_tensor(inputs, dtype=tf.float32)
-        self._state = ops.convert_to_tensor(states[-1], dtype=tf.float32)
+        # self._state = ops.convert_to_tensor(states[-1], dtype=tf.float32)
+        self._state = states[-1]
+
         LOG.debug("PhiCellinputs.shape: {}".format(inputs.shape))
         LOG.debug("PhiCell._inputs.shape: {}".format(self._inputs.shape))
         LOG.debug("PhiCell._state.shape: {}".format(self._state.shape))
@@ -567,7 +597,7 @@ class PhiCell(Layer):
         # outputs_ = tf.multiply(self._inputs, self.kernel)
         # outputs = [self._state]
         # for i in range(outputs_.shape[-1].value):
-        #     output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1]), self._width), outputs[-1])
+        #     output = tf.add(Phi(tf.subtract(outputs_[0][i], outputs[-1]), self._width, 0.99), outputs[-1])
         #     outputs.append(output)
 
         # outputs = ops.convert_to_tensor(outputs[1:], dtype=tf.float32)
@@ -577,12 +607,17 @@ class PhiCell(Layer):
         # LOG.debug("before reshaping state.shape: {}".format(state.shape))
         # state = tf.reshape(state, shape=(-1, 1))
         # LOG.debug("after reshaping state.shape: {}".format(state.shape))
+
         # return outputs, [state]
 
         ################ IMPL via RNN ###########################
         def inner_steps(inputs, states):
+            # import ipdb; ipdb.set_trace()
+            print("inner timestep: ", self._timestep)
+            self._timestep += 1
+
             LOG.debug("inputs: {}, states: {}".format(inputs, states))
-            outputs = Phi(inputs - states[-1], self._width) + states[-1]
+            outputs = Phi(inputs - states[-1], self._width, 1.0) + states[-1]
             return outputs, [outputs]
 
         # import ipdb; ipdb.set_trace()
@@ -594,11 +629,14 @@ class PhiCell(Layer):
             self._states = ops.convert_to_tensor(states, dtype=tf.float32)
 
         assert self._state.shape.ndims == 2, colors.red("PhiCell states must be 2 dimensions")
-        states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
+        # states_ = [tf.reshape(self._states, shape=self._states.shape.as_list())]
+        states_ = states
+        # import ipdb; ipdb.set_trace()
         last_outputs_, outputs_, states_x = tf.keras.backend.rnn(inner_steps, inputs=inputs_, initial_states=states_, unroll=self.unroll)
-
         LOG.debug("outputs_.shape: {}".format(outputs_))
         LOG.debug("states_x.shape: {}".format(states_x))
+        print("timestep: ", self._timestep)
+        # import ipdb; ipdb.set_trace()
         return outputs_, list(states_x)
 
 
@@ -622,6 +660,20 @@ class Operator(RNN):
             return_state=False,
             stateful=True,
             unroll=False)
+
+    def build(self, input_shape):
+        # import ipdb; ipdb.set_trace()
+        self._states = [self.add_weight(
+            name="states",
+            dtype=tf.float32,
+            initializer=tf.keras.initializers.Constant(value=0.0,  dtype=tf.float32),
+            trainable=True,
+            shape=(1, 1))]
+
+        super(Operator, self).build(input_shape)
+        # if self.stateful:
+        #     self.reset_states()
+        # self.built = True
 
     def call(self, inputs, initial_state=None):
         LOG.debug("Operator.inputs.shape: {}".format(inputs.shape))
@@ -1325,8 +1377,6 @@ class MyModel(Layer):
             else:
                 weight = 1.0
 
-            # weight = 10 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
-            # weight = 0.02 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
             weight = 2 * (nb_play + 1)                  # width range from (0.1, ... 0.1 * nb_plays)
             LOG.debug("MyModel {} generates {} with Weight: {}".format(self._ensemble, colors.red("Play #{}".format(nb_play+1)), weight))
             # if debug is True:
@@ -1649,8 +1699,20 @@ class MyModel(Layer):
                     dtype=tf.float32,
                     initializer=tf.keras.initializers.Constant(value=10.0, dtype=tf.float32),
                     trainable=True)
+                self._initial_states_list = []
+                for i in range(self._nb_plays):
+                    self._initial_states_list.append(self.plays[i].operator_layer.states[0])
+                    # self._initial_states_list.append(self.add_weight(
+                    #     'learnable_state{}'.format(i),
+                    #     dtype=tf.float32,
+                    #     initializer=tf.keras.initializers.Constant(value=10.0, dtype=tf.float32),
+                    #     trainable=True,
+                    #     shape=(1, 1)
+                    # ))
+
                 self.loss_a = tf.keras.backend.square((self.diff - self.mu)/sigma) / 2
                 self.params_list.append(self.mu)
+                # self.params_list += self._initial_states_list
 
             else:
                 self.loss_a = tf.keras.backend.square((self.diff - mu)/sigma) / 2
@@ -1690,12 +1752,14 @@ class MyModel(Layer):
                 # updates += self.update_inputs
             training_inputs = self.feed_inputs + self.feed_targets
 
+            import ipdb; ipdb.set_trace()
             # self.updates = updates
             # self.training_inputs = training_inputs
             if kwargs.get('test_stateful', False):
                 outputs = [play.operator_layer.output for play in self.plays]
             elif self._learnable_mu:
-                outputs = [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred, tf.keras.backend.mean(self.loss_a), tf.keras.backend.mean(self.loss_b), self.mu] + [play.operator_layer.output for play in self.plays]
+                # outputs = [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred, tf.keras.backend.mean(self.loss_a), tf.keras.backend.mean(self.loss_b), self.mu] + [play.operator_layer.output for play in self.plays]
+                outputs = [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred, tf.keras.backend.mean(self.loss_a), tf.keras.backend.mean(self.loss_b), self.mu] + [play.operator_layer.states[0] for play in self.plays] + self._initial_states_list
             else:
                 outputs = [self.loss, mse_loss1, mse_loss2, self.diff, self.curr_sigma, self.curr_mu, self.y_pred, tf.keras.backend.mean(self.loss_a), tf.keras.backend.mean(self.loss_b)] + [play.operator_layer.output for play in self.plays]
             self.train_function = tf.keras.backend.function(training_inputs,
@@ -1777,8 +1841,11 @@ class MyModel(Layer):
             logger_string_epoch = "Epoch: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}, loss_a: {:.7f}, loss_b: {:.7f}"
         logger_string_step = "Steps: {}, Loss: {:.7f}, MSE Loss1: {:.7f}, MSE Loss2: {:.7f}, diff.mu: {:.7f}, diff.sigma: {:.7f}, mu: {:.7f}, sigma: {:.7f}, loss_by_hand: {:.7f}, loss_by_tf: {:.7f}, loss_a: {:.7f}, loss_b: {:.7f}"
 
+        _states_list = [1.0] * self._nb_plays
+
         for i in range(epochs):
-            self.reset_states()
+            self.reset_states(_states_list)
+            # self.reset_states()
             for j in range(steps_per_epoch):
                 ins = inputs[j*input_dim:(j+1)*input_dim]
                 if self._learnable_mu:
@@ -1799,11 +1866,13 @@ class MyModel(Layer):
             else:
                 LOG.debug(logger_string_epoch.format(i, float(cost), float(mse_cost1), float(mse_cost2), float(diff_res.mean()), float(diff_res.std()), float(__mu__), float(__sigma__), float(loss_by_hand), float(loss_by_tf), loss_a, loss_b))
 
+            LOG.debug("Play States: {}".format(operator_outputs))
             LOG.debug("================================================================================")
             # save weights every 1000 epochs
             # if i % 1000 == 0 and i != 0:
             #     self.save_weights("{}-epochs-{}.h5".format(weights_fname[:-3], i))
-
+            # import ipdb; ipdb.set_trace()
+            # _states_list = operator_outputs[self._nb_plays:]
             self.cost_history.append([i, cost, mse_cost1, mse_cost2, loss_a, loss_b])
 
         cost_history = np.array(self.cost_history)
@@ -1897,8 +1966,8 @@ class MyModel(Layer):
         ################################################################################
         start = time.time()
         for play in self.plays:
-             task = Task(play, 'weights', None)
-             self.pool.put(task)
+            task = Task(play, 'weights', None)
+            self.pool.put(task)
         self.pool.join()
         weights_ = self.pool.results
         weights = [[], [], [], [], []]
@@ -1914,8 +1983,8 @@ class MyModel(Layer):
         LOG.debug("Time cost during extract weights: {}".format(end-start))
         start = time.time()
         for play in self.plays:
-             task = Task(play, 'operator_output', (prices,))
-             self.pool.put(task)
+            task = Task(play, 'operator_output', (prices,))
+            self.pool.put(task)
         self.pool.join()
 
         operator_outputs = self.pool.results
